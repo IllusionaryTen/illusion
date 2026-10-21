@@ -41,3 +41,22 @@ tools/*.exe
 # User-specific OS metadata
 Thumbs.db
 Desktop.ini
+
+# Preserve ignore rules from the repository's original Vite starter
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+dist-ssr/
+*.local
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
