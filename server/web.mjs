@@ -1,0 +1,14 @@
+import { readFileSync } from 'node:fs';
+import { documents,operator,fonts,legalVersion } from './legal.mjs';
+const files=new Map([['/app/',['index.html','text/html']],['/app/app.mjs',['app.mjs','text/javascript']],['/app/crypto.mjs',['crypto.mjs','text/javascript']],['/app/security.mjs',['security.mjs','text/javascript']],['/app/request-signal.mjs',['request-signal.mjs','text/javascript']],['/app/i18n.mjs',['i18n.mjs','text/javascript']],['/app/style.css',['style.css','text/css']],['/app/mobile.css',['mobile.css','text/css']],['/app/sounds/illusionsfx.mp3',['sounds/illusionsfx.mp3','audio/mpeg']],['/app/manifest.webmanifest',['manifest.webmanifest','application/manifest+json']],['/app/sw.js',['sw.js','text/javascript']],['/app/icons/icon-192.png',['icons/icon-192.png','image/png']],['/app/icons/icon-512.png',['icons/icon-512.png','image/png']],['/android/',['android.html','text/html']]]);
+const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export function publicWeb(req,res){
+  if(req.method!=='GET')return false;const path=new URL(req.url,'http://local').pathname;
+  let data,type;
+  if(path==='/v1/public'){type='application/json';data=JSON.stringify({policyVersion:legalVersion,minimumAge:18,operator:operator(),fonts,policies:Object.keys(documents()),optionalTracking:false,price:0});}
+  else if(path.startsWith('/v1/legal/')){const id=path.slice(10),docs=documents();if(!Object.hasOwn(docs,id))return false;type='application/json';data=JSON.stringify({version:legalVersion,title:id,text:docs[id]});}
+  else if(path.startsWith('/policies/')){const id=path.slice(10),docs=documents();if(!Object.hasOwn(docs,id))return false;type='text/html';data=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Illusion · ${escape(id)}</title><link rel="stylesheet" href="/app/style.css"><main class="policy"><a href="/app/">Back to Illusion</a><h1>${escape(id)}</h1><div class="document">${escape(docs[id])}</div></main></html>`;}
+  else {const spec=files.get(path==='/app'?'/app/':path==='/android'?'/android/':path);if(!spec)return false;type=spec[1];data=readFileSync(new URL('../web/'+spec[0],import.meta.url));}
+  const headers={'Content-Type':type+(type.startsWith('image/')||type==='audio/mpeg'?'':'; charset=utf-8'),'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Permissions-Policy':'camera=(), microphone=(), geolocation=()','Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org"};
+  if(path==='/app/sw.js')headers['Service-Worker-Allowed']='/app/';res.writeHead(200,headers);res.end(data);return true;
+}

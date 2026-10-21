@@ -1,0 +1,3 @@
+Accessibility · 2026-10-19.1
+
+The Mini App uses semantic forms, explicit labels, image alternatives, keyboard controls, visible focus and reduced-motion support. Desktop controls have accessible names, keyboard navigation and focus indicators. Default text palettes target at least 4.5:1 contrast for normal text; user colors are adjusted when necessary. RGB sliders/numeric fields are available alongside the color plane. We have performed automated and keyboard checks, not a full WCAG conformance certification or assistive-technology audit. Send barriers to the operator's public contact or report them through support.

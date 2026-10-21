@@ -1,0 +1,43 @@
+# Local credentials and private configuration
+.env
+.env.*
+!.env.example
+.bot-state.json
+*.illusionkey
+*.key
+*.pem
+*.p12
+*.pfx
+cloudflare/.dev.vars
+
+# Local databases, profiles, and backups
+data/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.dat
+*.bak
+
+# Build output, downloaded releases, QA captures, and runtime state
+build/
+dist/
+artifacts/
+compliance/
+tools/happ-illusion-routing.json
+HAPP-CLOUDFLARE.md
+*.log
+*.user
+*.tmp
+
+# Tool and package caches
+node_modules/
+.wrangler/
+android/.gradle/
+android/local.properties
+android/app/build/
+tools/*.exe
+
+# User-specific OS metadata
+Thumbs.db
+Desktop.ini
