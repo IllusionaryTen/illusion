@@ -1,0 +1,118 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Illusion" Width="1240" Height="820" MinWidth="1000" MinHeight="640" WindowStartupLocation="CenterScreen" Background="{DynamicResource AppBackground}" FontFamily="Segoe UI" Foreground="#F1F5FF" UseLayoutRounding="True" SnapsToDevicePixels="True">
+  <Window.Resources>
+    <SolidColorBrush x:Key="Accent" Color="#467AFF"/>
+    <SolidColorBrush x:Key="Panel" Color="#101622"/>
+    <Style TargetType="TextBox">
+      <Setter Property="Background" Value="{DynamicResource ControlBackground}"/><Setter Property="Foreground" Value="#F1F5FF"/><Setter Property="BorderBrush" Value="#263348"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="12,10"/><Setter Property="FontSize" Value="14"/><Setter Property="CaretBrush" Value="White"/>
+    </Style>
+    <Style TargetType="PasswordBox">
+      <Setter Property="Background" Value="{DynamicResource ControlBackground}"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#263348"/><Setter Property="Padding" Value="12,10"/><Setter Property="FontSize" Value="14"/>
+    </Style>
+    <Style TargetType="Button">
+      <Setter Property="Background" Value="{DynamicResource ControlBackground}"/><Setter Property="Foreground" Value="#EFF4FF"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="14,10"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="13"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="#B9D6FF"/><Setter TargetName="Surface" Property="BorderThickness" Value="2"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.8"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="ListBox">
+      <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Foreground" Value="White"/><Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+    </Style>
+    <Style TargetType="ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,3"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Row" CornerRadius="9" Background="Transparent" Padding="12"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="#1C2C49"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="Background" Value="#182236"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
+  </Window.Resources>
+  <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="280"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Border Background="{DynamicResource AppBackground}" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,0,1,0">
+      <DockPanel Margin="10,20,10,16">
+        <StackPanel DockPanel.Dock="Top">
+          <TextBlock Text="◈" Foreground="{DynamicResource Accent}" FontSize="38" HorizontalAlignment="Center" Margin="0,0,0,28"/>
+          <Button x:Name="ChatsButton" Content="☷" FontSize="25" ToolTip="Conversations" Background="#1C2C49" Margin="0,0,0,12"/>
+          <Button x:Name="SavedButton" Content="◇" FontSize="26" ToolTip="Saved messages" Background="Transparent"/>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
+          <Button x:Name="SettingsButton" Content="⚙" FontSize="22" ToolTip="Customize Illusion" Background="Transparent" Margin="0,0,0,12"/>
+          <Button x:Name="AvatarButton" ToolTip="Edit my profile" AutomationProperties.Name="Edit my profile" Padding="0" Background="Transparent" HorizontalAlignment="Center"><Border Background="#22395D" CornerRadius="18" Width="36" Height="36"><TextBlock x:Name="Avatar" Text="I" VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Bold"/></Border></Button>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+    <Border Grid.Column="1" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,0,1,0">
+      <DockPanel Margin="20,26,20,20">
+        <StackPanel DockPanel.Dock="Top">
+          <Grid><TextBlock Text="Illusion" FontSize="26" FontWeight="SemiBold"/><TextBlock Text="0.8.3" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}" FontFamily="Consolas"/></Grid>
+          <TextBlock Text="PRIVATE. CUSTOMIZABLE. FREE." FontSize="9" Foreground="{DynamicResource MutedText}" Margin="0,7,0,26"/>
+          <TextBlock Text="CONVERSATIONS" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource MutedText}" Margin="0,0,0,14"/>
+          <TextBox x:Name="SearchInput" ToolTip="Exact username, then Enter" Margin="0,0,0,8"/>
+          <TextBlock Text="Filter chats · Enter to find an @username" Foreground="#7185A4" FontSize="10" Margin="2,0,0,10"/>
+          <Button x:Name="FindButton" Content="+  Start a conversation" HorizontalAlignment="Stretch" Margin="0,0,0,16"/>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,20,0,0">
+          <Border Background="#13243B" CornerRadius="9" Padding="12"><StackPanel><TextBlock Text="YOUR OWN LITTLE UNIVERSE" Foreground="#8CB3FF" FontSize="9" FontWeight="Bold"/><TextBlock Text="No feeds. No ads. Just conversation." TextWrapping="Wrap" FontSize="11" Foreground="#A0AEC3" Margin="0,7,0,0"/></StackPanel></Border>
+          <TextBlock x:Name="IdentityLabel" Text="Not signed in" Foreground="{DynamicResource MutedText}" FontSize="11" Margin="0,14,0,0"/>
+          <TextBlock x:Name="ConnectionLabel" Text="○  Not connected" Foreground="{DynamicResource MutedText}" FontSize="10" Margin="0,7,0,0"/>
+        </StackPanel>
+        <ListBox x:Name="ChatList"/>
+      </DockPanel>
+    </Border>
+    <Grid Grid.Column="2">
+      <Grid.RowDefinitions><RowDefinition Height="85"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Border BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,0,0,1" Padding="28,18">
+        <Grid><StackPanel Margin="0,0,260,0"><TextBlock x:Name="ChatTitle" Text="Your space, uninterrupted." FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="ChatSubtitle" Text="A quieter corner of the internet." Foreground="{DynamicResource MutedText}" FontSize="12" Margin="0,5,0,0"/></StackPanel><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"><Button x:Name="ChatOptionsButton" Content="Profile / Timer" ToolTip="Profile, disappearing messages, block and report" Margin="0,0,9,0"/><Button x:Name="SearchChatButton" Content="⌕" FontSize="22" ToolTip="Search this conversation (Ctrl+F)" Margin="0,0,9,0"/><Button x:Name="VerifyButton" Content="◇  Verify keys" Visibility="Collapsed"/></StackPanel></Grid>
+      </Border>
+      <DockPanel Grid.Row="1">
+        <Border x:Name="NoticePanel" DockPanel.Dock="Top" Background="#17253B" Padding="14,10" Visibility="Collapsed"><Grid><TextBlock x:Name="NoticeText" TextWrapping="Wrap" Foreground="#B7CBEA" FontSize="12" Margin="0,0,100,0" VerticalAlignment="Center"/><Button x:Name="RetryButton" Content="Reconnect" HorizontalAlignment="Right" Padding="10,6"/></Grid></Border>
+        <Border x:Name="ChatSearchBar" DockPanel.Dock="Top" Background="#101A29" Padding="20,10" Visibility="Collapsed"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="ChatSearchInput" ToolTip="Search messages loaded in this conversation"/><StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0"><TextBlock x:Name="SearchCount" Foreground="#8FA3C4" VerticalAlignment="Center" Margin="0,0,12,0"/><Button x:Name="PreviousMatchButton" Content="↑" Padding="10,6" Margin="0,0,4,0"/><Button x:Name="NextMatchButton" Content="↓" Padding="10,6" Margin="0,0,4,0"/><Button x:Name="CloseSearchButton" Content="×" Padding="10,6"/></StackPanel></Grid></Border>
+      <Grid>
+        <Canvas x:Name="ChatWallpaper" IsHitTestVisible="False" ClipToBounds="True"/>
+        <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Canvas x:Name="AuraCanvas" Width="300" Height="230"/>
+          <TextBlock Text="Make a connection." FontSize="28" FontWeight="Light" HorizontalAlignment="Center" Margin="0,10,0,12"/>
+          <TextBlock Text="Find someone by their username.&#10;A small hello can open a whole new world." Foreground="{DynamicResource MutedText}" FontSize="14" TextAlignment="Center" LineHeight="23"/>
+          <TextBlock Text="[ dream state / connected minds ]" FontFamily="Consolas" Foreground="#3D587E" FontSize="11" HorizontalAlignment="Center" Margin="0,28,0,0"/>
+        </StackPanel>
+        <ScrollViewer x:Name="MessageScroll" VerticalScrollBarVisibility="Auto" Visibility="Collapsed"><StackPanel x:Name="MessageList" Margin="28,20"><Button x:Name="OlderButton" Content="Load earlier messages" HorizontalAlignment="Center" Visibility="Collapsed" Margin="0,0,0,18"/></StackPanel></ScrollViewer>
+        <Button x:Name="NewMessagesButton" Content="↓  New messages" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,28,18" Background="#254570"/>
+      </Grid>
+      </DockPanel>
+      <Border Grid.Row="2" x:Name="ComposerPanel" Padding="25,12,25,16" Visibility="Collapsed">
+        <StackPanel>
+          <TextBlock Text="Photos and videos are sent without end-to-end encryption. The relay operator can access them." Foreground="#FFD28A" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/><Border x:Name="AttachmentBar" Background="#15243D" Padding="12,8" Margin="0,0,0,8" Visibility="Collapsed"><Grid><TextBlock x:Name="AttachmentLabel" Foreground="#FFD28A" Margin="0,0,35,0"/><Button x:Name="ClearAttachmentButton" Content="×" Padding="7,0" HorizontalAlignment="Right"/></Grid></Border><StackPanel Orientation="Horizontal" Margin="0,0,0,8"><Button x:Name="AttachButton" Content="+ Photo / Video" Padding="10,5"/><CheckBox x:Name="ViewOnceCheck" Content="View once" Foreground="#A6C7FF" VerticalAlignment="Center" Margin="16,0,0,0" ToolTip="Recipient can open once; screenshots remain possible"/></StackPanel><Border x:Name="ReplyBar" Background="#15243D" CornerRadius="7" Padding="12,9" Margin="0,0,0,9" Visibility="Collapsed"><Grid><TextBlock x:Name="ReplyText" Foreground="#A6C7FF" TextTrimming="CharacterEllipsis" Margin="0,0,30,0"/><Button x:Name="CancelReplyButton" Content="×" Padding="7,0" HorizontalAlignment="Right" Background="Transparent"/></Grid></Border>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Button x:Name="EmojiButton" Content="☺" FontSize="22" Background="{DynamicResource ControlBackground}" Margin="0,0,8,0" ToolTip="Insert an emoji"/><TextBox x:Name="Composer" Grid.Column="1" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48" MaxHeight="130" VerticalScrollBarVisibility="Auto" ToolTip="Enter to send · Shift+Enter for a new line"/><TextBlock Grid.Column="1" Text="Write a message…" Foreground="#7185A4" Margin="14,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=Composer}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock><Button x:Name="SendButton" Grid.Column="2" Content="Send  ↗" Background="{DynamicResource Accent}" Margin="10,0,0,0" MinWidth="86"/></Grid>
+          <Grid Margin="2,8,2,0"><TextBlock x:Name="ComposerHint" Text="◇  Message text encrypted · media uploaded unencrypted" Foreground="#FFD28A" FontSize="10"/><TextBlock x:Name="CharacterCount" Text="0 / 2000" HorizontalAlignment="Right" Foreground="#637B9F" FontSize="10"/></Grid>
+        </StackPanel>
+      </Border>
+      <Border Grid.Row="3" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,1,0,0" Padding="25,10"><TextBlock x:Name="StatusLabel" Text="Local prototype · Connect to your server to begin" FontSize="11" Foreground="{DynamicResource MutedText}" TextWrapping="Wrap"/></Border>
+    </Grid>
+    <Border x:Name="AuthOverlay" Grid.Column="1" Grid.ColumnSpan="2" Background="{DynamicResource AppBackground}">
+      <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="460"/></Grid.ColumnDefinitions>
+        <StackPanel VerticalAlignment="Center" Margin="45">
+          <TextBlock Text="◈" FontSize="80" Foreground="{DynamicResource Accent}"/>
+          <TextBlock Text="Illusion" FontSize="52" FontWeight="Light" Margin="0,15,0,12"/>
+          <TextBlock Text="Private.&#10;Customizable.&#10;Free." FontSize="29" LineHeight="43" Foreground="#B3C7E8"/>
+          <TextBlock Text="A connection beyond the noise." Foreground="{DynamicResource MutedText}" FontSize="13" TextWrapping="Wrap" Margin="0,24,0,0"/>
+          <TextBlock Text="ドリームステート / DREAM STATE" Foreground="#45618C" FontFamily="Consolas" FontSize="10" Margin="0,32,0,0"/>
+        </StackPanel>
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" VerticalContentAlignment="Center">
+        <Border Background="{DynamicResource PanelBackground}" CornerRadius="16" Padding="30" Margin="0,24,30,24" VerticalAlignment="Center">
+          <StackPanel>
+            <TextBlock x:Name="AuthHeading" Text="Welcome back." FontSize="26" FontWeight="SemiBold"/>
+            <TextBlock Text="Your people. Your space." Foreground="{DynamicResource MutedText}" Margin="0,7,0,18"/>
+            <Border Background="#17263E" CornerRadius="8" Padding="12" Margin="0,0,0,10"><StackPanel><TextBlock x:Name="NetworkName" Text="Illusion" FontWeight="SemiBold" Foreground="#B6D0FF"/><TextBlock x:Name="NetworkDescription" TextWrapping="Wrap" FontSize="11" Foreground="#8DA5CA" Margin="0,6,0,0"/></StackPanel></Border>
+            <Button x:Name="ImportConnectionButton" Content="Import connection invitation" Margin="0,0,0,10"/>
+            <Expander x:Name="ConnectionAdvanced" Header="Advanced connection settings" Foreground="#91A2BC" FontSize="11" Margin="0,0,0,14"><StackPanel Margin="0,10,0,0"><TextBlock Text="SERVER ADDRESS" FontSize="10" Foreground="#91A2BC" Margin="0,0,0,6"/><TextBox x:Name="ServerInput" Text="http://127.0.0.1:3789"/><CheckBox x:Name="LanConsent" Content="Allow HTTP on a trusted local network" Foreground="#91A2BC" FontSize="11" Margin="0,8,0,0"/></StackPanel></Expander>
+            <TextBlock Text="USERNAME · 2–24 CHARACTERS" FontSize="10" Foreground="#91A2BC" Margin="0,0,0,6"/><TextBox x:Name="UsernameInput" MaxLength="24" ToolTip="Latin letters (A–Z, a–z), numbers (0–9), _ and -"/>
+            <TextBlock Text="Latin letters, numbers, _ and -" FontSize="10" Foreground="#7185A4" Margin="0,5,0,0"/>
+            <TextBlock Text="PASSWORD · AT LEAST 10 CHARACTERS" FontSize="10" Foreground="#91A2BC" Margin="0,12,0,6"/><PasswordBox x:Name="PasswordInput" MaxLength="128"/>
+            <StackPanel x:Name="RegisterFields" Visibility="Collapsed"><TextBlock Text="AGE RANGE · ADULT PREVIEW" Foreground="#B7CBEA" Margin="0,12,0,6"/><ComboBox x:Name="AgeBand" SelectedIndex="0"><ComboBoxItem Content="Choose your age range"/><ComboBoxItem Content="Under 13"/><ComboBoxItem Content="13–15"/><ComboBoxItem Content="16–17"/><ComboBoxItem Content="18 or older"/></ComboBox><CheckBox x:Name="AcceptTerms" Content="I agree to the Terms of service" Foreground="#C7D8F2" Margin="0,12,0,8"/><CheckBox x:Name="AcknowledgePrivacy" Content="I have read the Privacy policy" Foreground="#C7D8F2" Margin="0,0,0,8"/><TextBlock Text="DISPLAY NAME" FontSize="10" Foreground="#91A2BC" Margin="0,12,0,6"/><TextBox x:Name="DisplayNameInput" MaxLength="40"/><TextBlock Text="INVITATION CODE (IF REQUIRED)" FontSize="10" Foreground="#91A2BC" Margin="0,12,0,6"/><PasswordBox x:Name="InviteInput"/></StackPanel>
+            <TextBlock x:Name="AuthError" Foreground="#FF9DA7" TextWrapping="Wrap" FontSize="12" Margin="0,12,0,8"/>
+            <StackPanel Orientation="Horizontal"><Button x:Name="TermsLink" Content="Terms" Background="Transparent" Padding="6"/><Button x:Name="PrivacyLink" Content="Privacy" Background="Transparent" Padding="6"/></StackPanel><Button x:Name="AuthButton" Content="Enter Illusion  →" Background="{DynamicResource Accent}" Padding="15,13"/>
+            <Button x:Name="SwitchAuthButton" Content="New here? Create an account" Background="Transparent" Margin="0,7,0,0"/>
+            <Button x:Name="RecoverButton" Content="Forgot password? Connect Gmail for recovery" Background="Transparent" Foreground="#91A2BC" Padding="5" FontSize="11"/>
+            <Button x:Name="ImportKeyButton" Content="Restore an encryption key" Background="Transparent" Foreground="#91A2BC" Padding="5" FontSize="11"/>
+          </StackPanel>
+        </Border>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

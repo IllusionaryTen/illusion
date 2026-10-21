@@ -1,0 +1,27 @@
+{
+  "name": "illusion-messenger",
+  "version": "0.8.3",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.13.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "bot": "node --env-file-if-exists=.env bot/index.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
+    "build:android": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android.ps1",
+    "test:desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1 -TestBuild && node scripts/test-desktop.mjs",
+    "cloud:prepare": "node scripts/prepare-cloudflare.mjs",
+    "cloud:dev": "wrangler dev --config cloudflare/wrangler.jsonc --local",
+    "cloud:build": "node scripts/prepare-cloudflare.mjs && wrangler deploy --config cloudflare/wrangler.jsonc --dry-run --outdir build/cloudflare-bundle",
+    "cloud:test": "node scripts/test-cloudflare.mjs",
+    "cloud:deploy": "node scripts/deploy-cloudflare.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261012.1-beta",
+    "wrangler": "4.151.1"
+  }
+}

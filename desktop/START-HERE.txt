@@ -1,0 +1,54 @@
+ILLUSION 0.8.3 - WINDOWS PREVIEW
+Private. Customizable. Free.
+
+Open Illusion-0.8.3.exe on Windows 10/11 with .NET Framework 4.8.
+A configured download includes its public connection. Existing installs keep
+their connection; use your host bot's /connect invitation if needed.
+The Cloudflare-hosted connection works while the owner's laptop is off.
+Availability depends on Cloudflare, network access and free-plan quotas.
+Older laptop-hosted connections still require their host to stay online.
+
+The shared UI catalog includes 22 languages, including Greek and Vietnamese.
+Illusion is the product name and stays unchanged across languages.
+
+Usernames: 2-24 Latin letters, numbers, _ and -. Case-insensitive.
+Passwords: at least 10 characters. Back up your key in Settings.
+Your account password cannot recover chats on another Windows profile.
+If you still have this profile's device key, use Forgot password to reset it.
+Registration requires separate Terms/Privacy acknowledgements and age 18+.
+This adult-only preview has no parental-verification workflow.
+
+Find an exact username. Enter sends; Shift+Enter adds a line.
+Ctrl+K finds someone. Ctrl+F searches loaded messages locally.
+Right-click a normal message to copy/reply/report it.
+
++ Photo / Video: attach pictures or short MP4s up to 4 MB. These uploads are
+not end-to-end encrypted; the relay operator can access their contents.
+View once: recipient opens once; closing removes this app's opened copy.
+Screenshots, recordings and modified clients cannot be prevented.
+Profile / Timer: profiles, reports, blocking and disappearing messages.
+Auto-delete defaults to OFF in every new chat; timers affect new messages.
+Click your own profile picture to edit your picture, banner, bio, font, colors and effect.
+Your profile is public to signed-in people who find your username.
+Settings customizes your chat font/colors/spacing/artwork/receipts.
+Click your bottom-left picture for the live profile preview/editor.
+RGB controls include a color plane, channel sliders/numbers and hex input.
+Themes change backgrounds/panels/controls; 28 system font names are offered.
+Settings -> Privacy and data includes policies and deletion requests.
+
+The Telegram Mini App is served at the relay's /app/ URL. It needs a working
+public HTTPS connection before the bot's Open Illusion button can work.
+It is a web app inside Telegram and trusts code served by its host.
+Restore your .illusionkey to use an existing account in that browser.
+
+Report evidence sharing is optional and unchecked by default. Moderators
+can read submitted evidence; there is no private chat browser.
+
+Message text is encrypted on your device. New photo/video attachments are not
+end-to-end encrypted; avoid sending sensitive media. The relay sees accounts,
+contact pairs, timestamps and sizes. Compare Verify keys through
+another channel. This custom protocol has no forward secrecy or independent
+audit. Video playback briefly uses a local decrypted MP4, deleted on close.
+
+Portable, unsigned, no auto-updater. Use a trusted host and verify SHA-256.
+Not affiliated with Sol's RNG or Telegram.

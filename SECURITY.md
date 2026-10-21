@@ -1,0 +1,87 @@
+# Illusion 0.6.1 preview security boundaries
+
+Illusion is an early Cloudflare-hosted or local messenger, not an independently audited security product. This document describes the implemented design and its limits.
+
+## Message envelope, version 1
+
+Each account creates an RSA-3072 encryption/signing key on the desktop. The server's immutable account key directory contains public keys only. RSA public keys use the .NET `<RSAKeyValue>` public XML representation. An exact public-key fingerprint is SHA-256 over its UTF-8 XML string. First contact pins the fingerprint locally; subsequent changes for the same account ID on the same server are rejected. Compare both users' fingerprints using a separate trusted channel. First-use pinning alone does not protect a first conversation against a malicious key directory.
+
+For each message, the sender generates 64 random bytes and a 16-byte IV using the operating system cryptographic RNG. The first 32 bytes are an AES-256-CBC key, with PKCS#7 padding. The remaining 32 bytes key an HMAC-SHA-256 over `IV || ciphertext`. The full 64 bytes are separately wrapped to sender and recipient using RSA-OAEP with SHA-1, as supported by the Windows .NET Framework cryptographic provider. OAEP's SHA-1 choice is for compatibility with this provider. It is not a password hash or message signature algorithm.
+
+The sender signs the following UTF-8, newline-separated fields using RSA PKCS#1 v1.5 with SHA-256:
+
+```
+illusion:v1
+sender account ID
+recipient account ID
+client message UUID
+base64 IV
+base64 ciphertext
+base64 HMAC
+base64 wrapped material for sender
+base64 wrapped material for recipient
+```
+
+The JSON envelope contains `v`, `iv`, `ciphertext`, `mac`, `keys` indexed by the account IDs, and `signature`. Self-saved messages use the same account ID in both positions. The relay verifies signatures and sizes before storing a message. Readers verify the sender signature before unwrapping, check the HMAC before AES decryption, and display a failure message for invalid envelopes. Retries reuse the client UUID and exact envelope; conflicting reuse is rejected. The relay's database ID and timestamp are not signed and remain relay-controlled metadata.
+
+This is an application-specific format. It has no ratchet, forward secrecy, post-compromise recovery, or secure group protocol. The same account RSA key signs and unwraps messages. Compromising that private key exposes retained historical envelopes for that account. Future production work should adopt a reviewed messaging protocol/library and receive an independent review before claiming production security.
+
+## Keys, sessions, and transport
+
+Replies use the same signed/encrypted envelope as text messages. Inside that envelope, a versioned JSON content object contains the message text and a short reply quote. Older plain-text envelopes remain readable. Reply quotes are sender-authored quotations; the app does not cryptographically prove that a quote matches an earlier message.
+
+Private keys and persistent session tokens on Windows use DPAPI `CurrentUser`. This is a Windows-profile boundary, not protection from malware running as that user. The export format uses PBKDF2-HMAC-SHA-256 with 600,000 iterations for version-2 backups (version-1 backups still restore with 250,000 iterations) and a random 16-byte salt to derive 64 bytes, then AES-256-CBC and HMAC-SHA-256. The exported file contains a cleartext username and server address, plus the salt, IV, encrypted key, and MAC. Strong backup passwords matter. Private keys are never uploaded as part of sign-in or messaging.
+
+The server stores a unique random salt and a versioned scrypt-derived 64-byte password hash (N=32768, r=8, p=3 for new hashes; original hashes are upgraded after a successful login), and SHA-256 hashes of random 256-bit session tokens. Sessions expire after 30 days and can be revoked with logout. The app requires HTTPS for internet server addresses and normal certificate validation. HTTP is allowed on loopback; private IPv4 LAN addresses require explicit local-network consent. That option does not protect passwords or session tokens from network observers. Do not use it on untrusted networks.
+
+The local workspace is separately protected with DPAPI for the current Windows user and scoped to a server/account pair. It contains drafts, reply drafts, contact metadata, pinned contacts, encrypted outbound envelopes, the last conversation, and up to 400 cached recent envelopes across conversations. Message previews and search results are decrypted in memory. A remembered session can open the protected workspace during an outage; once the server is reachable, token validity is checked again. Offline access to a local cache is not proof that a server session remains valid. Signing out removes the remembered token but deliberately keeps keys and the protected workspace for future sign-in.
+
+The outbox saves a signed envelope before clearing the composer and keeps its client ID across retries and restarts. The relay's unique sender/client-ID constraint prevents duplicate storage. If a matching signed envelope returns in authenticated history, the app can reconcile a lost send acknowledgement. Stopping retries affects future delivery attempts, not a message that the relay has already accepted. Failed or queued messages remain on the device until delivered or explicitly removed from the retry queue. Neither the local cache nor outbox replaces a key backup.
+
+Live change cursors are authenticated and scoped to each account; messages wake only their participants. Hosted clients use hibernating authenticated WebSockets; local clients use bounded long-polls. Change cursors reset on server restart, prompting a refresh. Read receipts and unread markers use separate tables. Disabling shared receipts prevents further shared progress while still clearing the reader's unread counter. The relay can still observe read cursors and timing. Receipt IDs, delivery status, and relay timestamps are metadata and are not sender-authenticated cryptographic delivery proofs.
+
+The server binds to loopback by default, caps request bodies, bounds connection/request counts and timeouts, checks authenticated conversation participants, uses parameterized SQL, and limits authentication, lookups, and sending in memory. These are preview controls, not a distributed abuse prevention system. IP throttling uses the direct TCP peer; if proxied, all clients may share that throttle. The optional public launcher uses a Cloudflare quick tunnel, verifies external health before distributing its URL, and never exposes local files. Cloudflare terminates TLS and can see login/API metadata; chat bodies remain encrypted by the clients. Local tunnel hosting stops with the laptop. Cloud hosting keeps working with the laptop off, subject to provider/free-tier limits. Account deletion uses authenticated requests and manual fulfillment. Password reset, MFA, multi-device key synchronization, key rotation and automatic updates remain unimplemented.
+
+## Version 2 policies, media and deletion
+
+Version 2 envelopes retain the version 1 cryptography, replacing the signature prefix with `illusion:v2` and appending two signed fields: `1`/`0` for view-once and a decimal TTL in seconds. Allowed TTLs are 0 (default/off), 60, 3600, 86400, 604800 and 2592000. Both participants can change a shared conversation timer, applying only to future sends. The relay requires the signed policy to match the current timer; an obsolete queued send is rejected explicitly. The relay computes expiry from acceptance time. Relay timestamps and absolute deadlines remain relay-controlled metadata. The new desktop uses version 2 for new messages; all participants should upgrade.
+
+Text, captions, reply quotes and bounded media bytes are encrypted together inside `illusion.message.v2`. Files are limited to 4 MB, encrypted bodies to 5.6 MB, HTTP requests to 8 MB and history response envelopes to about 10 MB. Photos are decoded and re-encoded locally as JPEG; videos retain their bytes/metadata. Incoming media is untrusted and Windows decoders/codecs remain part of the attack surface. MP4 playback needs a short-lived plaintext file under the current user's local profile; it is deleted on closing the viewer/signing out and stale files are cleaned at next startup. A crash, filesystem recovery or malware can still recover such files. Text/photos are displayed in memory. Private content viewers close when their deadline passes.
+
+History and chat previews withhold view-once ciphertext and wrapped keys from both participants. Only the recipient can use the authenticated open endpoint; its synchronous read-and-erase permits at most one successful open response, including competing opens. The sender's durable outbox retains its encrypted envelope until acknowledged/reconciled; this is erased from the outbox after successful delivery. There is no atomic guarantee that an open response reaches or displays on the recipient's device: a failed response can consume the message. The open viewer keeps content in memory until closed, and can deliberately report the selected text while open. Modified clients, screenshots, recordings and copies made by participants are outside this guarantee. The relay operator can retain encrypted packets/backups; these controls do not remove an operator's ability to copy ciphertext.
+
+Expiry clears encrypted bodies/wrapped keys from active relay records and removes expired content/decryption results/reply quotes from this app's workspace and visible UI while running. Tombstones retain message identifiers, participants, policy, timing, removal state and an envelope hash for idempotency/report validation. SQLite secure deletion is enabled, but WAL files, storage snapshots, backups and disk recovery preclude a forensic erasure promise. The protected offline cache is filtered before rendering expired history. It holds at most 400 recent envelopes / 8 MB; the protected outbox is bounded to 100 entries / 8 MB. Public contact pictures/banners and full sidebar envelopes are omitted from persisted contact metadata. Closing the app cannot remove copies already made outside it, and clock manipulation can affect offline expiry.
+
+## Profiles, reports and blocking
+
+Profiles are public to authenticated username lookups and chat participants, not end-to-end encrypted. Allowed display name/bio/font/effect/color/image fields are bounded; remote image URLs and SVG/scripts are rejected. Uploaded profile images are re-encoded by the desktop and bounded to 256 KB each. Profile styling does not control another client's preferred chat text formatting.
+
+Reports require an explicit submission. A profile report includes the public snapshot. A message report requires that the reporter is its recipient and the target is its sender, and contains no message plaintext by default. Opt-in evidence sends only that selected envelope and its unwrapped 64-byte per-message material. The server binds it to the originally accepted envelope hash, validates the HMAC, decrypts the selection, and retains only its text/caption (up to 2,000 characters), not attachment bytes or account private keys. This deliberately makes the selected evidence readable to the host. Reports also include reporter/target IDs, reason, note, timestamp and message ID. Other messages use independent per-message material. Reports are capped at 10 per account per hour; evidence snapshots may remain after original message expiry. The local moderator CLI can review/resolve/dismiss reports and ban/unban accounts. Hosted report review requires a separate administration bearer secret; ordinary user tokens cannot access it. There is no arbitrary private-chat browsing endpoint. Blocking denies future sends in either direction; it does not recall history.
+
+## Telegram boundary
+
+Connection profiles contain only a format/version, public network name, and relay origin. Builds embed that public profile; they never embed `.env`, bot tokens, invitation registration secrets, user passwords, private keys, or session tokens. Imported profiles reject unknown fields, credentials in URLs, query strings, fragments, non-root paths, and insecure internet HTTP. Import requires an explicit destination confirmation and sign-out before changing networks. Existing remembered credentials are removed when a different network is selected. Profile checksums detect changes within a release bundle; a connection invitation is not a publisher signature or proof that the destination is trustworthy. Only import one from a host you trust.
+
+The bot token stays in local `.env` and a Cloudflare Worker secret, never the desktop binary or Mini App. The bot distributes releases/invitations and configures a public HTTPS Mini App menu/launch button when available. It does not carry chats or encryption keys. A Mini App is web content opened inside Telegram, requiring a reachable host. The bot preserves webhook ownership, offsets and cached download IDs; a crash can replay a delivery. Downloads remain unsigned and lack an auto-updater.
+
+## Web client, notices and deletion
+
+The Mini App loads only same-origin JS/CSS, no SDK/analytics/remote fonts/Telegram identity import. CSP restricts scripts/network; images use bounded data/blob URLs, media object URLs are revoked on close. Web Crypto matches Windows encryption/signatures/backup format. Non-extractable RSA decryption/signing keys are stored in origin-scoped IndexedDB. Exportable JWK material exists during creation/restoration for voluntary protected backup and is omitted from stored objects. Reloading/signing out ends that export window. Sessions/decrypted web messages are memory-only. Appearance, pins, keys and notice preferences use necessary local storage. Webviews may clear storage; new tunnel origins have separate storage.
+
+**Non-extractable keys do not protect against malicious served JavaScript.** A compromised/malicious host can replace code and use keys/decrypted content available to that code. CSP/encryption do not defend against their trusted code source. Telegram controls its webview. This unaudited Mini App must not be described as operator-proof secrecy.
+
+Terms agreement/Privacy acknowledgement and a neutral adult-only age choice are verified and recorded atomically with registration, with version/time and no DOB/ID. Existing accounts are not retroactively age-verified. Child-directed design/marketing and parental-consent obligations need actual operator/jurisdiction review; age self-declaration is not certification.
+
+Deletion requests require password/exact username, enter an idempotent queue, and need the local CLI's matching ID/name to fulfill. Active account/profile/session/message/consent/report rows are removed transactionally; an unlinked completed request reference remains up to 90 days. Restart after fulfillment closes in-flight cursors. Device keys, other users' copies, WAL/disk remnants and independent backups are outside active-row deletion. Policy/operator details stay visibly unfinished until configured; a checklist is not legal certification.
+
+## Verification
+
+The automated suites cover real relay operations and native Windows encryption/UI, including cross-runtime signatures, two-account decryption, third-party isolation, tampering, key backups, DPAPI, notifications, receipts, drafts, search, replies, offline restart, outbox recovery/lost acknowledgement, profiles/images, encrypted photo rendering, signed policies, competing opens, view-once cache exclusion, expiry, selected report evidence and blocking/bans. Telegram uploads are simulated. A public health check alone does not verify full internet media/playback delivery or production security. Independent cryptographic review and penetration testing remain outstanding.
+
+## 0.6.1 review and additional controls
+
+Web sign-out clears messages, contacts, drafts and pending UI work and attempts server-side token revocation. Windows and web clients reject stale session responses. Sessions are capped at 10 active tokens per account. Hosted account abuse limits persist across object hibernation; incoming password work and upload bodies have admission bounds and deadlines. Privileged request secrets are checked at the outer Worker before forwarding. These controls reduce specific risks but do not amount to an independent security audit.
+
+History pages are selected using metadata before hydrating ciphertext (8 MB page budget); sidebar responses have a 4 MB budget and avoid loading large bodies. Expiry works in bounded batches and coalesces notifications. A conservative 256 MiB accounting budget includes bodies, profiles, reports and metadata; SQLite/index overhead and platform quotas remain separate. Public signup is limited to 1000 active accounts and 10 registrations per IP per day. Quota limits can deny legitimate use under attack; this preview is not a distributed DDoS defense.
+
+Images are checked for PNG/JPEG dimensions before decoding: at most 8192 per side and 16 megapixels. Native decoders resize without upscaling skinny images. Native responses, client message windows, decoded text, reply fields and media sizes are bounded. Remote profile fonts use only the shared system-font list. Active XML constructs are rejected before native RSA import; this is defense in depth, not evidence that an XXE/RCE vulnerability was exploited. Codec/OS zero-days were not assessed.
