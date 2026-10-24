@@ -72,6 +72,8 @@ The Mini App loads only same-origin JS/CSS, no SDK/analytics/remote fonts/Telegr
 
 Terms agreement/Privacy acknowledgement and a neutral adult-only age choice are verified and recorded atomically with registration, with version/time and no DOB/ID. Existing accounts are not retroactively age-verified. Child-directed design/marketing and parental-consent obligations need actual operator/jurisdiction review; age self-declaration is not certification.
 
+**Update notices are host broadcasts, not private chats.** The deploy script publishes a notice automatically whenever the hosted version changes (or the host publishes one manually via the admin endpoints). Every account receives it in the chat list as an "Illusion updates" service conversation with a read-only viewer. Notice text is stored and served in plaintext by the relay, is labelled "not end-to-end encrypted" in the client, carries no account data, and only the host can publish it. Read markers for notices are local device preferences.
+
 Deletion requests require password/exact username, enter an idempotent queue, and need the local CLI's matching ID/name to fulfill. Active account/profile/session/message/consent/report rows are removed transactionally; an unlinked completed request reference remains up to 90 days. Restart after fulfillment closes in-flight cursors. Device keys, other users' copies, WAL/disk remnants and independent backups are outside active-row deletion. Policy/operator details stay visibly unfinished until configured; a checklist is not legal certification.
 
 ## Verification

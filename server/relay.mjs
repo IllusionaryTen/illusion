@@ -39,7 +39,8 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     CREATE INDEX IF NOT EXISTS message_pair ON messages(senderId, recipientId, id);
     CREATE INDEX IF NOT EXISTS message_recipient ON messages(recipientId, id);
     CREATE TABLE IF NOT EXISTS reads(userId TEXT NOT NULL, peerId TEXT NOT NULL, lastId INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(userId, peerId));
-    CREATE TABLE IF NOT EXISTS receipts(userId TEXT NOT NULL, peerId TEXT NOT NULL, lastId INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(userId, peerId));`);
+    CREATE TABLE IF NOT EXISTS receipts(userId TEXT NOT NULL, peerId TEXT NOT NULL, lastId INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(userId, peerId));
+    CREATE TABLE IF NOT EXISTS notices(id INTEGER PRIMARY KEY AUTOINCREMENT, version TEXT NOT NULL, text TEXT NOT NULL, createdAt INTEGER NOT NULL);`);
   try { db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch(e) { if (!String(e.message).includes('duplicate column')) throw e; }
   try { db.exec('ALTER TABLE users ADD COLUMN emailVerifiedAt INTEGER'); } catch(e) { if (!String(e.message).includes('duplicate column')) throw e; }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users(email) WHERE email IS NOT NULL; CREATE TABLE IF NOT EXISTS email_codes(id TEXT PRIMARY KEY,userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,purpose TEXT NOT NULL,email TEXT NOT NULL,codeHash TEXT NOT NULL,expiresAt INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,createdAt INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS email_codes_lookup ON email_codes(userId,purpose,expiresAt); CREATE TABLE IF NOT EXISTS account_recovery_challenges(id TEXT PRIMARY KEY,username TEXT NOT NULL,userId TEXT,nonce TEXT NOT NULL,expiresAt INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS recovery_challenges_expiry ON account_recovery_challenges(expiresAt);');
@@ -56,6 +57,16 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     revisions.set(user, (revisions.get(user) || 0) + 1);
     try { onNotify(user, cursorFor(user)); } catch { console.error('Live notification failed.'); }
     for (const finish of [...(watchers.get(user) || [])]) finish(true);
+  }
+  function publishNotice(version, text) {
+    if (!/^\d+\.\d+\.\d+$/.test(version)) fail(400, 'Use a release version like 0.8.4.');
+    if (typeof text !== 'string' || !text.trim() || text.length > 500) fail(400, 'Notice text must be 1–500 characters.');
+    const at = now();
+    db.prepare('INSERT INTO notices(version,text,createdAt) VALUES(?,?,?)').run(version, text.trim(), at);
+    // Keep the service history bounded; notices are host broadcasts, not chats.
+    db.prepare('DELETE FROM notices WHERE id<=(SELECT MAX(id) FROM notices)-50');
+    for (const { userId } of db.prepare('SELECT DISTINCT userId FROM sessions WHERE expiresAt>?').all(at)) notify(userId);
+    return db.prepare('SELECT id,version,text,createdAt FROM notices WHERE createdAt=? AND version=?').get(at, version);
   }
   function waitForChange(user, cursor, res) {
     if (cursor !== cursorFor(user)) return Promise.resolve({ cursor: cursorFor(user), changed: true });
@@ -271,7 +282,7 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
         const chat={...row,profile:extra.profile(row.id),lastMessage:m},size=Buffer.byteLength(JSON.stringify(chat));
         if(bytes+size>4000000&&chats.length)break;chats.push(chat);bytes+=size;
       }
-      return {chats};
+      return {chats,notices:db.prepare('SELECT id,version,text,createdAt FROM notices ORDER BY id DESC LIMIT 20').all()};
     }
     if (req.method === 'GET' && path === '/v1/messages') {
       const peer = url.searchParams.get('peer');
@@ -349,7 +360,7 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
       }
     }
   };
-  return { db, handler, authenticate, cursorFor, maintain() { extra.sweep(); maintain(); },
+  return { db, handler, authenticate, cursorFor, publishNotice, maintain() { extra.sweep(); maintain(); },
     close() { clearInterval(cleanup);clearInterval(expiry);for(const pending of [...watchers.values()])for(const finish of [...pending])finish(false); }
   };
 }

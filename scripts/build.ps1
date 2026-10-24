@@ -42,7 +42,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Desktop compilation failed.' }
 $taskSize = (Get-Item -LiteralPath $taskExe).Length
 if ($taskSize -gt 50000000) { throw 'Release exceeds the Telegram bot upload limit.' }
 $taskHash = & $taskSha256 $taskExe
-$taskManifest = [ordered]@{name='Illusion';version=$taskVersion;file=$OutputName;bytes=$taskSize;sha256=$taskHash;notes='Adds the floating Illusion desktop notification, Favorites, unlimited local pins and message alerts. Message text stays encrypted; new photos and videos are uploaded without end-to-end encryption.'}
+$taskManifest = [ordered]@{name='Illusion';version=$taskVersion;file=$OutputName;bytes=$taskSize;sha256=$taskHash;notes='Opens Favorites and chats on phone screens correctly, and delivers host update notices to every account on each release. Message text stays encrypted; new photos and videos are uploaded without end-to-end encryption.'}
 $taskProfileRelease = Join-Path $taskRoot 'dist\Illusion-Connection.illusion'
 Copy-Item -LiteralPath $taskConnectionPath -Destination $taskProfileRelease -Force
 $taskProfile = Get-Content -LiteralPath $taskProfileRelease -Raw | ConvertFrom-Json

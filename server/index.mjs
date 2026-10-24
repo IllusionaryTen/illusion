@@ -12,7 +12,7 @@ export function createMessenger({dataDir=process.env.DATA_DIR||'./data',registra
   const relay=createRelay({db,registrationCode,now,webHandler:publicWeb,sendEmail,emailCodeKey});
   const server=cert&&key?https.createServer({cert,key},relay.handler):http.createServer(relay.handler);
   server.requestTimeout=15000;server.headersTimeout=10000;server.maxConnections=100;
-  return {server,db,async close(){relay.close();await new Promise(r=>server.close(r));db.close();}};
+  return {server,db,relay,async close(){relay.close();await new Promise(r=>server.close(r));db.close();}};
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   if (Boolean(process.env.TLS_CERT) !== Boolean(process.env.TLS_KEY)) throw new Error('Set both TLS_CERT and TLS_KEY.');

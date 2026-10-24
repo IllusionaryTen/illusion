@@ -47,6 +47,10 @@ try{
   await api(alice,'/v1/chat-settings','PUT',{peer:bob.user.id,ttlSeconds:60});const exp=await api(alice,'/v1/messages','POST',encrypted(alice,bob,'expire fixture',{ttlSeconds:60}));await storage.exec('UPDATE messages SET expiresAt=? WHERE id=?',Date.now()-1,exp.body.message.id);await api(bob,'/v1/messages?peer='+alice.user.id);check((await storage.exec('SELECT removed,envelope FROM messages WHERE id=?',exp.body.message.id))[0].removed==='expired','Hosted expiry erases the body on the next request');
   await api(alice,'/v1/chat-settings','PUT',{peer:bob.user.id,ttlSeconds:0});await api(bob,'/v1/reports','POST',{targetId:alice.user.id,reason:'spam',note:'synthetic report'});check((await api(testAdmin,'/admin/reports')).body.reports.length===1,'Authenticated host moderation can review explicitly submitted reports');
   check((await api(null,'/admin/reports')).status===401,'Moderation endpoints reject ordinary unauthenticated requests');
+  check((await api(null,'/admin/notice','POST',{version:'0.9.9',text:'no'})).status===401,'Notice publishing rejects unauthenticated requests');
+  check((await api(testAdmin,'/admin/notice','POST',{version:'bad',text:'no'})).status===400,'Notice publishing validates the release version');
+  const published=await api(testAdmin,'/admin/notice','POST',{version:'0.9.9',text:'Hosted update notice'});check(published.status===200&&published.body.notice.version==='0.9.9','Host can publish an update notice');
+  check((await api(eve,'/v1/chats')).body.notices[0].text==='Hosted update notice','Published notices reach every account chat list');
   for(const s of sockets)s.close();sockets=[];await mf.dispose();mf=localWorker(dir);
   check((await api(bob,'/v1/me')).status===200,'Account sessions persist across complete Worker runtime restart');
   const restored=(await api(bob,'/v1/messages?peer='+alice.user.id)).body.messages.find(m=>m.id===largeSend.body.message.id);check(decrypt(restored,bob)===text,'Chunked encrypted history survives runtime restart');

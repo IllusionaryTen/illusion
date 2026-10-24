@@ -1,6 +1,10 @@
-# ◈ Illusion 0.8.3
+# ◈ Illusion 0.8.4
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 0.8.4
+
+Opening a chat (including Favorites) on a phone now switches the whole screen to the conversation; a conflicting mobile stylesheet rule previously kept the chat list on top and pushed the opened conversation below the visible screen. Deploying a new version now publishes an update notice to every account automatically (see Update notices below), and the Windows release file name now follows the package version. Existing accounts, chats and keys are unaffected.
 
 ## Security update 0.6.1
 
@@ -27,6 +31,12 @@ Illusion now runs on **Cloudflare**, with a stable HTTPS address and a Telegram 
 The cloud relay uses a SQLite-backed Durable Object and authenticated hibernating WebSockets. Idle clients no longer send repeated history polls. Cloudflare terminates TLS and handles credentials/metadata; chat bodies remain client-encrypted. Static app/download assets, account data and bot webhook are hosted together. No paid plan, custom domain or network/VPN changes are required by this setup.
 
 The original local database is preserved separately. It does not mirror later cloud messages. For isolated local development, use **npm start** and Advanced connection **http://127.0.0.1:3789**. The host tooling needs Node 24.13 or later; Windows users need Windows 10/11 with .NET Framework 4.8.
+
+## Update notices
+
+Every deploy that changes the hosted version automatically publishes an update notice to **all accounts**. Each signed-in user sees an **Illusion updates** entry (◈) at the top of their chat list with the latest notice, an unread badge, and a read-only notice history. Notices are labelled in the app as host service messages that are **not end-to-end encrypted**; only the host can publish them. Open the entry to mark notices as read on that device.
+
+To publish a notice manually, use `node scripts/cloud-admin.mjs notice 0.8.4 Message text here` on the hosted relay, or `node --env-file-if-exists=.env scripts/moderate.mjs notice 0.8.4 Message text here` for a local relay. `Deploy-Cloudflare.cmd` sends its own notice (add `--notice "custom text"` to override the default message) whenever the deployed version differs from the previously announced one.
 
 The old temporary tunnel tooling is retained for local experiments, but is not required for cloud hosting. The failed Happ routing experiment was [rolled back](HAPP-CLOUDFLARE.md). Do not reapply it.
 

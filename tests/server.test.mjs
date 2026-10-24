@@ -121,6 +121,19 @@ test('saved messages work and do not count as unread', async () => {
   const chats = await api('/v1/chats', { token: alice.token });
   assert.equal(chats.body.chats.find(c => c.id === alice.user.id).unread, 0);
 });
+test('host update notices reach every account and wake live listeners', async () => {
+  assert.deepEqual((await api('/v1/chats', { token: alice.token })).body.notices, []);
+  assert.throws(() => app.relay.publishNotice('0.9', 'bad version'), /release version/);
+  assert.throws(() => app.relay.publishNotice('0.9.0', ''), /500 characters/);
+  const cursor = (await api('/v1/events', { token: alice.token })).body.cursor;
+  app.relay.publishNotice('0.9.0', 'Illusion 0.9.0 is live.');
+  app.relay.publishNotice('0.9.1', 'Illusion 0.9.1 is live.');
+  const wake = await api('/v1/events?cursor=' + encodeURIComponent(cursor), { token: alice.token });
+  assert.equal(wake.body.changed, true);
+  const bobChats = await api('/v1/chats', { token: bob.token });
+  assert.deepEqual(bobChats.body.notices.map(n => n.version), ['0.9.1', '0.9.0']);
+  assert.equal(bobChats.body.notices[0].text, 'Illusion 0.9.1 is live.');
+});
 test('history cursors are conversation-scoped and malformed cursors fail', async () => {
   const rows = await api('/v1/messages?peer=' + bob.user.id + '&after=' + first.id, { token: alice.token });
   assert.equal(rows.body.messages.length, 1);
