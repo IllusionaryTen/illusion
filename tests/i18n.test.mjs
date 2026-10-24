@@ -4,13 +4,29 @@ import { languageOptions, translate, translationCatalog } from '../web/i18n.mjs'
 
 test('all published locales have a complete UI phrase row', () => {
   const { languages, english, rows } = translationCatalog;
-  assert.equal(languages.length, 22);
+  assert.equal(languages.length, 29);
   assert.ok(languages.some(([code]) => code === 'el'));
   assert.ok(languages.some(([code]) => code === 'vi'));
+  assert.ok(languages.some(([code]) => code === 'fi'));
+  assert.ok(languages.some(([code]) => code === 'no'));
+  assert.ok(languages.some(([code]) => code === 'da'));
   for (const [code] of languages) {
     if (code === 'en') continue;
     assert.equal(rows[code]?.length, english.length, `${code} translation length`);
     assert.ok(rows[code].every(value => typeof value === 'string' && value.trim()), `${code} has an empty translation`);
+  }
+});
+
+test('the full-coverage block leaves no English fallback in any locale', () => {
+  const { english, rows } = translationCatalog;
+  // Words that are legitimately identical in many languages (numbers, language names, loanwords).
+  const allowed = new Set(['13–15', '16–17', 'English', 'Greek', 'Vietnamese', 'Chats', 'Cloud', '1 minute', 'Pause', '1 week', 'Photo / Video', 'Report', 'Play', 'Draft: ', 'You: ']);
+  for (const [code, row] of Object.entries(rows)) {
+    for (let i = 84; i < english.length; i++) {
+      if (row[i] === english[i] && !allowed.has(english[i])) {
+        assert.fail(`${code} untranslated full-block phrase: ${english[i]}`);
+      }
+    }
   }
 });
 

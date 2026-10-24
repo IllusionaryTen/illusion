@@ -38,7 +38,7 @@
     <Border Grid.Column="1" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,0,1,0">
       <DockPanel Margin="20,26,20,20">
         <StackPanel DockPanel.Dock="Top">
-          <Grid><TextBlock Text="Illusion" FontSize="26" FontWeight="SemiBold"/><TextBlock Text="0.8.3" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}" FontFamily="Consolas"/></Grid>
+          <Grid><TextBlock Text="Illusion" FontSize="26" FontWeight="SemiBold"/><TextBlock Text="0.8.4" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}" FontFamily="Consolas"/></Grid>
           <TextBlock Text="PRIVATE. CUSTOMIZABLE. FREE." FontSize="9" Foreground="{DynamicResource MutedText}" Margin="0,7,0,26"/>
           <TextBlock Text="CONVERSATIONS" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource MutedText}" Margin="0,0,0,14"/>
           <TextBox x:Name="SearchInput" ToolTip="Exact username, then Enter" Margin="0,0,0,8"/>

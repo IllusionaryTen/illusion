@@ -54,6 +54,20 @@ namespace Illusion {
         if(!restoringDraft && me!=null && peer!=null){CaptureDraft();dirtyLocal=true;changedDraftAt=DateTime.UtcNow;}
       };
       Get<TextBox>("SearchInput").TextChanged+=(s,e)=>FilterChats();
+      DataObject.AddPastingHandler(Get<TextBox>("Composer"),(s,e)=>{
+        try {
+          var image=e.DataObject.GetData(DataFormats.Bitmap) as System.Windows.Media.Imaging.BitmapSource;
+          if(image==null)return;
+          e.Handled=true;e.CancelCommand();
+          if(me==null||peer==null)return;
+          var source=image;
+          double factor=Math.Min(1,Math.Min(1600.0/image.PixelWidth,1600.0/image.PixelHeight));
+          if(factor<1){var scaled=new System.Windows.Media.TransformedBitmap(image,new System.Windows.Media.ScaleTransform(factor,factor));scaled.Freeze();source=scaled;}
+          string encoded=EncodeImage(source,4*1024*1024);
+          pendingMedia=new Dictionary<string,object>{{"kind","photo"},{"mime","image/jpeg"},{"data",encoded.Substring(encoded.IndexOf(',')+1)}};
+          UpdateAttachment();
+        }catch{ }
+      });
       Get<Button>("SearchChatButton").Click+=(s,e)=>OpenSearch();
       Get<TextBox>("ChatSearchInput").TextChanged+=(s,e)=>{searchIndex=-1;SearchMessages(false);};
       Get<TextBox>("ChatSearchInput").KeyDown+=(s,e)=>{if(e.Key==Key.Enter){MoveSearch(Keyboard.Modifiers==ModifierKeys.Shift?-1:1);e.Handled=true;}};
