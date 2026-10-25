@@ -125,9 +125,9 @@ namespace Illusion {
     }
     void Connection(bool connected) {
       sessionConnected=connected;
-      Get<TextBlock>("ConnectionLabel").Text=connected?"●  Live connection"+(cloudLiveActive?" · Cloud":""):"○  Reconnecting…";
+      Get<TextBlock>("ConnectionLabel").Text=connected?"●  "+T("Live connection")+(cloudLiveActive?" · "+T("Cloud"):""):"○  "+T("Reconnecting…");
       Get<TextBlock>("ConnectionLabel").Foreground=Brush(connected?"#79DDB5":"#E8B67C");
-      Get<TextBlock>("StatusLabel").Text=connected?"Live updates · Encrypted message text · Media uploads are unencrypted"+(outbox.Count>0?" · "+outbox.Count+" queued":" · Ctrl+K find someone / Ctrl+F search chat"):"Offline · Your drafts and queued messages are safe on this device";
+      Get<TextBlock>("StatusLabel").Text=connected?T("Live updates · Encrypted message text · Media uploads are unencrypted")+(outbox.Count>0?" · "+outbox.Count+" "+T("queued"):" · "+T("Ctrl+K find someone / Ctrl+F search chat")):T("Offline · Your drafts and queued messages are safe on this device");
       if(connected)ShowNotice("",false);
     }
     static void AtomicWrite(string path,string text) {File.WriteAllText(path+".tmp",text);if(File.Exists(path))File.Replace(path+".tmp",path,null);else File.Move(path+".tmp",path);}
@@ -246,8 +246,8 @@ namespace Illusion {
           var text=new StackPanel();Grid.SetColumn(text,1);
           text.Children.Add(new TextBlock{Text=(pinned.Contains(id)?"◇  ":"")+(string)chat["displayName"]+(unread>0?"   • "+unread:""),Foreground=Brushes.White,FontSize=14,FontWeight=FontWeights.SemiBold,TextTrimming=TextTrimming.CharacterEllipsis});
           string preview="@"+chat["username"];
-          if(drafts.ContainsKey(id))preview="Draft: "+drafts[id].Replace('\n',' ');
-          else if(chat.ContainsKey("lastMessage")){var last=(Dictionary<string,object>)chat["lastMessage"];Content content;if(decoded.TryGetValue(ContentKey(last),out content))preview=((string)last["senderId"]==(string)me["id"]?"You: ":"")+content.Text.Replace('\n',' ');}
+          if(drafts.ContainsKey(id))preview=T("Draft: ")+drafts[id].Replace('\n',' ');
+          else if(chat.ContainsKey("lastMessage")){var last=(Dictionary<string,object>)chat["lastMessage"];Content content;if(decoded.TryGetValue(ContentKey(last),out content))preview=((string)last["senderId"]==(string)me["id"]?T("You: "):"")+content.Text.Replace('\n',' ');}
           text.Children.Add(new TextBlock{Text=preview,Foreground=Brush(drafts.ContainsKey(id)?"#91B7FF":"#7C8DAA"),FontSize=11,Margin=new Thickness(0,5,0,0),TextTrimming=TextTrimming.CharacterEllipsis});row.Children.Add(text);
           // Keep the item itself and its selection; content changes do not reset the list.
           string signature=(string)chat["displayName"]+"|"+preview+"|"+unread+"|"+pinned.Contains(id)+"|"+Crypto.Fingerprint(json.Serialize(UserProfile(chat)));
@@ -267,8 +267,8 @@ namespace Illusion {
       messages.Clear();views.Clear();emptyMessage=null;
       var list=Get<StackPanel>("MessageList");while(list.Children.Count>1)list.Children.RemoveAt(1);
       restoringDraft=true;Get<TextBox>("Composer").Text=drafts.ContainsKey(id)?drafts[id]:"";restoringDraft=false;reply=replyDrafts.ContainsKey(id)?replyDrafts[id]:null;UpdateReply();
-      Get<TextBlock>("ChatTitle").Text=id==(string)me["id"]?"Saved messages":(string)user["displayName"];
-      Get<TextBlock>("ChatSubtitle").Text="@"+user["username"]+"  ·  encrypted conversation";
+      Get<TextBlock>("ChatTitle").Text=id==(string)me["id"]?T("Saved messages"):(string)user["displayName"];
+      Get<TextBlock>("ChatSubtitle").Text="@"+user["username"]+"  ·  "+T("encrypted conversation");
       Get<StackPanel>("EmptyState").Visibility=Visibility.Collapsed;Get<ScrollViewer>("MessageScroll").Visibility=Visibility.Visible;Get<Border>("ComposerPanel").Visibility=Visibility.Visible;Get<Button>("VerifyButton").Visibility=Visibility.Visible;Get<Button>("NewMessagesButton").Visibility=Visibility.Collapsed;CloseSearch();
       if(history.ContainsKey(id)) {foreach(var row in history[id])messages[Convert.ToInt64(row["id"])]=row;await DecodeMessages(history[id],user);}
       await DecodeMessages(outbox.Where(m=>(string)m["recipientId"]==id).ToArray(),user);UpdateMessageViews(true,false);SaveLocalState();UpdateChats(latestChats);
@@ -412,14 +412,14 @@ namespace Illusion {
           if(once)menu.Items.Clear();
           if(content.Valid && !once){var replyItem=new MenuItem{Header=T("Reply")};var capturedView=view;var capturedContent=content;replyItem.Click+=(s,e)=>BeginReply(capturedView.Message,capturedContent);menu.Items.Add(replyItem);}
           if(!queued && !own){var report=new MenuItem{Header=T("Report message")};report.Click+=(s,e)=>ReportDialog(capturedUser,capturedMessage,once?null:content);menu.Items.Add(report);}
-          if(queued){var stop=new MenuItem{Header=T("Stop retrying this message"),ToolTip="Stops future attempts; it does not remove a message already delivered."};var captured=message;stop.Click+=(s,e)=>{if(activeSend==clientId){ShowNotice("This message is currently sending. Wait for the current attempt before stopping retries.",false);return;}outbox.Remove(captured);SaveLocalState();UpdateMessageViews(false,false);};menu.Items.Add(stop);}
+          if(queued){var stop=new MenuItem{Header=T("Stop retrying this message"),ToolTip=T("Stops future attempts; it does not remove a message already delivered.")};var captured=message;stop.Click+=(s,e)=>{if(activeSend==clientId){ShowNotice("This message is currently sending. Wait for the current attempt before stopping retries.",false);return;}outbox.Remove(captured);SaveLocalState();UpdateMessageViews(false,false);};menu.Items.Add(stop);}
           view.Bubble.ContextMenu=menu;view.Root.Children.Add(view.Bubble);views[id]=view;
           if(!force && Setting("motion","true")=="true" && SystemParameters.ClientAreaAnimation)view.Bubble.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(150)));
         }
         view.Message=message;
         if(!queued)foreach(var item in view.Bubble.ContextMenu.Items.Cast<MenuItem>().Where(i=>Convert.ToString(i.Header)=="Stop retrying this message").ToArray())view.Bubble.ContextMenu.Items.Remove(item);
-        view.Date.Text=when.Date==DateTime.Today?"Today":when.ToString("dddd, MMMM d");view.Date.Visibility=date!=when.Date?Visibility.Visible:Visibility.Collapsed;date=when.Date;
-        view.Time.Text=when.ToString("HH:mm")+(queued?"  ◷ Queued":!content.Valid?"  !":own && (string)peer["id"]!=(string)me["id"]?(Convert.ToInt64(message["id"])<=readThrough?"  ✓✓ Read":"  ✓ Sent"):"  ◇");
+        view.Date.Text=when.Date==DateTime.Today?T("Today"):when.ToString("dddd, MMMM d");view.Date.Visibility=date!=when.Date?Visibility.Visible:Visibility.Collapsed;date=when.Date;
+        view.Time.Text=when.ToString("HH:mm")+(queued?"  ◷ "+T("Queued"):!content.Valid?"  !":own && (string)peer["id"]!=(string)me["id"]?(Convert.ToInt64(message["id"])<=readThrough?"  ✓✓ "+T("Read"):"  ✓ "+T("Sent")):"  ◇");
         int old=list.Children.IndexOf(view.Root);if(old!=index){if(old>=0)list.Children.RemoveAt(old);list.Children.Insert(index,view.Root);}index++;
       }
       foreach(string id in views.Keys.Where(k=>!wanted.Contains(k)).ToArray()){list.Children.Remove(views[id].Root);views.Remove(id);}

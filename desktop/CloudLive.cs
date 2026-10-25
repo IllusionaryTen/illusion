@@ -29,7 +29,7 @@ namespace Illusion {
             while(socket.State==WebSocketState.Open && !cancellation.IsCancellationRequested && gen==generation) {
               string text=await CloudReceive(socket,cancellation,ready?90000:15000);
               if(gen!=generation||cancellation.IsCancellationRequested)return true;
-              if(text==null) {if(socket.CloseStatus.HasValue && (int)socket.CloseStatus.Value==4001){SignOutLocal();Get<System.Windows.Controls.TextBlock>("AuthError").Text="Your live session ended. Sign in again.";return true;}break;}
+              if(text==null) {if(socket.CloseStatus.HasValue && (int)socket.CloseStatus.Value==4001){SignOutLocal();Get<System.Windows.Controls.TextBlock>("AuthError").Text=T("Your session expired. Sign in again.");return true;}break;}
               if(text=="pong")continue;
               var message=json.Deserialize<Dictionary<string,object>>(text);
               if(!message.ContainsKey("type"))continue;

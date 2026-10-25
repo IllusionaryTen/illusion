@@ -38,8 +38,8 @@ namespace Illusion {
       }
       settings["server"]=address;settings["networkName"]=profile.Name;settings["lan"]="false";
       Get<CheckBox>("LanConsent").IsChecked=false;Get<TextBox>("ServerInput").Text=address;
-      Get<TextBlock>("NetworkName").Text=profile.Name;Get<TextBlock>("NetworkDescription").Text="Connection ready. Sign in or create an account; every chat uses this connection.";
-      Get<Expander>("ConnectionAdvanced").IsExpanded=false;Get<TextBlock>("AuthError").Text="Connection saved. No address needs to be typed.";SaveSettings();
+      Get<TextBlock>("NetworkName").Text=profile.Name;Get<TextBlock>("NetworkDescription").Text=T("Connection ready. Sign in or create an account; every chat uses this connection.");
+      Get<Expander>("ConnectionAdvanced").IsExpanded=false;Get<TextBlock>("AuthError").Text=T("Connection saved. No address needs to be typed.");SaveSettings();
     }
   }
 }

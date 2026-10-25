@@ -91,9 +91,9 @@ namespace Illusion {
     async Task ChatOptions(){
       if(peer==null || me==null)return;var user=peer;string id=(string)user["id"];int gen=generation;
       var response=await Api("GET","/v1/chat-settings?peer="+id);if(gen!=generation)return;chatTimers[id]=Convert.ToInt32(response["ttlSeconds"]);
-      var panel=new StackPanel();panel.Children.Add(Label("Conversation with @"+user["username"],18));
+      var panel=new StackPanel();panel.Children.Add(Label(T("Conversation with")+" @"+user["username"],18));
       var profile=new Button{Content=T("View profile")};panel.Children.Add(profile);profile.Click+=(s,e)=>ShowProfile(user,false);
-      panel.Children.Add(Label("Automatically delete new messages"));var timerChoice=new ComboBox{ItemsSource=TimerNames,SelectedIndex=Array.IndexOf(ChatTimers,chatTimers[id]),Margin=new Thickness(0,0,0,10)};panel.Children.Add(timerChoice);
+      panel.Children.Add(Label("Automatically delete new messages"));var timerChoice=new ComboBox{ItemsSource=Array.ConvertAll(TimerNames,name=>T(name)),SelectedIndex=Array.IndexOf(ChatTimers,chatTimers[id]),Margin=new Thickness(0,0,0,10)};panel.Children.Add(timerChoice);
       panel.Children.Add(Label("Either participant can change this shared timer. It applies to messages sent afterward, starting when the relay accepts them. Expired content is removed from the relay and this app's cache. Copies, screenshots and backups cannot be recalled."));
       var save=new Button{Content=T("Save chat timer")};panel.Children.Add(save);var status=Label("");panel.Children.Add(status);
       var block=new Button{Content=(bool)response["blocked"]?"Unblock this user":"Block this user",IsEnabled=id!=(string)me["id"],Margin=new Thickness(0,12,0,0)};panel.Children.Add(block);
@@ -102,7 +102,7 @@ namespace Illusion {
       save.Click+=async(s,e)=>{save.IsEnabled=false;try{if(gen!=generation){dialog.Close();return;}await Api("PUT","/v1/chat-settings",new{peer=id,ttlSeconds=ChatTimers[timerChoice.SelectedIndex]});chatTimers[id]=ChatTimers[timerChoice.SelectedIndex];UpdateTimerHint();dialog.Close();}catch(Exception error){status.Text=error.Message;}finally{save.IsEnabled=true;}};
       block.Click+=async(s,e)=>{block.IsEnabled=false;try{if(gen!=generation){dialog.Close();return;}await Api("PUT","/v1/block",new{peer=id,blocked=!(bool)response["blocked"]});dialog.Close();}catch(Exception error){status.Text=error.Message;block.IsEnabled=true;}};dialog.ShowDialog();
     }
-    void UpdateTimerHint(){if(peer==null)return;int ttl;chatTimers.TryGetValue((string)peer["id"],out ttl);Get<TextBlock>("ComposerHint").Text="◇ Encrypted · Auto-delete: "+TimerNames[Array.IndexOf(ChatTimers,ttl)];}
+    void UpdateTimerHint(){if(peer==null)return;int ttl;chatTimers.TryGetValue((string)peer["id"],out ttl);Get<TextBlock>("ComposerHint").Text="◇ "+T("Encrypted · Auto-delete: ")+T(TimerNames[Array.IndexOf(ChatTimers,ttl)]);}
     void RemoveFromCache(IEnumerable<long> ids){
       var gone=new HashSet<long>(ids);if(gone.Count==0)return;
       foreach(var bucket in history.Values)foreach(var m in bucket.Where(m=>gone.Contains(Convert.ToInt64(m["id"]))).ToArray()){decoded.Remove(ContentKey(m));bucket.Remove(m);}
@@ -137,13 +137,13 @@ namespace Illusion {
       dialog.Closed+=(s,e)=>{contentWindows.Remove(dialog);contentDeadlines.Remove(dialog);if(player!=null){player.Stop();player.Close();player.Source=null;}panel.Children.Clear();if(videoFile!=null)try{File.Delete(videoFile);mediaFiles.Remove(videoFile);}catch{};};dialog.ShowDialog();
     }
     void ReportDialog(Dictionary<string,object> target,Dictionary<string,object> message,Content content){
-      if(me==null || (string)target["id"]==(string)me["id"])return;var panel=new StackPanel();panel.Children.Add(Label(message==null?"Report @"+target["username"]+"'s public profile":"Report this message from @"+target["username"],18));
-      panel.Children.Add(Label(message==null?"This shares a snapshot of the public profile, your account ID, reason and note with this network's moderators.":"This shares your account ID, the message identifier, reason and note. Only the selected message text/caption is shared if you choose the evidence option. Other chats and private keys stay on your device."));
-      var reason=new ComboBox{ItemsSource=new[]{"spam","harassment","threats","sexual-content","other"},SelectedIndex=0};panel.Children.Add(reason);
-      panel.Children.Add(Label("Note (optional)"));var note=new TextBox{MaxLength=1000,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,MinHeight=65};panel.Children.Add(note);
+      if(me==null || (string)target["id"]==(string)me["id"])return;var panel=new StackPanel();panel.Children.Add(Label(message==null?T("Report public profile")+" @"+target["username"]:T("Report this message")+" @"+target["username"],18));
+      panel.Children.Add(Label(message==null?T("This shares a snapshot of the public profile, your account ID, reason and note with this network’s moderators."):T("This shares your account ID, the message identifier, reason and note. Only the selected message text/caption is optional. Other chats and account private keys are not shared.")));
+      var reason=new ComboBox{ItemsSource=new[]{"Spam","Harassment","Threats","Sexual content","Other"}.Select(T).ToArray(),SelectedIndex=0};panel.Children.Add(reason);
+      panel.Children.Add(Label("Note, optional"));var note=new TextBox{MaxLength=1000,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,MinHeight=65};panel.Children.Add(note);
       CheckBox share=null;if(message!=null){share=new CheckBox{Content=T("Share this message's text/caption as verified evidence"),IsChecked=false,IsEnabled=content!=null && content.Valid,Foreground=Brushes.White,Margin=new Thickness(0,14,0,8)};panel.Children.Add(share);if(content!=null)panel.Children.Add(LabelRaw(content.Text.Length>2000?content.Text.Substring(0,2000):content.Text));}
       var status=Label("");panel.Children.Add(status);var send=new Button{Content=T("Submit report")};panel.Children.Add(send);var dialog=Dialog("Report",panel);int gen=generation;
-      send.Click+=async(s,e)=>{send.IsEnabled=false;try{if(gen!=generation || me==null){dialog.Close();return;}var b=new Dictionary<string,object>{{"targetId",target["id"]},{"reason",reason.SelectedItem},{"note",note.Text}};if(message!=null){b["messageId"]=message["id"];if(share.IsChecked==true)b["evidence"]=new{envelope=message["envelope"],material=Crypto.ReportMaterial(message,(string)me["id"],privateKey)};}var result=await Api("POST","/v1/reports",b);status.Text="Report #"+result["reportId"]+" submitted. The network's moderators can review it.";send.Content=T("Submitted");}catch(Exception error){status.Text=error.Message;send.IsEnabled=true;}};dialog.ShowDialog();
+      send.Click+=async(s,e)=>{send.IsEnabled=false;try{if(gen!=generation || me==null){dialog.Close();return;}var b=new Dictionary<string,object>{{"targetId",target["id"]},{"reason",new[]{"spam","harassment","threats","sexual-content","other"}[reason.SelectedIndex]},{"note",note.Text}};if(message!=null){b["messageId"]=message["id"];if(share.IsChecked==true)b["evidence"]=new{envelope=message["envelope"],material=Crypto.ReportMaterial(message,(string)me["id"],privateKey)};}var result=await Api("POST","/v1/reports",b);status.Text=T("Report #1 submitted for host review.").Replace("#1","#"+result["reportId"]);send.Content=T("Submitted");}catch(Exception error){status.Text=error.Message;send.IsEnabled=true;}};dialog.ShowDialog();
     }
   }
 }
