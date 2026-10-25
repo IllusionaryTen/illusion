@@ -15,7 +15,8 @@
   "ratelimits": [
     {"name":"AUTH_LIMIT","namespace_id":"7606001","simple":{"limit":15,"period":60}},
     {"name":"API_LIMIT","namespace_id":"7606003","simple":{"limit":1200,"period":60}},
-    {"name":"LIVE_LIMIT","namespace_id":"7606002","simple":{"limit":30,"period":60}}
+    {"name":"LIVE_LIMIT","namespace_id":"7606002","simple":{"limit":30,"period":60}},
+    {"name":"ADMIN_LIMIT","namespace_id":"7606004","simple":{"limit":30,"period":60}}
   ],
   "observability": {"enabled": false},
   "vars": {"OPERATOR_NAME": "", "OPERATOR_COUNTRY": "", "SUPPORT_CONTACT": "", "OPERATOR_ADDRESS": ""}

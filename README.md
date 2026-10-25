@@ -1,6 +1,12 @@
-# ◈ Illusion 1.0.1
+# ◈ Illusion 1.0.2
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.0.2
+
+**Stays signed in on Android and the mini app.** The relay has always issued 30-day sessions, but the web client kept the token only in memory, so every WebView restart forced a fresh login. The session is now stored in device storage and restored on launch (validated against the account and this device's key), and signing out deletes it.
+
+**Public repository, private operations.** The source can stay public without giving anyone a way to hit the service: admin endpoints now require a strong token plus their own rate limit and reject weak/absent tokens outright, the bot throttles per chat, the deploy step refuses to finish if any private path (`.env`, config, database, build output) is reachable, and new tests fail if credentials or local state files are ever committed. No secret has ever been committed or served — both were verified directly.
 
 ## What's new in 1.0.1
 

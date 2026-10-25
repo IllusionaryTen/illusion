@@ -13,11 +13,15 @@ import {createGmailSender} from './gmail.mjs';
 export default {
   async fetch(request,env) {
     const url=new URL(request.url);
-    if(url.pathname.startsWith('/admin/')&&!secretMatches(request.headers.get('Authorization')?.replace(/^Bearer /,''),env.ADMIN_TOKEN))return Response.json({error:'Not authorized'},{status:401,headers:securityHeaders});
     if(url.pathname==='/telegram/webhook'&&!secretMatches(request.headers.get('X-Telegram-Bot-Api-Secret-Token'),env.TELEGRAM_WEBHOOK_SECRET))return new Response('Not authorized',{status:401,headers:securityHeaders});
     if(!['GET','HEAD'].includes(request.method)&&request.headers.has('Origin')&&request.headers.get('Origin')!==url.origin)return new Response('Origin rejected',{status:403,headers:securityHeaders});
     const visible = await publicResponse(request,env); if(visible)return visible;
     const ip=request.headers.get('CF-Connecting-IP')||'unknown';
+    if(url.pathname.startsWith('/admin/')){
+      if(!env.ADMIN_TOKEN||env.ADMIN_TOKEN.length<24)return Response.json({error:'Admin access is disabled until a strong token is configured.'},{status:503,headers:securityHeaders});
+      if(env.ADMIN_LIMIT&&!(await env.ADMIN_LIMIT.limit({key:'admin:'+ip})).success)return Response.json({error:'Too many admin attempts. Try again later.'},{status:429,headers:securityHeaders});
+      if(!secretMatches(request.headers.get('Authorization')?.replace(/^Bearer /,''),env.ADMIN_TOKEN))return Response.json({error:'Not authorized'},{status:401,headers:securityHeaders});
+    }
     if(env.API_LIMIT&&!(await env.API_LIMIT.limit({key:ip})).success)return Response.json({error:'Too many requests. Please retry shortly.'},{status:429,headers:securityHeaders});
     const limiter=['/v1/register','/v1/login'].includes(url.pathname)?env.AUTH_LIMIT:url.pathname==='/v1/live'?env.LIVE_LIMIT:null;
     if(limiter && !(await limiter.limit({key:ip})).success)return Response.json({error:'Too many attempts. Please wait a minute.'},{status:429,headers:securityHeaders});

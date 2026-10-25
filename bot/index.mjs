@@ -89,7 +89,7 @@ export async function runBot({ token = process.env.TELEGRAM_BOT_TOKEN, manifest 
           const { chatId, command } = action;
           const now = Date.now();
           for (const [id, expiry] of recent) if (expiry < now) recent.delete(id);
-          const throttleKey = `${chatId}:${command}`;
+          const throttleKey = String(chatId);
           if ((recent.get(throttleKey) || 0) < now) {
             recent.set(throttleKey, now + 3000);
             release = loadRelease(manifest);
@@ -123,7 +123,7 @@ export async function runBot({ token = process.env.TELEGRAM_BOT_TOKEN, manifest 
                 await api('sendDocument', form, true);
               } else await api('sendMessage', { chat_id: chatId, text: 'The host has not configured a public Illusion relay yet. The host needs to run Configure-Connection.cmd with the address of a running HTTPS relay and rebuild. This bot does not provide chat hosting by itself.' });
             } else {
-              const url=miniAppUrl(release);await api('sendMessage', { chat_id: chatId, text: '◈ Illusion\nPrivate. Customizable. Free.\n\n/app — Open the Telegram Mini App\n/apk — Download the Android APK\n/privacy — Policies and data controls\n/download — Windows desktop version\n/connect — Desktop invitation\n\nThe Mini App needs the host’s public HTTPS relay online. This custom encryption is an unaudited preview. No payments, ads or marketing emails are enabled.',...(url?{reply_markup:{inline_keyboard:[[{text:'Open Illusion',web_app:{url}}],[{text:'Download Android APK',url:new URL('/download/android/'+(loadAndroidRelease()?.file||'Illusion-1.0.1.apk'),url).href}]]}}:{}) });
+              const url=miniAppUrl(release);await api('sendMessage', { chat_id: chatId, text: '◈ Illusion\nPrivate. Customizable. Free.\n\n/app — Open the Telegram Mini App\n/apk — Download the Android APK\n/privacy — Policies and data controls\n/download — Windows desktop version\n/connect — Desktop invitation\n\nThe Mini App needs the host’s public HTTPS relay online. This custom encryption is an unaudited preview. No payments, ads or marketing emails are enabled.',...(url?{reply_markup:{inline_keyboard:[[{text:'Open Illusion',web_app:{url}}],[{text:'Download Android APK',url:new URL('/download/android/'+(loadAndroidRelease()?.file||'Illusion-1.0.2.apk'),url).href}]]}}:{}) });
             }
           }
         }
