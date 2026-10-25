@@ -1,6 +1,10 @@
-# ◈ Illusion 1.0.0
+# ◈ Illusion 1.0.1
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.0.1
+
+Theme palettes were resampled directly from each aura's collection artwork with k-means clustering instead of being guessed: Oppression is now the steel-blue and black it actually is (the red was invented from its lore text), Monarch is violet rather than gold, Hellborn keeps its ember orange only as an accent, and Astraios, Crimson Moon, Dreammetric, Eden, Oblivion and Tomorrow each use their measured dominant colors. Every theme's aura motif also has its own size and placement, so the backgrounds read as distinct scenes rather than the same corner pattern.
 
 ## What's new in 1.0.0
 

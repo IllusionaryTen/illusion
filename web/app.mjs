@@ -123,7 +123,7 @@ function auraShapes(motif){
     default:return [0,1,2].map(i=>`<ellipse cx="210" cy="140" rx="${120-i*28}" ry="${44-i*10}" fill="none" stroke="${A}" stroke-width="1.5" transform="rotate(-25 210 140)"/>`).join('')+[0,1,2].map(i=>`<rect x="${120+i*34}" y="${200+(i%2)*16}" width="26" height="14" fill="${A}" opacity="${.35+i*.1}"/>`).join('')+`<rect x="200" y="60" width="46" height="46" fill="none" stroke="${M}" stroke-width="2" transform="rotate(45 223 83)"/>`;
   }
 }
-function applyAuraArt(){const host=$('aura-art');if(!host)return;const id=document.body.dataset.theme||'blue';const art=auraArt[id]||auraArt.blue;host.innerHTML='<svg viewBox="0 0 600 360" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+auraShapes(art.motif)+'</svg><div class="aura-caption">'+art.caption+'</div>';}
+function applyAuraArt(){const host=$('aura-art');if(!host)return;const id=document.body.dataset.theme||'blue';const art=auraArt[id]||auraArt.blue;host.dataset.motif=art.motif;host.innerHTML='<svg viewBox="0 0 600 360" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+auraShapes(art.motif)+'</svg><div class="aura-caption">'+art.caption+'</div>';}
 function themePicker(){const s=node('select');for(const [id,label] of themeChoices){const o=node('option',translate(label,language));o.value=id;s.append(o);}s.value=getPreference('illusion-theme')||'blue';if(![...s.options].some(o=>o.value===s.value))s.value='blue';return s;}
 const timerValues=[0,60,3600,86400,604800,2592000],timerNames=['Off (default)','1 minute','1 hour','1 day','1 week','30 days'],timerLabel=v=>translate(timerNames[timerValues.indexOf(v)],language);
 $('older').onclick=()=>guard(()=>refreshMessages(false,Math.min(...rows.keys())));

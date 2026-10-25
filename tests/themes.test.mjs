@@ -77,3 +77,16 @@ test('every theme name is translated in all 28 non-English languages', () => {
     }
   }
 });
+
+test('every theme ships its own aura motif with a caption and placement', () => {
+  const art = app.match(/const auraArt=\{([\s\S]*?)\n\};/)[1];
+  const entries = [...art.matchAll(/([\w-]+|'[\w-]+'):\{caption:'([^']+)',motif:'(\w+)'\}/g)]
+    .map((m) => ({ id: m[1].replace(/'/g, ''), caption: m[2], motif: m[3] }));
+  assert.equal(entries.length, ids.length, 'each theme needs one aura motif');
+  assert.deepEqual(entries.map((e) => e.id).sort(), [...ids].sort());
+  assert.equal(new Set(entries.map((e) => e.caption)).size, entries.length, 'captions must be unique');
+  for (const entry of entries) {
+    assert.ok(style.includes(`#aura-art[data-motif=${entry.motif}] svg`), `missing placement for motif ${entry.motif}`);
+    assert.ok(app.includes("host.dataset.motif=art.motif"), 'aura layer must expose its motif for CSS');
+  }
+});
