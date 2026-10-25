@@ -1,6 +1,6 @@
 {
   "name": "illusion-messenger",
-  "version": "0.9.2",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env server/index.mjs",
     "bot": "node --env-file-if-exists=.env bot/index.mjs",
+    "setup:gmail": "node scripts/setup-gmail.mjs",
     "test": "node --test tests/*.test.mjs",
     "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
     "build:android": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android.ps1",

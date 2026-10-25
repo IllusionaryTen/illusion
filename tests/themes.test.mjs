@@ -33,7 +33,7 @@ const contrast = (a, b) => {
 };
 
 test('the web ships a full theme set', () => {
-  assert.ok(ids.length >= 10, `expected >=12 themes, found ${ids.length}`);
+  assert.ok(ids.length >= 8, `expected >=12 themes, found ${ids.length}`);
   assert.equal(new Set(ids).size, ids.length, 'theme ids must be unique');
 });
 

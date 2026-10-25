@@ -60,12 +60,23 @@ export function features({ db, notify, getUser, safeUser, body, now = Date.now, 
   }
   function validateMedia(value) {
     if(value==null)return null;
-    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join(',')!=='data,kind,mime'||!['photo','video'].includes(value.kind)||typeof value.data!=='string'||value.data.length>5592408||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.data))fail(400,'Invalid unencrypted attachment.');
-    const bytes=Buffer.from(value.data,'base64');if(!bytes.length||bytes.length>4*1024*1024||bytes.toString('base64')!==value.data)fail(413,'Choose an image or MP4 video up to 4 MB.');
+    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join(',')!=='data,kind,mime'||!['photo','video','audio','file'].includes(value.kind)||typeof value.data!=='string'||value.data.length>5592408||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.data))fail(400,'Invalid unencrypted attachment.');
+    const bytes=Buffer.from(value.data,'base64');if(!bytes.length||bytes.length>4*1024*1024||bytes.toString('base64')!==value.data)fail(413,'Choose a file up to 4 MB.');
     if(value.kind==='photo'){
       if(!['image/jpeg','image/png'].includes(value.mime)||!(value.mime==='image/jpeg'?bytes.subarray(0,3).equals(Buffer.from('ffd8ff','hex')):bytes.subarray(0,8).equals(Buffer.from('89504e470d0a1a0a','hex'))))fail(400,'Choose a valid PNG or JPEG photo.');
       try{imageDimensions(bytes);}catch{fail(400,'Photo dimensions are invalid or too large.');}
-    } else if(value.mime!=='video/mp4'||bytes.length<12||bytes.toString('ascii',4,8)!=='ftyp')fail(400,'Choose a valid MP4 video.');
+    } else if(value.kind==='video'){
+      if(value.mime!=='video/mp4'||bytes.length<12||bytes.toString('ascii',4,8)!=='ftyp')fail(400,'Choose a valid MP4 video.');
+    } else if(value.kind==='audio'){
+      const wav=['audio/wav','audio/x-wav','audio/wave'].includes(value.mime)&&bytes.length>=12&&bytes.toString('ascii',0,4)==='RIFF'&&bytes.toString('ascii',8,12)==='WAVE';
+      const mp3=['audio/mpeg','audio/mp3','audio/mpeg3'].includes(value.mime)&&(bytes.toString('ascii',0,3)==='ID3'||(bytes[0]===0xff&&(bytes[1]&0xe0)===0xe0));
+      if(!wav&&!mp3)fail(400,'Choose a valid WAV or MP3 audio file.');
+    } else {
+      if(!['text/plain','text/markdown','text/x-markdown'].includes(value.mime))fail(400,'Choose a valid text or Markdown file.');
+      if(bytes.length>200*1024)fail(413,'Choose a file up to 4 MB.');
+      let text;try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{fail(400,'Choose a valid text or Markdown file.');}
+      if(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(text))fail(400,'Choose a valid text or Markdown file.');
+    }
     return {kind:value.kind,mime:value.mime,data:value.data};
   }
   function validateSend(sender, recipient, envelope) {

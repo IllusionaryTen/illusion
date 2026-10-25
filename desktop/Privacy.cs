@@ -42,16 +42,30 @@ namespace Illusion {
     void UpdateSelfProfile(){if(me==null)return;var text=Get<TextBlock>("Avatar");var surface=text.Parent as Border;if(surface==null)return;var profile=UserProfile(me);surface.Background=Brush(Str(profile,"accent","#22395D"));text.Visibility=Visibility.Visible;try{var image=ImageData(Str(profile,"avatar"));if(image!=null){surface.Background=new ImageBrush(image){Stretch=Stretch.UniformToFill};text.Visibility=Visibility.Collapsed;}}catch{}text.Text=Str(me,"displayName","I").Substring(0,1).ToUpperInvariant();}
     void ClosePrivateContent(){foreach(var w in contentWindows.ToArray())w.Close();foreach(var f in mediaFiles.ToArray())try{File.Delete(f);}catch{}mediaFiles.Clear();}
     void ResetPrivacy(){ClosePrivateContent();pendingMedia=null;chatTimers.Clear();videoThumbCache.Clear();Get<CheckBox>("ViewOnceCheck").IsChecked=false;UpdateAttachment();}
-    void UpdateAttachment(){Get<Border>("AttachmentBar").Visibility=pendingMedia==null?Visibility.Collapsed:Visibility.Visible;Get<TextBlock>("AttachmentLabel").Text=pendingMedia==null?"":Str(pendingMedia,"kind")=="photo"?"Photo attached · sent without end-to-end encryption":"Video attached · sent without end-to-end encryption";}
+    void UpdateAttachment(){Get<Border>("AttachmentBar").Visibility=pendingMedia==null?Visibility.Collapsed:Visibility.Visible;string kind=pendingMedia==null?"":Str(pendingMedia,"kind");Get<TextBlock>("AttachmentLabel").Text=pendingMedia==null?"":kind=="photo"?T("Photo attached · sent without end-to-end encryption"):kind=="video"?T("Video attached · sent without end-to-end encryption"):kind=="audio"?T("Audio attached · sent without end-to-end encryption"):T("Document attached · sent without end-to-end encryption");}
     async Task AttachMedia(){
-      if(me==null || peer==null)return;var open=new OpenFileDialog{Filter="Photo or short MP4 video|*.png;*.jpg;*.jpeg;*.mp4"};if(open.ShowDialog(Window)!=true)return;
-      if(new FileInfo(open.FileName).Length>4*1024*1024)throw new Exception("Choose a photo or short MP4 video under 4 MB.");
+      if(me==null || peer==null)return;var open=new OpenFileDialog{Filter="Supported files|*.png;*.jpg;*.jpeg;*.mp4;*.wav;*.mp3;*.txt;*.md|All files|*.*"};if(open.ShowDialog(Window)!=true)return;
+      if(new FileInfo(open.FileName).Length>4*1024*1024)throw new Exception("Choose a file up to 4 MB.");
       int version=conversationVersion;string file=open.FileName;
       var media=await Task.Run(()=>{
-        bool video=System.IO.Path.GetExtension(file).Equals(".mp4",StringComparison.OrdinalIgnoreCase);byte[] bytes;
-        if(video){bytes=File.ReadAllBytes(file);if(bytes.Length<12 || Encoding.ASCII.GetString(bytes,4,4)!="ftyp")throw new Exception("Choose a valid MP4 file.");}
-        else {string data=PrepareImage(file,1600,1600,4*1024*1024);bytes=Convert.FromBase64String(data.Substring(data.IndexOf(',')+1));}
-        return new Dictionary<string,object>{{"kind",video?"video":"photo"},{"mime",video?"video/mp4":"image/jpeg"},{"data",Convert.ToBase64String(bytes)}};
+        string ext=System.IO.Path.GetExtension(file).ToLowerInvariant();
+        if(ext==".mp4"){byte[] bytes=File.ReadAllBytes(file);if(bytes.Length<12 || Encoding.ASCII.GetString(bytes,4,4)!="ftyp")throw new Exception("Choose a valid MP4 video.");return new Dictionary<string,object>{{"kind","video"},{"mime","video/mp4"},{"data",Convert.ToBase64String(bytes)}};}
+        if(ext==".wav"||ext==".mp3"){
+          byte[] bytes=File.ReadAllBytes(file);
+          bool wav=ext==".wav" && bytes.Length>=12 && Encoding.ASCII.GetString(bytes,0,4)=="RIFF" && Encoding.ASCII.GetString(bytes,8,4)=="WAVE";
+          bool mp3=ext==".mp3" && ((bytes.Length>=3 && Encoding.ASCII.GetString(bytes,0,3)=="ID3") || (bytes.Length>=2 && bytes[0]==0xff && (bytes[1]&0xe0)==0xe0));
+          if(!wav && !mp3)throw new Exception("Choose a valid WAV or MP3 audio file.");
+          return new Dictionary<string,object>{{"kind","audio"},{"mime",wav?"audio/wav":"audio/mpeg"},{"data",Convert.ToBase64String(bytes)}};
+        }
+        if(ext==".txt"||ext==".md"){
+          if(new FileInfo(file).Length>200*1024)throw new Exception("Choose a file up to 4 MB.");
+          byte[] bytes=File.ReadAllBytes(file);string text;
+          try{text=new UTF8Encoding(false,true).GetString(bytes);}catch{throw new Exception("Choose a valid text or Markdown file.");}
+          foreach(char c in text)if((c<32 && c!='\n' && c!='\r' && c!='\t') || c==127)throw new Exception("Choose a valid text or Markdown file.");
+          return new Dictionary<string,object>{{"kind","file"},{"mime",ext==".md"?"text/markdown":"text/plain"},{"data",Convert.ToBase64String(bytes)}};
+        }
+        string data=PrepareImage(file,1600,1600,4*1024*1024);byte[] photo=Convert.FromBase64String(data.Substring(data.IndexOf(',')+1));
+        return new Dictionary<string,object>{{"kind","photo"},{"mime","image/jpeg"},{"data",Convert.ToBase64String(photo)}};
       });
       if(version!=conversationVersion || me==null)return;pendingMedia=media;UpdateAttachment();
     }
@@ -122,7 +136,7 @@ namespace Illusion {
     void ShowMessageContent(Dictionary<string,object> message,Content content,Dictionary<string,object> user,bool once){
       if(!content.Valid)throw new Exception(content.Text);var panel=new StackPanel();panel.Children.Add(Label(once?"VIEW ONCE · Closing this window removes this copy.":"Attachment",16));
       panel.Children.Add(new TextBlock{Text=content.Text,TextWrapping=TextWrapping.Wrap,FontSize=16,Foreground=Brushes.White,Margin=new Thickness(0,10,0,15)});
-      string videoFile=null;MediaElement player=null;
+      string videoFile=null,audioFile=null;MediaElement player=null;
       if(content.Media!=null){string kind=Str(content.Media,"kind"),data=Str(content.Media,"data");if(data.Length>5600000)throw new Exception("Attachment is too large.");
         if(kind=="photo")panel.Children.Add(new Image{Source=ImageData("data:image/jpeg;base64,"+data),MaxHeight=430,Stretch=Stretch.Uniform});
         else if(kind=="video"){
@@ -130,11 +144,18 @@ namespace Illusion {
           string dir=System.IO.Path.Combine(ProfileDir,"playback");Directory.CreateDirectory(dir);videoFile=System.IO.Path.Combine(dir,"illusion-"+Guid.NewGuid().ToString("N")+".mp4");File.WriteAllBytes(videoFile,bytes);Array.Clear(bytes,0,bytes.Length);mediaFiles.Add(videoFile);
           player=new MediaElement{Source=new Uri(videoFile),LoadedBehavior=MediaState.Manual,UnloadedBehavior=MediaState.Close,MaxHeight=400,Stretch=Stretch.Uniform};panel.Children.Add(player);var controls=new StackPanel{Orientation=Orientation.Horizontal};var play=new Button{Content=T("Play")};var pause=new Button{Content=T("Pause"),Margin=new Thickness(10,0,0,0)};controls.Children.Add(play);controls.Children.Add(pause);panel.Children.Add(controls);var captured=player;play.Click+=(s,e)=>captured.Play();pause.Click+=(s,e)=>captured.Pause();
           player.MediaFailed+=(s,e)=>MessageBox.Show("Windows could not play this video. Try an MP4 encoded with H.264/AAC.","Illusion");
+        }else if(kind=="audio"){
+          byte[] bytes=Convert.FromBase64String(data);bool wav=Str(content.Media,"mime").Contains("wav");
+          string dir=System.IO.Path.Combine(ProfileDir,"playback");Directory.CreateDirectory(dir);audioFile=System.IO.Path.Combine(dir,"illusion-"+Guid.NewGuid().ToString("N")+(wav?".wav":".mp3"));File.WriteAllBytes(audioFile,bytes);Array.Clear(bytes,0,bytes.Length);mediaFiles.Add(audioFile);
+          player=new MediaElement{Source=new Uri(audioFile),LoadedBehavior=MediaState.Manual,UnloadedBehavior=MediaState.Close,MaxHeight=120,Stretch=Stretch.Uniform};panel.Children.Add(player);var audioControls=new StackPanel{Orientation=Orientation.Horizontal};var audioPlay=new Button{Content=T("Play")};var audioPause=new Button{Content=T("Pause")};audioPlay.Click+=(s,e)=>{player.Play();};audioPause.Click+=(s,e)=>{player.Pause();};audioControls.Children.Add(audioPlay);audioControls.Children.Add(audioPause);panel.Children.Add(audioControls);
+        }else if(kind=="file"){
+          byte[] bytes=Convert.FromBase64String(data);string text=new UTF8Encoding(false,true).GetString(bytes);
+          panel.Children.Add(new TextBox{Text=text,IsReadOnly=true,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,FontFamily=new FontFamily("Consolas"),FontSize=13,MaxHeight=420,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Background=Brush("#0E1420"),Foreground=Brushes.White,BorderThickness=new Thickness(1),BorderBrush=Brush("#31466A"),Padding=new Thickness(10)});
         }else throw new Exception("Unsupported attachment type.");
       }
       var report=new Button{Content=T("Report this message"),Margin=new Thickness(0,15,0,0),IsEnabled=(string)message["senderId"]!=(string)me["id"]};panel.Children.Add(report);report.Click+=(s,e)=>ReportDialog(user,message,content);
       var dialog=Dialog(once?"View once":"Attachment",panel);contentWindows.Add(dialog);contentDeadlines[dialog]=message.ContainsKey("expiresAt")?Convert.ToInt64(message["expiresAt"]):0;
-      dialog.Closed+=(s,e)=>{contentWindows.Remove(dialog);contentDeadlines.Remove(dialog);if(player!=null){player.Stop();player.Close();player.Source=null;}panel.Children.Clear();if(videoFile!=null)try{File.Delete(videoFile);mediaFiles.Remove(videoFile);}catch{};};dialog.ShowDialog();
+      dialog.Closed+=(s,e)=>{contentWindows.Remove(dialog);contentDeadlines.Remove(dialog);if(player!=null){player.Stop();player.Close();player.Source=null;}panel.Children.Clear();if(videoFile!=null)try{File.Delete(videoFile);mediaFiles.Remove(videoFile);}catch{};if(audioFile!=null)try{File.Delete(audioFile);mediaFiles.Remove(audioFile);}catch{};};dialog.ShowDialog();
     }
     void ReportDialog(Dictionary<string,object> target,Dictionary<string,object> message,Content content){
       if(me==null || (string)target["id"]==(string)me["id"])return;var panel=new StackPanel();panel.Children.Add(Label(message==null?T("Report public profile")+" @"+target["username"]:T("Report this message")+" @"+target["username"],18));

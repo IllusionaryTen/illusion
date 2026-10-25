@@ -95,3 +95,22 @@ test('profile reports snapshot public details; blocking stops both directions; m
   await api(bob,'/v1/block','PUT',{peer:alice.user.id,blocked:false});assert.equal((await api(alice,'/v1/messages','POST',encrypted('unblocked').payload)).status,200);
   app.db.prepare('INSERT INTO bans VALUES(?,?)').run(eve.user.id,clock);assert.equal((await api(eve,'/v1/me')).status,403);assert.equal((await api(null,'/v1/login','POST',{username:'eve',password:'a sufficiently strong password'})).status,403);
 });
+
+test('audio and text attachments are validated before storage',async()=>{
+  const wav=Buffer.concat([Buffer.from('RIFF'),Buffer.alloc(4),Buffer.from('WAVE'),Buffer.alloc(64,1)]);
+  const mp3=Buffer.concat([Buffer.from('ID3'),Buffer.alloc(64,2)]);
+  const post=async(media)=>{const packet=encrypted('attachment');packet.payload.media=media;return api(alice,'/v1/messages','POST',packet.payload);};
+  assert.equal((await post({kind:'audio',mime:'audio/wav',data:wav.toString('base64')})).status,200);
+  assert.equal((await post({kind:'audio',mime:'audio/mpeg',data:mp3.toString('base64')})).status,200);
+  const doc={kind:'file',mime:'text/markdown',data:Buffer.from('# note\nhello').toString('base64')};
+  assert.equal((await post(doc)).status,200);
+  const received=await api(bob,'/v1/messages?peer='+alice.user.id);
+  assert.ok(received.body.messages.some(row=>row.media&&row.media.kind==='file'&&row.media.mime==='text/markdown'));
+  assert.equal((await post({kind:'audio',mime:'audio/wav',data:Buffer.from('not a wav at all').toString('base64')})).status,400);
+  assert.equal((await post({kind:'file',mime:'application/pdf',data:doc.data})).status,400);
+  const control=Buffer.from([0x68,0x00,0x69]);
+  assert.equal((await post({kind:'file',mime:'text/plain',data:control.toString('base64')})).status,400);
+  assert.equal((await post({kind:'file',mime:'text/plain',data:Buffer.alloc(200*1024+10,0x61).toString('base64')})).status,413);
+  assert.equal((await post({kind:'audio',mime:'audio/mpeg',data:'!!!notbase64'})).status,400);
+  assert.equal((await post({kind:'photo',mime:'image/png',data:Buffer.from('89504e470d0a1a0a','hex').toString('base64')})).status,400);
+});

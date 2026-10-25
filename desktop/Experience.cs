@@ -430,6 +430,10 @@ namespace Illusion {
     Border BuildMediaPreview(Dictionary<string,object> message,Content content,Dictionary<string,object> user){
       var card=new Border{Margin=new Thickness(0,8,0,0),Cursor=System.Windows.Input.Cursors.Hand,CornerRadius=new CornerRadius(12),BorderThickness=new Thickness(1),BorderBrush=Brush("#31466A"),ClipToBounds=true};
       var panel=new Grid();
+
+      string mediaKind=Str(content.Media,"kind");
+
+      if(mediaKind=="audio"||mediaKind=="file"){var row=new StackPanel{Orientation=Orientation.Horizontal};row.Children.Add(new TextBlock{Text=mediaKind=="audio"?"♪":"📄",FontSize=20,Foreground=Brush("#8CB3FF"),Margin=new Thickness(0,0,10,0),VerticalAlignment=VerticalAlignment.Center});row.Children.Add(new TextBlock{Text=mediaKind=="audio"?T("Play"):T("Attachment"),FontSize=13,Foreground=Brushes.White,VerticalAlignment=VerticalAlignment.Center});card.Padding=new Thickness(12,10,12,10);card.Child=row;card.MouseLeftButtonUp+=(s,e)=>ShowMessageContent(message,content,user,false);return card;}
       System.Windows.Media.Imaging.BitmapSource photo=null;
       try{if(Str(content.Media,"kind")=="photo")photo=ImageData(Str(content.Media,"data"));}catch{}
       if(photo!=null){panel.Children.Add(ScalePreview(photo));}

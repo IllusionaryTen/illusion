@@ -1,6 +1,20 @@
-# ◈ Illusion 0.9.2
+# ◈ Illusion 1.0.0
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.0.0
+
+**Attachments: text, Markdown and audio.** You can now send `.txt` and `.md` documents (up to 200 KB) and `.wav`/`.mp3` audio (up to 4 MB) alongside photos and MP4 videos. Text opens in a read-only plain-text viewer, audio gets an inline player on web and a play/pause viewer on Windows. Every new type is validated by signature (RIFF/WAVE, ID3/MPEG sync) and UTF-8 strictness on the relay, not just by extension.
+
+**Language switching is fixed.** Changing language now relabels every dynamic surface at once — chat list, conversation header, auto-delete hint, status bar, placeholders, notices and the open settings dialog — instead of leaving a mix of old and new until restart, on both web and Windows.
+
+**One Illusionary theme.** The duplicate aura entry is gone and the base theme is simply "Illusionary".
+
+**Every theme has its own aura art.** The faint dream-state watermark is now clearly visible and themed: Astraios shows a starfield, Crimson Moon a crescent, Dreammetric a swirl, Eden and Oblivion void rings, Hellborn flames, Monarch a crown, Oppression cracks, Tomorrow a dawn horizon, and Illusionary its orbital checkerboard — each with its own bilingual stamp.
+
+**Gmail recovery is wired end to end.** Run `npm run setup:gmail` once (Google OAuth desktop client, `gmail.send` scope), then `npm run cloud:deploy` pushes the sender secrets to the Worker and the "Connect Gmail for account recovery" dialog starts issuing codes. Until that one-time setup is done the dialog explains that honestly instead of failing on send.
+
+**Security pass:** strict MIME/magic checks for every attachment kind, text rendered as plain text (no HTML injection), 200 KB text cap, and tests asserting malformed audio, binary text and oversized documents are rejected before storage.
 
 ## What's new in 0.9.2
 
