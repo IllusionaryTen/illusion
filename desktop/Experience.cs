@@ -28,6 +28,7 @@ namespace Illusion {
     readonly Dictionary<string,MessageView> views=new Dictionary<string,MessageView>();
     readonly Dictionary<string,long> notifiedUnread=new Dictionary<string,long>();
     readonly List<string> searchMatches=new List<string>();
+    readonly Dictionary<string,System.Windows.Media.ImageSource> videoThumbCache=new Dictionary<string,System.Windows.Media.ImageSource>();
     CancellationTokenSource sessionStop;
     Task syncTask;
     Dictionary<string,object>[] latestChats=new Dictionary<string,object>[0];
@@ -404,7 +405,7 @@ namespace Illusion {
           bool once=Once(message);var capturedMessage=message;var capturedUser=peer;
           inner.Children.Add(new TextBlock{Text=content.Text,TextWrapping=TextWrapping.Wrap,FontFamily=new FontFamily(Setting("chatFont","Segoe UI")),FontSize=int.Parse(Setting("font","14")),Foreground=content.Valid?Readable(Setting("textColor","#F1F5FF"),own?Setting("bubbleColor",Setting("accent","#467AFF")):"#192334"):Brush("#FF9DA7")});
           if(once && !own && !queued){var open=new Button{Content="Open once",Margin=new Thickness(0,8,0,0)};open.Click+=async(s,e)=>await Guard(()=>OpenOnce(capturedMessage));inner.Children.Add(open);}
-          if(content.Media!=null && !once){var open=new Button{Content=Str(content.Media,"kind")=="video"?"▶ Open video":"▧ Open photo",Margin=new Thickness(0,8,0,0)};open.Click+=(s,e)=>ShowMessageContent(capturedMessage,content,capturedUser,false);inner.Children.Add(open);}
+          if(content.Media!=null && !once){inner.Children.Add(BuildMediaPreview(capturedMessage,content,capturedUser));}
           view.Time=new TextBlock{FontSize=10,Foreground=Readable("#B3C5E1",own?Setting("bubbleColor",Setting("accent","#467AFF")):"#192334"),HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,7,0,0)};inner.Children.Add(view.Time);
           view.Bubble=new Border{Background=own?Brush(Setting("bubbleColor",Setting("accent","#467AFF"))):Brush("#192334"),CornerRadius=new CornerRadius(14,14,own?4:14,own?14:4),Padding=new Thickness(15,11,15,9),Margin=new Thickness(0,0,0,Setting("compact","false")=="true"?6:13),MaxWidth=480,HorizontalAlignment=own?HorizontalAlignment.Right:HorizontalAlignment.Left,Child=inner,BorderThickness=new Thickness(1),BorderBrush=Brushes.Transparent};
           var menu=new ContextMenu();var copy=new MenuItem{Header="Copy message"};string copied=content.Text;copy.Click+=(s,e)=>Clipboard.SetText(copied);menu.Items.Add(copy);
@@ -424,6 +425,59 @@ namespace Illusion {
       foreach(string id in views.Keys.Where(k=>!wanted.Contains(k)).ToArray()){list.Children.Remove(views[id].Root);views.Remove(id);}
       if(rows.Length==0){emptyMessage=new TextBlock{Text="This is the beginning of your conversation. Say hello.",Foreground=Brush("#7C8DAA"),TextWrapping=TextWrapping.Wrap,HorizontalAlignment=HorizontalAlignment.Center,Margin=new Thickness(0,35,0,0)};list.Children.Add(emptyMessage);}
       SearchMessages(false);if(manageScroll)Window.Dispatcher.BeginInvoke(new Action(()=>{if(!closing && version==conversationVersion && intent==scrollIntent){if(bottom)scroll.ScrollToEnd();else scroll.ScrollToVerticalOffset(previousOffset);}}),System.Windows.Threading.DispatcherPriority.Background);
+    }
+    System.Windows.Controls.Image ScalePreview(System.Windows.Media.Imaging.BitmapSource source){var image=new System.Windows.Controls.Image{Source=source,MaxWidth=240,MaxHeight=200,Stretch=Stretch.UniformToFill,Cursor=System.Windows.Input.Cursors.Hand,Margin=new Thickness(0,8,0,0)};System.Windows.Controls.ToolTipService.SetToolTip(image,T("Open photo"));return image;}
+    Border BuildMediaPreview(Dictionary<string,object> message,Content content,Dictionary<string,object> user){
+      var card=new Border{Margin=new Thickness(0,8,0,0),Cursor=System.Windows.Input.Cursors.Hand,CornerRadius=new CornerRadius(12),BorderThickness=new Thickness(1),BorderBrush=Brush("#31466A"),ClipToBounds=true};
+      var panel=new Grid();
+      System.Windows.Media.Imaging.BitmapSource photo=null;
+      try{if(Str(content.Media,"kind")=="photo")photo=ImageData(Str(content.Media,"data"));}catch{}
+      if(photo!=null){panel.Children.Add(ScalePreview(photo));}
+      else{
+        var key=message.ContainsKey("id")?Convert.ToString(message["id"]):"q:"+Convert.ToString(message["clientId"]);
+        System.Windows.Media.ImageSource cached;videoThumbCache.TryGetValue(key,out cached);
+        if(cached!=null){panel.Children.Add(new System.Windows.Controls.Image{Source=cached,MaxWidth=240,MaxHeight=200,Stretch=Stretch.UniformToFill});}
+        else{
+          var pending=new TextBlock{Text="▶",FontSize=22,Foreground=Brush("#8CB3FF"),HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Width=120,Height=80};
+          panel.Children.Add(pending);
+          var bytes=Convert.FromBase64String(Str(content.Media,"data"));
+          var gen=generation;
+          System.Threading.Tasks.Task.Run(async()=>{
+            var thumb=await RenderVideoFirstFrame(bytes);
+            if(thumb==null||closing||gen!=generation)return;
+            await Window.Dispatcher.InvokeAsync(()=>{videoThumbCache[key]=thumb;UpdateMessageViews(false,false);});
+          }).ContinueWith(_=>{},System.Threading.Tasks.TaskContinuationOptions.OnlyOnFaulted);
+        }
+        var play=new TextBlock{Text="▶",FontSize=16,Foreground=Brushes.White,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,IsHitTestVisible=false};
+        var badge=new Border{Width=36,Height=36,CornerRadius=new CornerRadius(18),Background=Brush("#99000000"),Child=play,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,IsHitTestVisible=false};
+        panel.Children.Add(badge);
+      }
+      card.Child=panel;
+      card.MouseLeftButtonUp+=(s,e)=>ShowMessageContent(message,content,user,false);
+      return card;
+    }
+    async System.Threading.Tasks.Task<System.Windows.Media.ImageSource> RenderVideoFirstFrame(byte[] bytes){
+      // Same short-lived decrypted file pattern as playback: written, read once for a
+      // single scrubbed frame, then deleted immediately even on failure.
+      string dir=System.IO.Path.Combine(ProfileDir,"playback");System.IO.Directory.CreateDirectory(dir);
+      string file=System.IO.Path.Combine(dir,"thumb-"+Guid.NewGuid().ToString("N")+".mp4");
+      var player=new System.Windows.Media.MediaPlayer{ScrubbingEnabled=true,Volume=0};
+      try{
+        System.IO.File.WriteAllBytes(file,bytes);
+        var opened=new TaskCompletionSource<bool>();
+        player.MediaOpened+=(s,e)=>opened.TrySetResult(true);
+        player.MediaFailed+=(s,e)=>opened.TrySetResult(false);
+        player.Open(new Uri(file));
+        var done=await System.Threading.Tasks.Task.WhenAny(opened.Task,System.Threading.Tasks.Task.Delay(5000));
+        if(done!=opened.Task||!opened.Task.Result)return null;
+        player.Position=TimeSpan.FromMilliseconds(40);
+        await System.Threading.Tasks.Task.Delay(120);
+        var drawing=new System.Windows.Media.DrawingVisual();
+        using(var context=drawing.RenderOpen())context.DrawVideo(player,new Rect(0,0,Math.Min(320,player.NaturalVideoWidth),Math.Max(1,Math.Min(320,player.NaturalVideoWidth)*(double)player.NaturalVideoHeight/Math.Max(1,player.NaturalVideoWidth))));
+        var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Min(320,player.NaturalVideoWidth==0?320:player.NaturalVideoWidth),(int)Math.Max(1,Math.Min(320,player.NaturalVideoWidth==0?180:player.NaturalVideoWidth)*(double)(player.NaturalVideoHeight==0?180:player.NaturalVideoHeight)/Math.Max(1,player.NaturalVideoWidth)),96,96,System.Windows.Media.PixelFormats.Pbgra32);
+        bitmap.Render(drawing);bitmap.Freeze();return bitmap;
+      }catch{return null;}
+      finally{try{player.Close();}catch{}try{System.IO.File.Delete(file);}catch{}}
     }
     void OpenSearch(){if(peer==null)return;Get<Border>("ChatSearchBar").Visibility=Visibility.Visible;Get<TextBox>("ChatSearchInput").Focus();SearchMessages(false);}
     void CloseSearch(){Get<Border>("ChatSearchBar").Visibility=Visibility.Collapsed;Get<TextBox>("ChatSearchInput").Clear();}

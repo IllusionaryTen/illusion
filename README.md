@@ -1,6 +1,10 @@
-# ◈ Illusion 0.8.5
+# ◈ Illusion 0.8.6
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 0.8.6
+
+Photos and videos now appear as inline previews in the conversation instead of only an Open button: photos render directly, and videos show a thumbnail of their first frame with a play badge (extracted on your device; if extraction fails, a play badge remains). Clicking a preview opens the full viewer as before.
 
 ## What's new in 0.8.5
 

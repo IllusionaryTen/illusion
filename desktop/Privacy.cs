@@ -41,7 +41,7 @@ namespace Illusion {
     }
     void UpdateSelfProfile(){if(me==null)return;var text=Get<TextBlock>("Avatar");var surface=text.Parent as Border;if(surface==null)return;var profile=UserProfile(me);surface.Background=Brush(Str(profile,"accent","#22395D"));text.Visibility=Visibility.Visible;try{var image=ImageData(Str(profile,"avatar"));if(image!=null){surface.Background=new ImageBrush(image){Stretch=Stretch.UniformToFill};text.Visibility=Visibility.Collapsed;}}catch{}text.Text=Str(me,"displayName","I").Substring(0,1).ToUpperInvariant();}
     void ClosePrivateContent(){foreach(var w in contentWindows.ToArray())w.Close();foreach(var f in mediaFiles.ToArray())try{File.Delete(f);}catch{}mediaFiles.Clear();}
-    void ResetPrivacy(){ClosePrivateContent();pendingMedia=null;chatTimers.Clear();Get<CheckBox>("ViewOnceCheck").IsChecked=false;UpdateAttachment();}
+    void ResetPrivacy(){ClosePrivateContent();pendingMedia=null;chatTimers.Clear();videoThumbCache.Clear();Get<CheckBox>("ViewOnceCheck").IsChecked=false;UpdateAttachment();}
     void UpdateAttachment(){Get<Border>("AttachmentBar").Visibility=pendingMedia==null?Visibility.Collapsed:Visibility.Visible;Get<TextBlock>("AttachmentLabel").Text=pendingMedia==null?"":Str(pendingMedia,"kind")=="photo"?"Photo attached · sent without end-to-end encryption":"Video attached · sent without end-to-end encryption";}
     async Task AttachMedia(){
       if(me==null || peer==null)return;var open=new OpenFileDialog{Filter="Photo or short MP4 video|*.png;*.jpg;*.jpeg;*.mp4"};if(open.ShowDialog(Window)!=true)return;
