@@ -1,6 +1,10 @@
-# ◈ Illusion 0.8.9
+# ◈ Illusion 0.9.0
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 0.9.0
+
+**15 full interface themes** instead of 3. The classic blue, ice and silver are joined by Midnight indigo, Violet dusk, Rose quartz, Crimson ember, Ember glow, Forest moss, Deep ocean, Desert sand, Aurora veil, Plum haze, Sunset blush and Pure contrast. Each theme recolors the background, panels, controls, borders, accent buttons and muted text consistently on the web app, the Android APK and the Windows app, and every theme name is translated in all 29 languages. A new test suite checks that every theme exists on both platforms, keeps its colors in sync between web and Windows, and keeps text at WCAG 4.5:1 contrast or better.
 
 ## What's new in 0.8.9
 
