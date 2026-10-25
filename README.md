@@ -22,7 +22,7 @@ Theme palettes were resampled directly from each aura's collection artwork with 
 
 **Every theme has its own aura art.** The faint dream-state watermark is now clearly visible and themed: Astraios shows a starfield, Crimson Moon a crescent, Dreammetric a swirl, Eden and Oblivion void rings, Hellborn flames, Monarch a crown, Oppression cracks, Tomorrow a dawn horizon, and Illusionary its orbital checkerboard — each with its own bilingual stamp.
 
-**Gmail recovery is wired end to end.** Run `npm run setup:gmail` once (Google OAuth desktop client, `gmail.send` scope), then `npm run cloud:deploy` pushes the sender secrets to the Worker and the "Connect Gmail for account recovery" dialog starts issuing codes. Until that one-time setup is done the dialog explains that honestly instead of failing on send.
+**Gmail recovery is wired end to end.** Run `npm run setup:gmail` once (Google OAuth desktop client, `gmail.send` scope), then your private deploy tooling pushes the sender secrets to the Worker and the "Connect Gmail for account recovery" dialog starts issuing codes. Until that one-time setup is done the dialog explains that honestly instead of failing on send.
 
 **Security pass:** strict MIME/magic checks for every attachment kind, text rendered as plain text (no HTML injection), 200 KB text cap, and tests asserting malformed audio, binary text and oversized documents are rejected before storage.
 
@@ -92,9 +92,9 @@ The original local database is preserved separately. It does not mirror later cl
 
 Every deploy that changes the hosted version automatically publishes an update notice to **all accounts**. Each signed-in user sees an **Illusion updates** entry (◈) at the top of their chat list with the latest notice, an unread badge, and a read-only notice history. Notices are labelled in the app as host service messages that are **not end-to-end encrypted**; only the host can publish them. Open the entry to mark notices as read on that device.
 
-To publish a notice manually, use `node scripts/cloud-admin.mjs notice 0.8.4 Message text here` on the hosted relay, or `node --env-file-if-exists=.env scripts/moderate.mjs notice 0.8.4 Message text here` for a local relay. `Deploy-Cloudflare.cmd` sends its own notice (add `--notice "custom text"` to override the default message) whenever the deployed version differs from the previously announced one.
+Deploying a version publishes its notice automatically; the host can also publish or override a notice with private administration tooling. That tooling is not distributed with the app.
 
-The old temporary tunnel tooling is retained for local experiments, but is not required for cloud hosting. The failed Happ routing experiment was [rolled back](HAPP-CLOUDFLARE.md). Do not reapply it.
+The old temporary tunnel tooling is retained for local experiments, but is not required for cloud hosting. The failed Happ routing experiment was rolled back. Do not reapply it.
 
 ## New in 0.5: profiles, themes and Telegram Mini App
 
@@ -118,7 +118,7 @@ Draft policies under **legal/** appear in the web footer and Windows Settings �
 
 Registration has separate unchecked Terms agreement/Privacy acknowledgement, version-checked by the relay, plus a neutral age choice. This preview rejects under-18 registration; it does not pretend that a checkbox is parental consent. Existing accounts are not retroactively age-verified. Children's-service eligibility, branding, controller details, legal bases, transfers and local obligations still need review. There are no payments or marketing emails; refund/unsubscribe notices explain that accurately. The storage notice explains essential storage, with no fabricated optional tracker consent.
 
-Deletion requests require current password and typed username and enter a **manual host queue**. For cloud hosting, list with `node scripts/cloud-admin.mjs deletions` and fulfill only a matching request with `node scripts/cloud-admin.mjs fulfill-deletion ID EXACT_USERNAME`. The local-only administration tool remains `scripts/moderate.mjs`. Active account/session/profile/message/consent/report rows are removed transactionally; device data, backups and other users' copies cannot be remotely recalled. Reports/completed request records have a 90-day cleanup.
+Deletion requests require current password and typed username and enter a **manual host queue**. The host reviews and fulfills the queue with private administration tooling, matching each request to its account before deletion. Active account/session/profile/message/consent/report rows are removed transactionally; device data, backups and other users' copies cannot be remotely recalled. Reports/completed request records have a 90-day cleanup.
 
 ## Existing features
 
@@ -139,7 +139,7 @@ Drafts/outbox survive restarts. Offline sends retry with the same ID. Up to 400 
 
 ## Review reports
 
-**Review-Reports.cmd** lists reports. In PowerShell in this folder:
+Reports are reviewed with the host's private moderation tooling, which can list, resolve, dismiss and ban accounts. Those commands are intentionally not published with the app.
 
 ```
 node --env-file-if-exists=.env scripts/moderate.mjs show 1

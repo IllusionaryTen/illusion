@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-test('Windows bot setup verifies before saving, preserves rejected settings, and hides token output', { skip: process.platform !== 'win32' }, () => {
+test('Windows bot setup verifies before saving, preserves rejected settings, and hides token output', { skip: process.platform !== 'win32' || !existsSync(resolve('scripts/configure-telegram.ps1')) }, () => {
   const dir = mkdtempSync(join(tmpdir(), 'illusion-token-setup-test-'));
   try {
     mkdirSync(join(dir, 'scripts'));

@@ -17,8 +17,7 @@
     "cloud:prepare": "node scripts/prepare-cloudflare.mjs",
     "cloud:dev": "wrangler dev --config cloudflare/wrangler.jsonc --local",
     "cloud:build": "node scripts/prepare-cloudflare.mjs && wrangler deploy --config cloudflare/wrangler.jsonc --dry-run --outdir build/cloudflare-bundle",
-    "cloud:test": "node scripts/test-cloudflare.mjs",
-    "cloud:deploy": "node scripts/deploy-cloudflare.mjs"
+    "cloud:test": "node scripts/test-cloudflare.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",
