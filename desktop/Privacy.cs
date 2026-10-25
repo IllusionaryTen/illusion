@@ -86,18 +86,18 @@ namespace Illusion {
       panel.Children.Add(scene);panel.Children.Add(new TextBlock{Text=Str(user,"displayName"),Foreground=Readable(Str(p,"textColor","#F1F5FF"),((SolidColorBrush)Window.Resources["PanelBackground"]).Color.ToString()),FontFamily=ProfileFont(Str(p,"font","Segoe UI")),FontSize=25,TextWrapping=TextWrapping.Wrap});panel.Children.Add(Label("@"+user["username"]));panel.Children.Add(LabelRaw(Str(p,"bio","No description yet."),14));
     }
     void ShowProfile(Dictionary<string,object> user,bool edit){
-      if(edit){ShowProfileEditor(user);return;}var panel=new StackPanel();DecorateProfile(panel,user);var report=new Button{Content="Report profile"};panel.Children.Add(report);var view=Dialog("Profile",panel);report.Click+=(s,e)=>ReportDialog(user,null,null);view.ShowDialog();
+      if(edit){ShowProfileEditor(user);return;}var panel=new StackPanel();DecorateProfile(panel,user);var report=new Button{Content=T("Report profile")};panel.Children.Add(report);var view=Dialog("Profile",panel);report.Click+=(s,e)=>ReportDialog(user,null,null);view.ShowDialog();
     }
     async Task ChatOptions(){
       if(peer==null || me==null)return;var user=peer;string id=(string)user["id"];int gen=generation;
       var response=await Api("GET","/v1/chat-settings?peer="+id);if(gen!=generation)return;chatTimers[id]=Convert.ToInt32(response["ttlSeconds"]);
       var panel=new StackPanel();panel.Children.Add(Label("Conversation with @"+user["username"],18));
-      var profile=new Button{Content="View profile"};panel.Children.Add(profile);profile.Click+=(s,e)=>ShowProfile(user,false);
+      var profile=new Button{Content=T("View profile")};panel.Children.Add(profile);profile.Click+=(s,e)=>ShowProfile(user,false);
       panel.Children.Add(Label("Automatically delete new messages"));var timerChoice=new ComboBox{ItemsSource=TimerNames,SelectedIndex=Array.IndexOf(ChatTimers,chatTimers[id]),Margin=new Thickness(0,0,0,10)};panel.Children.Add(timerChoice);
       panel.Children.Add(Label("Either participant can change this shared timer. It applies to messages sent afterward, starting when the relay accepts them. Expired content is removed from the relay and this app's cache. Copies, screenshots and backups cannot be recalled."));
-      var save=new Button{Content="Save chat timer"};panel.Children.Add(save);var status=Label("");panel.Children.Add(status);
+      var save=new Button{Content=T("Save chat timer")};panel.Children.Add(save);var status=Label("");panel.Children.Add(status);
       var block=new Button{Content=(bool)response["blocked"]?"Unblock this user":"Block this user",IsEnabled=id!=(string)me["id"],Margin=new Thickness(0,12,0,0)};panel.Children.Add(block);
-      var report=new Button{Content="Report profile",IsEnabled=id!=(string)me["id"],Margin=new Thickness(0,8,0,0)};panel.Children.Add(report);report.Click+=(s,e)=>ReportDialog(user,null,null);
+      var report=new Button{Content=T("Report profile"),IsEnabled=id!=(string)me["id"],Margin=new Thickness(0,8,0,0)};panel.Children.Add(report);report.Click+=(s,e)=>ReportDialog(user,null,null);
       var dialog=Dialog("Chat settings",panel);
       save.Click+=async(s,e)=>{save.IsEnabled=false;try{if(gen!=generation){dialog.Close();return;}await Api("PUT","/v1/chat-settings",new{peer=id,ttlSeconds=ChatTimers[timerChoice.SelectedIndex]});chatTimers[id]=ChatTimers[timerChoice.SelectedIndex];UpdateTimerHint();dialog.Close();}catch(Exception error){status.Text=error.Message;}finally{save.IsEnabled=true;}};
       block.Click+=async(s,e)=>{block.IsEnabled=false;try{if(gen!=generation){dialog.Close();return;}await Api("PUT","/v1/block",new{peer=id,blocked=!(bool)response["blocked"]});dialog.Close();}catch(Exception error){status.Text=error.Message;block.IsEnabled=true;}};dialog.ShowDialog();
@@ -128,11 +128,11 @@ namespace Illusion {
         else if(kind=="video"){
           byte[] bytes=Convert.FromBase64String(data);if(bytes.Length<12 || Encoding.ASCII.GetString(bytes,4,4)!="ftyp")throw new Exception("Invalid MP4 attachment.");
           string dir=System.IO.Path.Combine(ProfileDir,"playback");Directory.CreateDirectory(dir);videoFile=System.IO.Path.Combine(dir,"illusion-"+Guid.NewGuid().ToString("N")+".mp4");File.WriteAllBytes(videoFile,bytes);Array.Clear(bytes,0,bytes.Length);mediaFiles.Add(videoFile);
-          player=new MediaElement{Source=new Uri(videoFile),LoadedBehavior=MediaState.Manual,UnloadedBehavior=MediaState.Close,MaxHeight=400,Stretch=Stretch.Uniform};panel.Children.Add(player);var controls=new StackPanel{Orientation=Orientation.Horizontal};var play=new Button{Content="Play"};var pause=new Button{Content="Pause",Margin=new Thickness(10,0,0,0)};controls.Children.Add(play);controls.Children.Add(pause);panel.Children.Add(controls);var captured=player;play.Click+=(s,e)=>captured.Play();pause.Click+=(s,e)=>captured.Pause();
+          player=new MediaElement{Source=new Uri(videoFile),LoadedBehavior=MediaState.Manual,UnloadedBehavior=MediaState.Close,MaxHeight=400,Stretch=Stretch.Uniform};panel.Children.Add(player);var controls=new StackPanel{Orientation=Orientation.Horizontal};var play=new Button{Content=T("Play")};var pause=new Button{Content=T("Pause"),Margin=new Thickness(10,0,0,0)};controls.Children.Add(play);controls.Children.Add(pause);panel.Children.Add(controls);var captured=player;play.Click+=(s,e)=>captured.Play();pause.Click+=(s,e)=>captured.Pause();
           player.MediaFailed+=(s,e)=>MessageBox.Show("Windows could not play this video. Try an MP4 encoded with H.264/AAC.","Illusion");
         }else throw new Exception("Unsupported attachment type.");
       }
-      var report=new Button{Content="Report this message",Margin=new Thickness(0,15,0,0),IsEnabled=(string)message["senderId"]!=(string)me["id"]};panel.Children.Add(report);report.Click+=(s,e)=>ReportDialog(user,message,content);
+      var report=new Button{Content=T("Report this message"),Margin=new Thickness(0,15,0,0),IsEnabled=(string)message["senderId"]!=(string)me["id"]};panel.Children.Add(report);report.Click+=(s,e)=>ReportDialog(user,message,content);
       var dialog=Dialog(once?"View once":"Attachment",panel);contentWindows.Add(dialog);contentDeadlines[dialog]=message.ContainsKey("expiresAt")?Convert.ToInt64(message["expiresAt"]):0;
       dialog.Closed+=(s,e)=>{contentWindows.Remove(dialog);contentDeadlines.Remove(dialog);if(player!=null){player.Stop();player.Close();player.Source=null;}panel.Children.Clear();if(videoFile!=null)try{File.Delete(videoFile);mediaFiles.Remove(videoFile);}catch{};};dialog.ShowDialog();
     }
@@ -141,9 +141,9 @@ namespace Illusion {
       panel.Children.Add(Label(message==null?"This shares a snapshot of the public profile, your account ID, reason and note with this network's moderators.":"This shares your account ID, the message identifier, reason and note. Only the selected message text/caption is shared if you choose the evidence option. Other chats and private keys stay on your device."));
       var reason=new ComboBox{ItemsSource=new[]{"spam","harassment","threats","sexual-content","other"},SelectedIndex=0};panel.Children.Add(reason);
       panel.Children.Add(Label("Note (optional)"));var note=new TextBox{MaxLength=1000,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,MinHeight=65};panel.Children.Add(note);
-      CheckBox share=null;if(message!=null){share=new CheckBox{Content="Share this message's text/caption as verified evidence",IsChecked=false,IsEnabled=content!=null && content.Valid,Foreground=Brushes.White,Margin=new Thickness(0,14,0,8)};panel.Children.Add(share);if(content!=null)panel.Children.Add(LabelRaw(content.Text.Length>2000?content.Text.Substring(0,2000):content.Text));}
-      var status=Label("");panel.Children.Add(status);var send=new Button{Content="Submit report"};panel.Children.Add(send);var dialog=Dialog("Report",panel);int gen=generation;
-      send.Click+=async(s,e)=>{send.IsEnabled=false;try{if(gen!=generation || me==null){dialog.Close();return;}var b=new Dictionary<string,object>{{"targetId",target["id"]},{"reason",reason.SelectedItem},{"note",note.Text}};if(message!=null){b["messageId"]=message["id"];if(share.IsChecked==true)b["evidence"]=new{envelope=message["envelope"],material=Crypto.ReportMaterial(message,(string)me["id"],privateKey)};}var result=await Api("POST","/v1/reports",b);status.Text="Report #"+result["reportId"]+" submitted. The network's moderators can review it.";send.Content="Submitted";}catch(Exception error){status.Text=error.Message;send.IsEnabled=true;}};dialog.ShowDialog();
+      CheckBox share=null;if(message!=null){share=new CheckBox{Content=T("Share this message's text/caption as verified evidence"),IsChecked=false,IsEnabled=content!=null && content.Valid,Foreground=Brushes.White,Margin=new Thickness(0,14,0,8)};panel.Children.Add(share);if(content!=null)panel.Children.Add(LabelRaw(content.Text.Length>2000?content.Text.Substring(0,2000):content.Text));}
+      var status=Label("");panel.Children.Add(status);var send=new Button{Content=T("Submit report")};panel.Children.Add(send);var dialog=Dialog("Report",panel);int gen=generation;
+      send.Click+=async(s,e)=>{send.IsEnabled=false;try{if(gen!=generation || me==null){dialog.Close();return;}var b=new Dictionary<string,object>{{"targetId",target["id"]},{"reason",reason.SelectedItem},{"note",note.Text}};if(message!=null){b["messageId"]=message["id"];if(share.IsChecked==true)b["evidence"]=new{envelope=message["envelope"],material=Crypto.ReportMaterial(message,(string)me["id"],privateKey)};}var result=await Api("POST","/v1/reports",b);status.Text="Report #"+result["reportId"]+" submitted. The network's moderators can review it.";send.Content=T("Submitted");}catch(Exception error){status.Text=error.Message;send.IsEnabled=true;}};dialog.ShowDialog();
     }
   }
 }

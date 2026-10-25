@@ -105,7 +105,7 @@ namespace Illusion {
       var close=new Button{Content="×",Width=30,Height=30,Padding=new Thickness(0),Background=Brush("#17202F"),Foreground=Brush("#AFBED5"),BorderThickness=new Thickness(0),FontSize=19,VerticalAlignment=VerticalAlignment.Top,ToolTip="Dismiss notification"};
       var row=new DockPanel{LastChildFill=true};DockPanel.SetDock(close,Dock.Right);row.Children.Add(close);row.Children.Add(text);
       var card=new Border{Padding=new Thickness(16,14,12,14),CornerRadius=new CornerRadius(15),BorderThickness=new Thickness(1),BorderBrush=Brush("#34445F"),Background=Brush("#111925"),Effect=new System.Windows.Media.Effects.DropShadowEffect{Color=Colors.Black,Opacity=.38,BlurRadius=22,ShadowDepth=5}};card.Child=row;
-      var toast=new Window{Title="Illusion notification",Width=360,Height=92,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,ShowActivated=false,Topmost=true,AllowsTransparency=true,Background=Brush("#00000000"),Opacity=0,Content=card};
+      var toast=new Window{Title=T("Illusion notification"),Width=360,Height=92,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,ShowActivated=false,Topmost=true,AllowsTransparency=true,Background=Brush("#00000000"),Opacity=0,Content=card};
       System.Windows.Automation.AutomationProperties.SetName(toast,"Illusion message notification");System.Windows.Automation.AutomationProperties.SetName(title,"Message from "+name);System.Windows.Automation.AutomationProperties.SetName(message,body);
       var area=SystemParameters.WorkArea;toast.Left=Math.Max(area.Left+12,area.Right-toast.Width-18);toast.Top=Math.Max(area.Top+12,area.Bottom-toast.Height-18);
       toast.MouseLeftButtonUp+=(s,e)=>{if(e.OriginalSource is Button)return;if(Window.WindowState==WindowState.Minimized)Window.WindowState=WindowState.Normal;Window.Activate();CloseNotificationToast();};
@@ -238,7 +238,7 @@ namespace Illusion {
           ListBoxItem item;
           if(!chatItems.TryGetValue(id,out item)) {
             item=new ListBoxItem();chatItems[id]=item;
-            var menu=new ContextMenu();var pin=new MenuItem{Header="Pin / unpin conversation"};pin.Click+=(s,e)=>{if(!pinned.Add(id))pinned.Remove(id);SaveLocalState();UpdateChats(latestChats);};menu.Items.Add(pin);item.ContextMenu=menu;
+            var menu=new ContextMenu();var pin=new MenuItem{Header=T("Pin / unpin conversation")};pin.Click+=(s,e)=>{if(!pinned.Add(id))pinned.Remove(id);SaveLocalState();UpdateChats(latestChats);};menu.Items.Add(pin);item.ContextMenu=menu;
           }
           item.Tag=chat;
           var row=new Grid();row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(40)});row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
@@ -404,15 +404,15 @@ namespace Illusion {
           if(content.Reply!=null)inner.Children.Add(new Border{BorderBrush=Brush("#9ABCF2"),BorderThickness=new Thickness(2,0,0,0),Padding=new Thickness(9,2,0,2),Margin=new Thickness(0,0,0,8),Child=new TextBlock{Text=Convert.ToString(content.Reply["name"])+"\n"+Convert.ToString(content.Reply["text"]),Foreground=Brush("#D0E0FC"),FontSize=11,TextWrapping=TextWrapping.Wrap,MaxHeight=58}});
           bool once=Once(message);var capturedMessage=message;var capturedUser=peer;
           inner.Children.Add(new TextBlock{Text=content.Text,TextWrapping=TextWrapping.Wrap,FontFamily=new FontFamily(Setting("chatFont","Segoe UI")),FontSize=int.Parse(Setting("font","14")),Foreground=content.Valid?Readable(Setting("textColor","#F1F5FF"),own?Setting("bubbleColor",Setting("accent","#467AFF")):"#192334"):Brush("#FF9DA7")});
-          if(once && !own && !queued){var open=new Button{Content="Open once",Margin=new Thickness(0,8,0,0)};open.Click+=async(s,e)=>await Guard(()=>OpenOnce(capturedMessage));inner.Children.Add(open);}
+          if(once && !own && !queued){var open=new Button{Content=T("Open once"),Margin=new Thickness(0,8,0,0)};open.Click+=async(s,e)=>await Guard(()=>OpenOnce(capturedMessage));inner.Children.Add(open);}
           if(content.Media!=null && !once){inner.Children.Add(BuildMediaPreview(capturedMessage,content,capturedUser));}
           view.Time=new TextBlock{FontSize=10,Foreground=Readable("#B3C5E1",own?Setting("bubbleColor",Setting("accent","#467AFF")):"#192334"),HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,7,0,0)};inner.Children.Add(view.Time);
           view.Bubble=new Border{Background=own?Brush(Setting("bubbleColor",Setting("accent","#467AFF"))):Brush("#192334"),CornerRadius=new CornerRadius(14,14,own?4:14,own?14:4),Padding=new Thickness(15,11,15,9),Margin=new Thickness(0,0,0,Setting("compact","false")=="true"?6:13),MaxWidth=480,HorizontalAlignment=own?HorizontalAlignment.Right:HorizontalAlignment.Left,Child=inner,BorderThickness=new Thickness(1),BorderBrush=Brushes.Transparent};
-          var menu=new ContextMenu();var copy=new MenuItem{Header="Copy message"};string copied=content.Text;copy.Click+=(s,e)=>Clipboard.SetText(copied);menu.Items.Add(copy);
+          var menu=new ContextMenu();var copy=new MenuItem{Header=T("Copy message")};string copied=content.Text;copy.Click+=(s,e)=>Clipboard.SetText(copied);menu.Items.Add(copy);
           if(once)menu.Items.Clear();
-          if(content.Valid && !once){var replyItem=new MenuItem{Header="Reply"};var capturedView=view;var capturedContent=content;replyItem.Click+=(s,e)=>BeginReply(capturedView.Message,capturedContent);menu.Items.Add(replyItem);}
-          if(!queued && !own){var report=new MenuItem{Header="Report message"};report.Click+=(s,e)=>ReportDialog(capturedUser,capturedMessage,once?null:content);menu.Items.Add(report);}
-          if(queued){var stop=new MenuItem{Header="Stop retrying this message",ToolTip="Stops future attempts; it does not remove a message already delivered."};var captured=message;stop.Click+=(s,e)=>{if(activeSend==clientId){ShowNotice("This message is currently sending. Wait for the current attempt before stopping retries.",false);return;}outbox.Remove(captured);SaveLocalState();UpdateMessageViews(false,false);};menu.Items.Add(stop);}
+          if(content.Valid && !once){var replyItem=new MenuItem{Header=T("Reply")};var capturedView=view;var capturedContent=content;replyItem.Click+=(s,e)=>BeginReply(capturedView.Message,capturedContent);menu.Items.Add(replyItem);}
+          if(!queued && !own){var report=new MenuItem{Header=T("Report message")};report.Click+=(s,e)=>ReportDialog(capturedUser,capturedMessage,once?null:content);menu.Items.Add(report);}
+          if(queued){var stop=new MenuItem{Header=T("Stop retrying this message"),ToolTip="Stops future attempts; it does not remove a message already delivered."};var captured=message;stop.Click+=(s,e)=>{if(activeSend==clientId){ShowNotice("This message is currently sending. Wait for the current attempt before stopping retries.",false);return;}outbox.Remove(captured);SaveLocalState();UpdateMessageViews(false,false);};menu.Items.Add(stop);}
           view.Bubble.ContextMenu=menu;view.Root.Children.Add(view.Bubble);views[id]=view;
           if(!force && Setting("motion","true")=="true" && SystemParameters.ClientAreaAnimation)view.Bubble.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(150)));
         }

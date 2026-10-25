@@ -20,7 +20,7 @@ namespace Illusion {
     }
     Task ImportConnection() {
       if(me!=null)throw new Exception("Sign out before changing your Illusion network.");
-      var dialog=new OpenFileDialog{Filter="Illusion connection|*.illusion;*.illusion.json",Title="Choose your Illusion connection file"};
+      var dialog=new OpenFileDialog{Filter="Illusion connection|*.illusion;*.illusion.json",Title=T("Choose your Illusion connection file")};
       if(dialog.ShowDialog(Window)!=true)return Task.FromResult(0);
       if(new FileInfo(dialog.FileName).Length>6000)throw new Exception("The connection file is too large.");
       var profile=ConnectionProfile.Parse(File.ReadAllText(dialog.FileName));

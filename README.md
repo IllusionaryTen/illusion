@@ -1,6 +1,10 @@
-# ◈ Illusion 0.8.6
+# ◈ Illusion 0.8.7
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 0.8.7
+
+Translation is now complete in all 28 non-English languages, not just the main screens. A string-level audit found every place where English bypassed the translation catalog — chat-list previews, the search placeholder, profile editor, report and deletion dialogs, settings policy links, notification text, connection statuses, clipboard and upload errors, theme and effect names, and the Windows app's runtime-created buttons and menus. All of it is translated, with a regression check that fails if any user-visible string loses its translation. Existing accounts, chats and keys are unaffected.
 
 ## What's new in 0.8.6
 

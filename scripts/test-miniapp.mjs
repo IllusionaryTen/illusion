@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { createMessenger } from '../server/index.mjs';
+import { translate } from '../web/i18n.mjs';
 import {localWorker,openTestRegistration} from './cloudflare-test-runtime.mjs';
 const require=createRequire(import.meta.url);
 let pw;try{pw=require('playwright');}catch{pw=require(process.env.ILLUSION_PLAYWRIGHT||'C:/Users/Giga/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');}
@@ -34,7 +35,7 @@ try{
   await alice.getByRole('button',{name:'Appearance & privacy'}).click();const before=await alice.evaluate(()=>getComputedStyle(document.body).backgroundColor);await alice.getByLabel('Full interface theme').selectOption('ice');check(before!==await alice.evaluate(()=>getComputedStyle(document.body).backgroundColor),'Theme changes the real browser background');await alice.getByRole('button',{name:'Close dialog'}).click();
   await alice.getByLabel('Message',{exact:true}).fill('Browser view-once secret');await alice.getByLabel('View once',{exact:true}).check();await alice.locator('#send-form').getByRole('button',{name:'Send',exact:true}).click();await bob.locator('#messages').getByRole('button',{name:'Open once',exact:true}).waitFor({timeout:15000});check(!await bob.locator('#messages').textContent().then(t=>t.includes('Browser view-once secret')),'View-once browser history withholds plaintext until opened');
   bob.once('dialog',d=>d.accept());await bob.locator('#messages').getByRole('button',{name:'Open once',exact:true}).click();await bob.locator('#modal-body').getByText('Browser view-once secret',{exact:true}).waitFor();check(true,'View-once Web Crypto content decrypts in temporary viewer');await bob.getByRole('button',{name:'Close dialog'}).click();check(!await bob.locator('#messages').textContent().then(t=>t.includes('Browser view-once secret')),'Closing view-once viewer removes its displayed copy');
-  await alice.getByRole('button',{name:'Appearance & privacy'}).click();await alice.getByRole('button',{name:'Request account deletion',exact:true}).click();await alice.getByLabel('Confirm your username',{exact:true}).fill('web_alice');await alice.getByLabel('Current password',{exact:true}).fill('a strong browser testing password');await alice.getByRole('button',{name:'Submit deletion request',exact:true}).click();await alice.locator('#status').getByText(/pending host review/).waitFor();check((await stored("SELECT COUNT(*) AS n FROM deletion_requests WHERE status='pending'")).n===1,'Browser deletion form submits an authenticated review request');
+  await alice.getByRole('button',{name:'Appearance & privacy'}).click();await alice.getByRole('button',{name:'Request account deletion',exact:true}).click();await alice.locator('#modal').getByLabel('Username',{exact:true}).fill('web_alice');await alice.locator('#modal').getByLabel('Password',{exact:true}).fill('a strong browser testing password');await alice.getByRole('button',{name:'Submit deletion request',exact:true}).click();await alice.locator('#status').getByText(/pending host review/).waitFor();check((await stored("SELECT COUNT(*) AS n FROM deletion_requests WHERE status='pending'")).n===1,'Browser deletion form submits an authenticated review request');
   check((await a.cookies()).length===0,'Mini App sets no browser cookies');const keys=await alice.evaluate(async()=>{const {storage}=await import('/app/crypto.mjs');const key=await storage('get','key:web_alice');return {decrypt:key.decryptKey.extractable,sign:key.signKey.extractable,raw:!!key.exportJwk};});check(!keys.decrypt&&!keys.sign&&!keys.raw,'Persisted browser keys are non-extractable with no raw private JWK');
   await bob.getByRole('button',{name:'Appearance & privacy'}).click();await bob.getByRole('button',{name:'Sign out',exact:true}).click();await bob.keyboard.press('Tab');check(await bob.evaluate(()=>document.activeElement!==document.body),'Keyboard navigation moves focus to a real control');await bob.screenshot({path:'artifacts/illusion-miniapp-mobile.png',fullPage:true});
   if(cloud){const r=await app.dispatchFetch('http://localhost/admin/notice',{method:'POST',headers:{Authorization:'Bearer '+testAdmin,'Content-Type':'application/json'},body:JSON.stringify({version:'9.9.9',text:'Browser update notice ✨'})});if(r.status!==200)throw Error('Notice publish failed');}else app.relay.publishNotice('9.9.9','Browser update notice ✨');
@@ -43,6 +44,22 @@ try{
   await alice.locator('#messages').getByText('Browser update notice ✨',{exact:true}).waitFor();check(await alice.locator('#chat-title').textContent()==='Illusion updates','Published update notice opens as a service conversation for the account');
   check(await alice.locator('#send-form').isHidden(),'Service notices are read-only with no composer');await alice.screenshot({path:'artifacts/illusion-miniapp-notices.png',fullPage:true});
   check(errors.length===0,'No browser runtime errors: '+errors.join(', '));
+  // Language regression (reported: Finnish showed mixed English). Each locale must translate
+  // the auth screen, chat list, conversation placeholder and settings dialog end to end.
+  for(const lang of ['fi','de','ja','ar']){await alice.setViewportSize({width:430,height:900});
+    await alice.evaluate(code=>localStorage.setItem('illusion-language',code),lang);await alice.reload();await alice.waitForLoadState('networkidle');
+    check((await alice.locator('.card h1').textContent()).trim()===translate('Your people. Your space.',lang),'['+lang+'] auth heading fully translated');
+    check((await alice.locator('#auth p').first().innerText()).trim()===translate('This is an encrypted messenger inside Telegram. It uses your Illusion account, without importing Telegram contacts or identity.',lang),'['+lang+'] auth copy fully translated');
+    await alice.fill('#username','web_alice');await alice.fill('#password','a strong browser testing password');await alice.click('#sign-in');
+    await alice.locator('#workspace').waitFor({state:'visible',timeout:25000});
+    check((await alice.locator('.search-label').textContent()).trim()===translate('Search chats or username',lang),'['+lang+'] chat search label fully translated');
+    check((await alice.locator('#chat-title').textContent()).trim()===translate('Make a connection.',lang),'['+lang+'] conversation placeholder fully translated');
+    await alice.locator('#new-chat').click();
+    check(await alice.locator('#find-name').getAttribute('placeholder')===translate('Exact username, then Enter',lang),'['+lang+'] search placeholder fully translated');
+    await alice.locator('#settings').click();
+    check((await alice.locator('#modal-body h2').textContent()).trim()===translate('Appearance & privacy',lang),'['+lang+'] settings dialog fully translated');
+    await alice.locator('#close-modal').click();
+  }
   if(cloud){check(websockets>=2,'Real browser contexts use persistent authenticated live sockets');check(eventPolls===0,'Hosted browser clients issue zero idle event-poll requests');}
   writeFileSync(cloud?'artifacts/miniapp-cloudflare-qa.txt':'artifacts/miniapp-qa.txt',checks+' browser integration checks passed. Chromium with separate contexts, live relay, no Telegram session.\n');console.log(checks+' browser integration checks passed.');
 }finally{if(browser)await browser.close();if(cloud)await app.dispose();else await app.close();assert.ok(dir.startsWith(join(tmpdir(),'illusion-miniapp-')));rmSync(dir,{recursive:true,force:true});}

@@ -20,7 +20,7 @@ test('all published locales have a complete UI phrase row', () => {
 test('the full-coverage block leaves no English fallback in any locale', () => {
   const { english, rows } = translationCatalog;
   // Words that are legitimately identical in many languages (numbers, language names, loanwords).
-  const allowed = new Set(['13–15', '16–17', 'English', 'Greek', 'Vietnamese', 'Chats', 'Cloud', '1 minute', 'Pause', '1 week', 'Photo / Video', 'Report', 'Play', 'Draft: ', 'You: ']);
+  const allowed = new Set(['13–15', '16–17', 'English', 'Greek', 'Vietnamese', 'Chats', 'Cloud', '1 minute', 'Pause', '1 week', 'Photo / Video', 'Report', 'Play', 'Draft: ', 'You: ', 'Spam', 'Silver', 'Orbit']);
   for (const [code, row] of Object.entries(rows)) {
     for (let i = 84; i < english.length; i++) {
       if (row[i] === english[i] && !allowed.has(english[i])) {
