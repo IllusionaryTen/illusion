@@ -60,3 +60,16 @@ dist-ssr/
 *.njsproj
 *.sln
 *.sw?
+
+# Private local launchers (never publish operational entry points)
+Configure-Connection.cmd
+Configure-Telegram.cmd
+Deploy-Cloudflare.cmd
+Review-Cloud-Reports.cmd
+Review-Reports.cmd
+Setup-Public.cmd
+Start-Illusion.cmd
+Start-Public-TCP.cmd
+Start-Public.cmd
+Start-Server.cmd
+Start-Telegram-Bot.cmd
