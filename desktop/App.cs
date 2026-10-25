@@ -47,7 +47,7 @@ namespace Illusion {
       using(var stream=typeof(Messenger).Assembly.GetManifestResourceStream("Illusion.ico")) if(stream!=null)Window.Icon=BitmapFrame.Create(stream);
       try { if(File.Exists(ConfigPath)) foreach(var item in json.Deserialize<Dictionary<string,string>>(File.ReadAllText(ConfigPath))) settings[item.Key]=item.Value; } catch { }
       InitializeLocalization();CaptureLocalizedElements(Window.Content as DependencyObject,false);ApplyWindowLanguage();
-      Get<Button>("AuthButton").Content=T("Sign in");Get<Button>("SwitchAuthButton").Content=T("Create an account");Get<Button>("TermsLink").Content=T("Terms");Get<Button>("PrivacyLink").Content=T("Privacy");
+      Get<TextBlock>("VersionLabel").Text=BuildInfo.Version;Get<Button>("AuthButton").Content=T("Sign in");Get<Button>("SwitchAuthButton").Content=T("Create an account");Get<Button>("TermsLink").Content=T("Terms");Get<Button>("PrivacyLink").Content=T("Privacy");
       InitializeConnection();
       Get<TextBox>("UsernameInput").Text=Setting("username","");
       Get<CheckBox>("LanConsent").IsChecked=Setting("lan","false")=="true";
@@ -278,7 +278,7 @@ namespace Illusion {
       var recovery=new Button {Content=T("Connect Gmail for account recovery"),IsEnabled=me!=null,Margin=new Thickness(0,8,0,0)};panel.Children.Add(recovery);recovery.Click+=(s,e)=>ShowEmailRecovery();
       panel.Children.Add(Label("Your key is protected by Windows on this profile. Export a password-protected backup before changing PCs. Without it, old messages cannot be recovered.",12));
       var logout=new Button {Content=T("Sign out"),IsEnabled=me!=null};panel.Children.Add(logout);
-      panel.Children.Add(Label("Illusion 0.8.4 · Private. Customizable. Free.\nOriginal interface inspired by illusionary in Sol's RNG.\nOne remembered connection for all your conversations.",11));
+      panel.Children.Add(Label("Illusion "+BuildInfo.Version+" · Private. Customizable. Free.\nOriginal interface inspired by illusionary in Sol's RNG.\nOne remembered connection for all your conversations.",11));
       var dialog=Dialog("Customize Illusion",panel);
       apply.Click+=(s,e)=>{settings["language"]=Convert.ToString(language.SelectedValue??"en");currentLanguage=settings["language"];settings["theme"]=new[]{"blue","ice","silver"}[themes.SelectedIndex];settings["chatFont"]=Convert.ToString(family.SelectedItem);settings["textColor"]=textColor.Hex;if(bubbleColor.Hex=="")settings.Remove("bubbleColor");else settings["bubbleColor"]=bubbleColor.Hex;settings["accent"]=new[]{"#467AFF","#297C91","#56657C"}[themes.SelectedIndex];settings["font"]=((int)font.Value).ToString();settings["compact"]=compact.IsChecked==true?"true":"false";settings["aura"]=aura.IsChecked==true?"true":"false";settings["motion"]=motion.IsChecked==true?"true":"false";settings["receipts"]=receipts.IsChecked==true?"true":"false";lastReadSent=0;SaveSettings();ApplyTheme();ApplyWindowLanguage();DrawAura();if(peer!=null)UpdateMessageViews(false,true);dialog.Close();};
       backup.Click+=async(s,e)=>await Guard(ExportKey);
