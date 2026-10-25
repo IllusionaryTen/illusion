@@ -233,7 +233,7 @@ namespace Illusion {
     public Task Send() { return QueueMessage(); }
     static SolidColorBrush Brush(string color) { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); }
     void RenderMessages(bool bottom) { UpdateMessageViews(bottom,false); }
-    void ApplyTheme() {ApplyPalette();Window.Resources["Accent"]=Brush(Setting("accent","#467AFF"));Window.FontFamily=new FontFamily(Setting("chatFont","Segoe UI"));}
+    void ApplyTheme() {ApplyPalette();string saved=Setting("accent","#467AFF");if(string.IsNullOrEmpty(Setting("theme",""))&&(saved=="#297C91"||saved=="#56657C"))saved="#467AFF";Window.Resources["Accent"]=Brush(saved);Window.FontFamily=new FontFamily(Setting("chatFont","Segoe UI"));}
     void DrawAura() {
       DrawWallpaper();var canvas=Get<Canvas>("AuraCanvas");canvas.Children.Clear();if(Setting("aura","true")=="false")return;
       for(int y=0;y<5;y++)for(int x=0;x<8;x++){var square=new Rectangle {Width=22,Height=11,Fill=Brush((x+y)%2==0?"#234EAD":"#A7C3FF"),Opacity=0.18};Canvas.SetLeft(square,55+x*24);Canvas.SetTop(square,157+y*12);canvas.Children.Add(square);}
@@ -264,7 +264,7 @@ namespace Illusion {
     void ShowSettings() {
       var panel=new StackPanel();panel.Children.Add(Label("Make it yours.",25));panel.Children.Add(Label("ILLUSIONARY / APPEARANCE",11));
       var language=new ComboBox{ItemsSource=GetLanguageChoices(),DisplayMemberPath="Name",SelectedValuePath="Code",SelectedValue=currentLanguage,Margin=new Thickness(0,0,0,14)};panel.Children.Add(Label(T("Language")));panel.Children.Add(language);
-      var themeIds=new[]{"blue","ice","silver","astraios","crimson-moon","dreammetric","eden","hellborn","illusionary","monarch","oblivion","oppression","tomorrow"};var themeLabels=new[]{"Illusionary · blue","Dream state · ice","Monochrome · silver","Astraios","Calamity of the Crimson Moon","Dreammetric","Eden","Hellborn","Illusionary","Monarch","Oblivion","Oppression","Tomorrow"};var themes=new ComboBox{ItemsSource=Array.ConvertAll(themeLabels,label=>T(label)),SelectedIndex=Math.Max(0,Array.IndexOf(themeIds,CurrentThemeId())),Margin=new Thickness(0,0,0,16)};panel.Children.Add(themes);
+      var themeIds=new[]{"blue","astraios","crimson-moon","dreammetric","eden","hellborn","illusionary","monarch","oblivion","oppression","tomorrow"};var themeLabels=new[]{"Illusionary · blue","Astraios","Calamity of the Crimson Moon","Dreammetric","Eden","Hellborn","Illusionary","Monarch","Oblivion","Oppression","Tomorrow"};var themes=new ComboBox{ItemsSource=Array.ConvertAll(themeLabels,label=>T(label)),SelectedIndex=Math.Max(0,Array.IndexOf(themeIds,CurrentThemeId())),Margin=new Thickness(0,0,0,16)};panel.Children.Add(themes);
       panel.Children.Add(Label("Message text size"));var font=new Slider {Minimum=12,Maximum=20,TickFrequency=1,IsSnapToTickEnabled=true,Value=int.Parse(Setting("font","14")),Margin=new Thickness(0,0,0,16)};panel.Children.Add(font);
       panel.Children.Add(Label("Chat font"));var family=new ComboBox{ItemsSource=ProfileFonts,SelectedItem=Setting("chatFont","Segoe UI"),Margin=new Thickness(0,0,0,12)};panel.Children.Add(family);
       var textColor=new ColorStudio("Message text color",Setting("textColor","#F1F5FF"));panel.Children.Add(new Expander{Header=T("Message text color · RGB studio"),Foreground=Brushes.White,Content=textColor});

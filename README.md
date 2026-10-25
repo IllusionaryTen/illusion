@@ -1,6 +1,10 @@
-# ◈ Illusion 0.9.1
+# ◈ Illusion 0.9.2
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 0.9.2
+
+Ice and silver are gone, leaving **11 themes**: Illusionary blue plus the ten Sol's RNG Challenged+ auras (Astraios, Calamity of the Crimson Moon, Dreammetric, Eden, Hellborn, Illusionary, Monarch, Oblivion, Oppression, Tomorrow). Anyone who had ice or silver saved falls back to blue, including the legacy Windows accent color, so no one is left with an unstyled or mismatched palette.
 
 ## What's new in 0.9.1
 

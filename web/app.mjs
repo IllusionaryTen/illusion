@@ -74,7 +74,7 @@ async function refreshMessages(initial=false,before){
 }
 function trimRows(older){const ids=[...rows.keys()].sort((a,b)=>a-b);let bytes=ids.reduce((sum,id)=>sum+(rows.get(id).envelope?.ciphertext?.length||0)+2048,0);if(older)ids.reverse();while((rows.size>400||bytes>16000000)&&ids.length>1){const id=ids.shift(),row=rows.get(id);bytes-=(row.envelope?.ciphertext?.length||0)+2048;rows.delete(id);decoded.delete(id);$('older').hidden=false;}}
 
-const themeChoices=[["blue","Illusionary · blue"],["ice","Dream state · ice"],["silver","Monochrome · silver"],["astraios","Astraios"],["crimson-moon","Calamity of the Crimson Moon"],["dreammetric","Dreammetric"],["eden","Eden"],["hellborn","Hellborn"],["illusionary","Illusionary"],["monarch","Monarch"],["oblivion","Oblivion"],["oppression","Oppression"],["tomorrow","Tomorrow"]];
+const themeChoices=[["blue","Illusionary · blue"],["astraios","Astraios"],["crimson-moon","Calamity of the Crimson Moon"],["dreammetric","Dreammetric"],["eden","Eden"],["hellborn","Hellborn"],["illusionary","Illusionary"],["monarch","Monarch"],["oblivion","Oblivion"],["oppression","Oppression"],["tomorrow","Tomorrow"]];
 function themePicker(){const s=node('select');for(const [id,label] of themeChoices){const o=node('option',translate(label,language));o.value=id;s.append(o);}s.value=getPreference('illusion-theme')||'blue';if(![...s.options].some(o=>o.value===s.value))s.value='blue';return s;}
 const timerValues=[0,60,3600,86400,604800,2592000],timerNames=['Off (default)','1 minute','1 hour','1 day','1 week','30 days'],timerLabel=v=>translate(timerNames[timerValues.indexOf(v)],language);
 $('older').onclick=()=>guard(()=>refreshMessages(false,Math.min(...rows.keys())));

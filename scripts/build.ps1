@@ -46,7 +46,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Desktop compilation failed.' }
 $taskSize = (Get-Item -LiteralPath $taskExe).Length
 if ($taskSize -gt 50000000) { throw 'Release exceeds the Telegram bot upload limit.' }
 $taskHash = & $taskSha256 $taskExe
-$taskManifest = [ordered]@{name='Illusion';version=$taskVersion;file=$OutputName;bytes=$taskSize;sha256=$taskHash;notes='Adds Challenged+ aura themes (Astraios, Dreammetric, Oppression, Monarch and more) for 13 themes total, contrast-checked on web, Android and Windows. Message text stays encrypted; new photos and videos are uploaded without end-to-end encryption.'}
+$taskManifest = [ordered]@{name='Illusion';version=$taskVersion;file=$OutputName;bytes=$taskSize;sha256=$taskHash;notes='Ships 11 themes: Illusionary blue plus ten Challenged+ auras (Astraios, Dreammetric, Oppression, Monarch and more), contrast-checked on web, Android and Windows. Message text stays encrypted; new photos and videos are uploaded without end-to-end encryption.'}
 $taskProfileRelease = Join-Path $taskRoot 'dist\Illusion-Connection.illusion'
 Copy-Item -LiteralPath $taskConnectionPath -Destination $taskProfileRelease -Force
 $taskProfile = Get-Content -LiteralPath $taskProfileRelease -Raw | ConvertFrom-Json
