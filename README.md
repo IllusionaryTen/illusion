@@ -1,10 +1,14 @@
-# ◈ Illusion 0.9.0
+# ◈ Illusion 0.9.1
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
 
+## What's new in 0.9.1
+
+The 12 palette-only themes are replaced by **10 themes drawn from Sol's RNG Challenged+ auras**: Astraios, Calamity of the Crimson Moon, Dreammetric, Eden, Hellborn, Illusionary, Monarch, Oblivion, Oppression and Tomorrow — alongside the classic blue, ice and silver, for **13 themes total**. Each palette was sampled from the aura's own collection artwork and checked for WCAG 4.5:1 contrast on body text, muted text and accent buttons, and the web and Windows palettes are verified to stay identical. Aura names are proper nouns, so they stay as written in every language, exactly like the Illusion name.
+
 ## What's new in 0.9.0
 
-**15 full interface themes** instead of 3. The classic blue, ice and silver are joined by Midnight indigo, Violet dusk, Rose quartz, Crimson ember, Ember glow, Forest moss, Deep ocean, Desert sand, Aurora veil, Plum haze, Sunset blush and Pure contrast. Each theme recolors the background, panels, controls, borders, accent buttons and muted text consistently on the web app, the Android APK and the Windows app, and every theme name is translated in all 29 languages. A new test suite checks that every theme exists on both platforms, keeps its colors in sync between web and Windows, and keeps text at WCAG 4.5:1 contrast or better.
+****15 full interface themes** instead of 3 (since revised to 13 aura-based themes in 0.9.1). The classic blue, ice and silver are joined by Midnight indigo, Violet dusk, Rose quartz, Crimson ember, Ember glow, Forest moss, Deep ocean, Desert sand, Aurora veil, Plum haze, Sunset blush and Pure contrast. Each theme recolors the background, panels, controls, borders, accent buttons and muted text consistently on the web app, the Android APK and the Windows app, and every theme name is translated in all 29 languages. A new test suite checks that every theme exists on both platforms, keeps its colors in sync between web and Windows, and keeps text at WCAG 4.5:1 contrast or better.
 
 ## What's new in 0.8.9
 

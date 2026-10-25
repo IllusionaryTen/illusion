@@ -112,7 +112,7 @@ const fullPatchEnglish = [
   'Choose a PNG/JPEG photo or MP4 video.','Secure browser cryptography is unavailable. Use Telegram with an HTTPS connection.',
   'Publish profile','Creating your account…','Report #1 submitted for host review.','Deletion request #1 is pending host review. Keep this reference.',
   'Orbit','Glow','Prism','Checkerboard',
-  'Midnight · indigo','Violet dusk','Rose quartz','Crimson ember','Ember glow','Forest moss','Deep ocean','Desert sand','Aurora veil','Plum haze','Sunset blush','Pure contrast',
+  
   'Enter Illusion →','Connection ready. Sign in or create an account; every chat uses this connection.','Connection saved. No address needs to be typed.',
   'Request deletion of','queued','Ctrl+K find someone / Ctrl+F search chat','Restore for a different address',
   'The server sees account names, message times, and who talks to whom. Message bodies are encrypted. First contact still trusts the server’s key directory; compare fingerprints for stronger assurance. This prototype has not had an independent security audit.',
