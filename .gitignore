@@ -73,3 +73,21 @@ Start-Public-TCP.cmd
 Start-Public.cmd
 Start-Server.cmd
 Start-Telegram-Bot.cmd
+
+# Private hosting and moderation tooling (local only)
+CLOUDFLARE.md
+scripts/cloud-admin.mjs
+scripts/cloud-state.mjs
+scripts/cloud-status.mjs
+scripts/cloudflare-dns.mjs
+scripts/configure-connection.ps1
+scripts/configure-telegram.ps1
+scripts/deploy-cloudflare.mjs
+scripts/migrate-cloud-device.ps1
+scripts/moderate.mjs
+scripts/public-host.mjs
+scripts/setup-public.ps1
+scripts/sleep-laptop.ps1
+scripts/stop-legacy-bot.ps1
+scripts/test-cloud-public.mjs
+scripts/update-telegram-commands.mjs
