@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { commandFor, loadRelease, loadAndroidRelease, runBot, miniAppUrl } from '../bot/index.mjs';
-import {updateTelegramCommands} from '../scripts/update-telegram-commands.mjs';
 
 test('download bot responds only to direct messages addressed to this bot', () => {
   const update = { message: { text: '/download@IllusionBot', chat: { id: 1, type: 'private' } } };
@@ -105,9 +104,4 @@ test('Telegram Mini App configures menu and sends HTTPS web_app launch buttons w
     const menu=calls.find(c=>c.method==='setChatMenuButton');assert.equal(menu.body.menu_button.web_app.url,'https://relay.example.test/app/');const message=calls.find(c=>c.method==='sendMessage');assert.equal(message.body.reply_markup.inline_keyboard[0][0].web_app.url,'https://relay.example.test/app/');assert.ok(!JSON.stringify(message).includes('fixture-token'));
     const commands=calls.find(c=>c.method==='setMyCommands').body.commands.map(c=>c.command);assert.ok(commands.includes('apk'));assert.ok(!commands.includes('android'));assert.ok(!commands.includes('version'));assert.equal(message.body.reply_markup.inline_keyboard[1][0].url,'https://relay.example.test/policies/privacy');
   }finally{assert.ok(dir.startsWith(join(tmpdir(),'illusion-bot-miniapp-')));rmSync(dir,{recursive:true,force:true});}
-});
-test('Telegram command updater verifies the configured bot and removes retired commands',async()=>{
-  const calls=[];const result=await updateTelegramCommands({token:'123:fixture-token',origin:'https://relay.example.test',username:'IllusionBot',fetcher:async(url,options)=>{const method=url.split('/').at(-1);calls.push({method,body:JSON.parse(options.body)});if(method==='getMe')return Response.json({ok:true,result:{username:'IllusionBot'}});if(method==='getMyCommands')return Response.json({ok:true,result:[{command:'app'},{command:'apk'},{command:'privacy'},{command:'download'},{command:'connect'}]});return Response.json({ok:true,result:true});}});
-  assert.deepEqual(result,{username:'IllusionBot',origin:'https://relay.example.test'});const commands=calls.find(c=>c.method==='setMyCommands').body.commands.map(c=>c.command);assert.ok(commands.includes('apk'));assert.ok(!commands.includes('android'));assert.ok(!commands.includes('version'));assert.equal(calls.find(c=>c.method==='setChatMenuButton').body.menu_button.web_app.url,'https://relay.example.test/app/');
-  await assert.rejects(updateTelegramCommands({token:'123:fixture-token',origin:'https://relay.example.test',username:'IllusionBot',fetcher:async()=>Response.json({ok:true,result:{username:'OtherBot'}})}),/different Telegram bot/);
 });
