@@ -114,3 +114,20 @@ test('audio and text attachments are validated before storage',async()=>{
   assert.equal((await post({kind:'audio',mime:'audio/mpeg',data:'!!!notbase64'})).status,400);
   assert.equal((await post({kind:'photo',mime:'image/png',data:Buffer.from('89504e470d0a1a0a','hex').toString('base64')})).status,400);
 });
+
+test('sessions can be listed and revoked without exposing tokens',async()=>{
+  const second=await api(null,'/v1/login','POST',{username:'alice',password:'a sufficiently strong password'});
+  assert.equal(second.status,200);
+  const list=await api(alice,'/v1/sessions');
+  assert.equal(list.status,200);
+  assert.ok(list.body.sessions.length>=2);
+  assert.ok(list.body.sessions.every(row=>/^[a-f0-9]{64}$/.test(row.id)&&!JSON.stringify(row).includes(second.body.token)));
+  const other=list.body.sessions.find(row=>!row.current);
+  const revoke=await api(alice,'/v1/sessions/'+other.id,'DELETE');
+  assert.equal(revoke.status,200);assert.equal(revoke.body.current,false);
+  assert.equal((await api(second.body,'/v1/me')).status,401);
+  const removed=await api(alice,'/v1/sessions','DELETE');
+  assert.equal(removed.status,200);
+  assert.equal((await api(alice,'/v1/sessions')).body.sessions.length,1);
+  assert.equal((await api(alice,'/v1/sessions/not-a-session','DELETE')).status,400);
+});

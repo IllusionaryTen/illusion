@@ -94,7 +94,7 @@ namespace Illusion {
       }
       foreach(object child in LogicalTreeHelper.GetChildren(root))if(child is DependencyObject)CaptureLocalizedElements((DependencyObject)child,excluded || (element!=null && (element.Name=="ChatList" || element.Name=="MessageList")));
     }
-    void RelocalizeEverything(){ApplyWindowLanguage();Get<Button>("FindButton").Content="+  "+T("Start a conversation");Get<Button>("AuthButton").Content=T("Sign in");Get<Button>("SwitchAuthButton").Content=T("Create an account");UpdateAttachment();if(me==null)return;UpdateChats(latestChats);if(peer!=null){Get<TextBlock>("ChatTitle").Text=(string)peer["id"]==(string)me["id"]?T("Saved messages"):Convert.ToString(peer["displayName"]);Get<TextBlock>("ChatSubtitle").Text="@"+peer["username"]+"  ·  "+T("encrypted conversation");UpdateTimerHint();}UpdateMessageViews(false,true);Connection(sessionConnected);}
+    void RelocalizeEverything(){ApplyWindowLanguage();Get<Button>("FindButton").Content="+  "+T("Start a conversation");Get<Button>("AuthButton").Content=T("Sign in");Get<Button>("SwitchAuthButton").Content=T("Create an account");UpdateAttachment();if(me==null)return;UpdateChats(latestChats);if(peer!=null){Get<TextBlock>("ChatTitle").Text=(string)peer["id"]==(string)me["id"]?T("Saved messages"):Convert.ToString(peer["displayName"]);Get<TextBlock>("ChatSubtitle").Text=ChatSubtitleText(peer);UpdateTimerHint();}UpdateMessageViews(false,true);Connection(sessionConnected);}
     void ApplyWindowLanguage(){foreach(var apply in languageBindings)apply();Get<Button>("OlderButton").Content=T("Load earlier messages");Get<Button>("FindButton").Content="+  "+T("Start a conversation");}
     sealed class LanguageChoice{public string Code{get;set;}public string Name{get;set;}}
     List<LanguageChoice> GetLanguageChoices(){var result=new List<LanguageChoice>();if(translationLanguages!=null)foreach(ArrayList item in translationLanguages)if(item.Count>=2)result.Add(new LanguageChoice{Code=Convert.ToString(item[0]),Name=Convert.ToString(item[1])});return result;}
@@ -281,6 +281,9 @@ namespace Illusion {
       if(peer==null)return;
       var panel=new StackPanel();panel.Children.Add(Label("Compare these fingerprints with your contact using another channel. They identify the encryption keys stored on your devices.",14));
       foreach(var user in new[]{me,peer}) {panel.Children.Add(Label("@"+user["username"],16));string fp=Crypto.Fingerprint((string)user["publicKey"]);panel.Children.Add(Label(string.Join(" ",Enumerable.Range(0,8).Select(i=>fp.Substring(i*8,8))),13));}
+      string peerPrint=Crypto.Fingerprint((string)peer["publicKey"]);
+      if(IsVerified(peer))panel.Children.Add(Label(T("Verified contact"),14));
+      else{var markVerified=new Button{Content=T("Mark as verified"),Margin=new Thickness(0,10,0,8)};markVerified.Click+=(s,e)=>Guard(async()=>{File.WriteAllText(VerifiedPath((string)peer["id"]),peerPrint);markVerified.Content=T("Verified contact");markVerified.IsEnabled=false;Get<TextBlock>("ChatSubtitle").Text=ChatSubtitleText(peer);});panel.Children.Add(markVerified);}
       panel.Children.Add(Label("The server sees account names, message times, and who talks to whom. Message bodies are encrypted. First contact still trusts the server's key directory; compare fingerprints for stronger assurance. This prototype has not had an independent security audit."));Dialog("Verify your connection",panel).ShowDialog();
     }
     void ShowSettings() {
@@ -301,6 +304,7 @@ namespace Illusion {
       var backup=new Button {Content=T("Back up my encryption key"),IsEnabled=me!=null,Margin=new Thickness(0,12,0,0)};panel.Children.Add(backup);
       var recovery=new Button {Content=T("Connect Gmail for account recovery"),IsEnabled=me!=null,Margin=new Thickness(0,8,0,0)};panel.Children.Add(recovery);recovery.Click+=(s,e)=>ShowEmailRecovery();
       panel.Children.Add(Label("Your key is protected by Windows on this profile. Export a password-protected backup before changing PCs. Without it, old messages cannot be recovered.",12));
+      var devices=new Button{Content=T("Signed-in devices"),IsEnabled=me!=null,Margin=new Thickness(0,10,0,0)};panel.Children.Add(devices);devices.Click+=(s,e)=>Guard(ShowDevices);
       var logout=new Button {Content=T("Sign out"),IsEnabled=me!=null};panel.Children.Add(logout);
       panel.Children.Add(Label("Illusion "+BuildInfo.Version+" · "+T("Private. Customizable. Free.")+"\n"+T("A connection beyond the noise.")+"\n"+T("Your space, uninterrupted."),11));
       var dialog=Dialog("Customize Illusion",panel);

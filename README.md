@@ -1,6 +1,12 @@
-# ◈ Illusion 1.0.2
+# ◈ Illusion 1.1.0
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.1.0
+
+**Signed-in devices.** Settings now lists every active session with its age, marks the current device, and can sign out a single other device or all of them at once. Revoking a session takes effect immediately — that device gets a 401 and returns to the sign-in screen. Session ids are the hashes the relay already stores, so no token is ever exposed in the list.
+
+**Verified contacts.** The key-verification dialog now lets you mark a contact as verified after comparing fingerprints through another channel. Verified chats show a ✓ badge next to the title, and the mark is tied to the exact fingerprint — if their key ever changes, the badge disappears and the existing key-change warning still blocks sending until you verify again.
 
 ## What's new in 1.0.2
 

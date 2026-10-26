@@ -268,7 +268,7 @@ namespace Illusion {
       var list=Get<StackPanel>("MessageList");while(list.Children.Count>1)list.Children.RemoveAt(1);
       restoringDraft=true;Get<TextBox>("Composer").Text=drafts.ContainsKey(id)?drafts[id]:"";restoringDraft=false;reply=replyDrafts.ContainsKey(id)?replyDrafts[id]:null;UpdateReply();
       Get<TextBlock>("ChatTitle").Text=id==(string)me["id"]?T("Saved messages"):(string)user["displayName"];
-      Get<TextBlock>("ChatSubtitle").Text="@"+user["username"]+"  ·  "+T("encrypted conversation");
+      Get<TextBlock>("ChatSubtitle").Text=ChatSubtitleText(user);
       Get<StackPanel>("EmptyState").Visibility=Visibility.Collapsed;Get<ScrollViewer>("MessageScroll").Visibility=Visibility.Visible;Get<Border>("ComposerPanel").Visibility=Visibility.Visible;Get<Button>("VerifyButton").Visibility=Visibility.Visible;Get<Button>("NewMessagesButton").Visibility=Visibility.Collapsed;CloseSearch();
       if(history.ContainsKey(id)) {foreach(var row in history[id])messages[Convert.ToInt64(row["id"])]=row;await DecodeMessages(history[id],user);}
       await DecodeMessages(outbox.Where(m=>(string)m["recipientId"]==id).ToArray(),user);UpdateMessageViews(true,false);SaveLocalState();UpdateChats(latestChats);

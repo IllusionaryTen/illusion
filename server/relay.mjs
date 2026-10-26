@@ -237,7 +237,7 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
       return {ok:true};
     }
     const token = req.headers.authorization?.replace(/^Bearer /, '') || '';
-    const { user: me } = authenticate(token);
+    const { user: me, session: currentSession } = authenticate(token);
     req.actor=me.id;
     if(req.method==='GET'&&path==='/v1/email/status')return {available:emailRecoveryAvailable,verified:Boolean(me.emailVerifiedAt),email:me.emailVerifiedAt?maskEmail(me.email):null};
     if(req.method==='POST'&&path==='/v1/email/start'){const b=await body(req);if(me.emailVerifiedAt)fail(409,'This account already has a verified Gmail address.');return issueEmailCode(me,b.email,'link');}
@@ -255,6 +255,28 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     }
     const handled = await extra.route(req, path, url, me); if (handled !== undefined) return handled;
     if (req.method === 'GET' && path === '/v1/me') return { user: safeUser(me) };
+    if (path === '/v1/sessions' || path.startsWith('/v1/sessions/')) {
+      limit('sessions:' + me.id, 30, 60000, true);
+      if (req.method === 'GET' && path === '/v1/sessions') {
+        const rows = db.prepare('SELECT tokenHash,expiresAt FROM sessions WHERE userId=? AND expiresAt>? ORDER BY expiresAt DESC LIMIT 20').all(me.id, Date.now());
+        return { sessions: rows.map(row => ({ id: row.tokenHash, current: row.tokenHash === currentSession.tokenHash, createdAt: row.expiresAt - 30 * 86400_000, expiresAt: row.expiresAt })) };
+      }
+      if (req.method === 'DELETE' && path === '/v1/sessions') {
+        const removed = db.prepare('DELETE FROM sessions WHERE userId=? AND tokenHash<>?').run(me.id, currentSession.tokenHash).changes;
+        notify(me.id);
+        return { ok: true, removed, current: false };
+      }
+      if (req.method === 'DELETE' && path.startsWith('/v1/sessions/')) {
+        const id = decodeURIComponent(path.slice('/v1/sessions/'.length));
+        if (!/^[a-f0-9]{64}$/.test(id)) fail(400, 'Choose a session to sign out.');
+        const row = db.prepare('SELECT tokenHash FROM sessions WHERE tokenHash=? AND userId=?').get(id, me.id);
+        if (!row) fail(404, 'That session is already signed out.');
+        db.prepare('DELETE FROM sessions WHERE tokenHash=?').run(id);
+        notify(me.id);
+        return { ok: true, current: id === currentSession.tokenHash };
+      }
+      fail(405, 'Unsupported session request.');
+    }
     if (req.method === 'GET' && path === '/v1/events') return waitForChange(me.id, url.searchParams.get('cursor'), res);
     if (req.method === 'POST' && path === '/v1/logout') {
       db.prepare('DELETE FROM sessions WHERE tokenHash=?').run(hash(token));

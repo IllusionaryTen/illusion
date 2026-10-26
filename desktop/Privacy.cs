@@ -43,6 +43,9 @@ namespace Illusion {
     void ClosePrivateContent(){foreach(var w in contentWindows.ToArray())w.Close();foreach(var f in mediaFiles.ToArray())try{File.Delete(f);}catch{}mediaFiles.Clear();}
     void ResetPrivacy(){ClosePrivateContent();pendingMedia=null;chatTimers.Clear();videoThumbCache.Clear();Get<CheckBox>("ViewOnceCheck").IsChecked=false;UpdateAttachment();}
     void UpdateAttachment(){Get<Border>("AttachmentBar").Visibility=pendingMedia==null?Visibility.Collapsed:Visibility.Visible;string kind=pendingMedia==null?"":Str(pendingMedia,"kind");Get<TextBlock>("AttachmentLabel").Text=pendingMedia==null?"":kind=="photo"?T("Photo attached · sent without end-to-end encryption"):kind=="video"?T("Video attached · sent without end-to-end encryption"):kind=="audio"?T("Audio attached · sent without end-to-end encryption"):T("Document attached · sent without end-to-end encryption");}
+    string VerifiedPath(string id){return System.IO.Path.Combine(ProfileDir,"verified-"+Crypto.Fingerprint(id)+".txt");}
+    bool IsVerified(Dictionary<string,object> user){try{string id=Convert.ToString(user["id"]);if(me!=null&&id==Convert.ToString(me["id"]))return false;string path=VerifiedPath(id);return File.Exists(path)&&File.ReadAllText(path)==Crypto.Fingerprint(Convert.ToString(user["publicKey"]));}catch{return false;}}
+    string ChatSubtitleText(Dictionary<string,object> user){string text="@"+user["username"]+"  ·  "+T("encrypted conversation");if(IsVerified(user))text+="  ·  ✓ "+T("Verified");return text;}
     async Task AttachMedia(){
       if(me==null || peer==null)return;var open=new OpenFileDialog{Filter="Supported files|*.png;*.jpg;*.jpeg;*.mp4;*.wav;*.mp3;*.txt;*.md|All files|*.*"};if(open.ShowDialog(Window)!=true)return;
       if(new FileInfo(open.FileName).Length>4*1024*1024)throw new Exception("Choose a file up to 4 MB.");
@@ -132,6 +135,17 @@ namespace Illusion {
       if(MessageBox.Show(Window,"Open this view-once message? It will disappear even if opening fails or this window is closed. Screenshots and recordings are still possible.","Open once",MessageBoxButton.YesNo)!=MessageBoxResult.Yes)return;
       openingOnce=true;int gen=generation;string key=privateKey,myId=(string)me["id"];var user=peer;
       try{var response=await Api("POST","/v1/open",new{id=stub["id"]});if(gen!=generation)return;var message=(Dictionary<string,object>)response["message"];RemoveFromCache(new[]{Convert.ToInt64(stub["id"])});SaveLocalState();var content=await Task.Run(()=>Decode(message,myId,key,(string)user["publicKey"],true));if(gen!=generation)return;ShowMessageContent(message,content,user,true);}finally{openingOnce=false;}
+    }
+    async Task ShowDevices(){
+      if(me==null)return;var panel=new StackPanel();panel.Children.Add(Label(T("Signed-in devices"),22));
+      ArrayList rows;
+      try{var result=await Api("GET","/v1/sessions");rows=(ArrayList)result["sessions"];}catch(Exception error){panel.Children.Add(Label(error.Message));Dialog(T("Signed-in devices"),panel).ShowDialog();return;}
+      var entries=new List<KeyValuePair<string,string>>();var flags=new List<bool>();
+      foreach(Dictionary<string,object> session in rows){bool cur=Convert.ToBoolean(session["current"]);var when=DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(session["createdAt"])).LocalDateTime;entries.Add(new KeyValuePair<string,string>(Convert.ToString(session["id"]),cur?T("This device"):when.ToString("yyyy-MM-dd")));flags.Add(cur);}
+      var dialog=Dialog(T("Signed-in devices"),panel);
+      for(int i=0;i<entries.Count;i++){int index=i;var row=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,6,0,0)};row.Children.Add(new TextBlock{Text=entries[i].Value,Foreground=Brushes.White,Width=150,VerticalAlignment=VerticalAlignment.Center});if(flags[i])row.Children.Add(new TextBlock{Text="✓",Foreground=(Brush)Window.Resources["ThemeHighlight"],Width=24,VerticalAlignment=VerticalAlignment.Center});var revoke=new Button{Content=T("Sign out")};revoke.Click+=(s,e)=>Guard(async()=>{var outResult=await Api("DELETE","/v1/sessions/"+Uri.EscapeDataString(entries[index].Key));dialog.Close();if(Convert.ToBoolean(outResult["current"])){SignOutLocal();return;}ShowDevices();});row.Children.Add(revoke);panel.Children.Add(row);}
+      var all=new Button{Content=T("Sign out other devices"),Margin=new Thickness(0,12,0,0)};all.Click+=(s,e)=>Guard(async()=>{await Api("DELETE","/v1/sessions");dialog.Close();ShowDevices();});panel.Children.Add(all);
+      dialog.ShowDialog();
     }
     void ShowMessageContent(Dictionary<string,object> message,Content content,Dictionary<string,object> user,bool once){
       if(!content.Valid)throw new Exception(content.Text);var panel=new StackPanel();panel.Children.Add(Label(once?"VIEW ONCE · Closing this window removes this copy.":"Attachment",16));
