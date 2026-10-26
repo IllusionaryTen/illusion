@@ -117,13 +117,22 @@ public final class MainActivity extends Activity {
 
             @Override
             public void onPermissionRequest(android.webkit.PermissionRequest request) {
-                request.deny();
+                boolean audio=false;
+                for (String resource : request.getResources()) {
+                    if ("android.webkit.resource.AUDIO_CAPTURE".equals(resource)) audio=true;
+                }
+                if (audio && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    request.grant(new String[]{"android.webkit.resource.AUDIO_CAPTURE"});
+                } else {
+                    request.deny();
+                }
             }
         });
 
         root.addView(webView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 4102);
         ensureNotificationChannel();
 
         if (state == null || webView.restoreState(state) == null) webView.loadUrl(BuildConfig.ILLUSION_START_URL);

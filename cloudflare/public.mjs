@@ -2,7 +2,7 @@ import {documents, operator, fonts, legalVersion} from '../server/legal.mjs';
 const escape = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const securityHeaders = {
   'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'no-referrer',
-  'Permissions-Policy':'camera=(), microphone=(), geolocation=()',
+  'Permissions-Policy':'camera=(), microphone=(self), geolocation=()',
   'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org"
 };
 export async function publicResponse(request, env) {

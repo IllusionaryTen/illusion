@@ -1,6 +1,16 @@
-# ◈ Illusion 1.2.0
+# ◈ Illusion 1.3.0
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.3.0
+
+**In-chat search.** A search control in the conversation header highlights matches as you type, shows how many were found, and steps through them with ↑/↓ — all over locally decrypted messages.
+
+**Replies on web.** Any message can be quoted from the browser/Android client; replies are encrypted like the rest of the message and render as the same quote block Windows already used.
+
+**Voice notes.** Hold the microphone button to record; the app captures a WAV (≤40 s, 4 MB) and sends it through the encrypted attachment pipeline, so Windows and Android can both play it. Android now requests and grants microphone permission for the WebView, and the app’s Permissions-Policy allows the microphone only for its own origin.
+
+**Docs:** added `CONTRIBUTING.md` and `docs/translations.md` with the catalog rules and a step-by-step language guide.
 
 ## What's new in 1.2.0
 
