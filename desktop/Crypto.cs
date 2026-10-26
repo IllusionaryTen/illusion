@@ -70,5 +70,18 @@ namespace Illusion {
         string result=Encoding.UTF8.GetString(Aes(ciphertext,material.Take(32).ToArray(),iv,false));Public(result);return result;
       }finally{Array.Clear(material,0,material.Length);}
     }
+
+    public static byte[] SealMedia(byte[] plain,out string keyB64,out string ivB64,out string macKeyB64,out string macB64){
+      byte[] key=Random(32),macKey=Random(32),iv=Random(16);
+      using(var aes=new AesManaged{KeySize=256,BlockSize=128,Mode=CipherMode.CBC,Padding=PaddingMode.PKCS7}){aes.Key=key;aes.IV=iv;using(var enc=aes.CreateEncryptor()){byte[] cipher=enc.TransformFinalBlock(plain,0,plain.Length);var input=new byte[iv.Length+cipher.Length];Buffer.BlockCopy(iv,0,input,0,iv.Length);Buffer.BlockCopy(cipher,0,input,iv.Length,cipher.Length);string mac;using(var hmac=new HMACSHA256(macKey))mac=B64(hmac.ComputeHash(input));keyB64=B64(key);ivB64=B64(iv);macKeyB64=B64(macKey);macB64=mac;return cipher;}}
+    }
+    public static byte[] OpenMedia(byte[] cipher,string keyB64,string ivB64,string macKeyB64,string macB64){
+      byte[] key=Convert.FromBase64String(keyB64),iv=Convert.FromBase64String(ivB64),macKey=Convert.FromBase64String(macKeyB64);
+      if(key.Length!=32||iv.Length!=16||macKey.Length!=32)throw new CryptographicException("Invalid attachment key.");
+      var input=new byte[iv.Length+cipher.Length];Buffer.BlockCopy(iv,0,input,0,iv.Length);Buffer.BlockCopy(cipher,0,input,iv.Length,cipher.Length);
+      string expected;using(var hmac=new HMACSHA256(macKey))expected=B64(hmac.ComputeHash(input));
+      if(!string.Equals(expected,Convert.ToString(macB64),StringComparison.Ordinal))throw new CryptographicException("Attachment integrity failed.");
+      using(var aes=new AesManaged{KeySize=256,BlockSize=128,Mode=CipherMode.CBC,Padding=PaddingMode.PKCS7}){aes.Key=key;aes.IV=iv;using(var dec=aes.CreateDecryptor())return dec.TransformFinalBlock(cipher,0,cipher.Length);}
+    }
   }
 }

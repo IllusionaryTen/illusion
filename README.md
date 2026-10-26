@@ -1,6 +1,12 @@
-# ◈ Illusion 1.1.0
+# ◈ Illusion 1.2.0
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.2.0
+
+**Attachments are now end-to-end encrypted.** Photos, videos, WAV/MP3 audio and text/Markdown files are sealed on your device with a random AES-256 key plus an HMAC, and that key travels only inside the already-encrypted message. The relay now stores nothing but ciphertext — it can no longer read or preview any upload. Previews, playback and the document viewer decrypt locally; messages sent by older builds (plaintext media) still open normally.
+
+**Hardening:** the relay’s base64 check could overflow the stack on multi-megabyte uploads and return a 500; it now validates linearly, rejects malformed payloads with 400 and oversized ones with 413, so a malicious client cannot crash a request path.
 
 ## What's new in 1.1.0
 

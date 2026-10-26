@@ -27,6 +27,6 @@ test('Android install guide and PWA resources are served with install scope and 
   assert.match(worker,/illusion-app-shell-v3/);assert.match(worker,/notificationclick/);assert.match(worker,/illusionsfx\.mp3/);
   const app=readFileSync(join(root,'app.mjs'),'utf8');assert.match(app,/serviceWorker\.register\('\/app\/sw\.js'/);assert.match(app,/requestSignal\(sessionController\.signal/);assert.doesNotMatch(app,/AbortSignal\.(any|timeout)\(/);assert.match(app,/status\(register\?'Preparing your account…':'Signing in…'\)/);assert.match(app,/password\.length<10\|\|password\.length>128/);assert.match(app,/chat-pins:/);assert.match(app,/notifyMessage/);assert.match(app,/media:pendingSend\.media/);
   const stylesheet=readFileSync(join(root,'style.css'),'utf8')+readFileSync(join(root,'mobile.css'),'utf8');assert.match(stylesheet,/\.chat-row/);assert.match(stylesheet,/#workspace\[data-view=list\]/);
-  const index=readFileSync(join(root,'index.html'),'utf8');assert.match(index,/<form id="auth-form" novalidate>/);assert.match(index,/id="favorites-row"/);assert.match(index,/without end-to-end encryption/i);
+  const index=readFileSync(join(root,'index.html'),'utf8');assert.match(index,/<form id="auth-form" novalidate>/);assert.match(index,/id="favorites-row"/);assert.match(index,/attachments are encrypted on your device/i);
   const crypto=readFileSync(join(root,'crypto.mjs'),'utf8');assert.match(crypto,/r\.onblocked=/);assert.match(crypto,/Device key storage timed out/);
 });

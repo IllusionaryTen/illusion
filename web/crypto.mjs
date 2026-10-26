@@ -20,3 +20,21 @@ export async function backup(identity,password,username,server){if(!identity.exp
 export async function restore(file,password){if(![1,2].includes(file.version)||un64(file.ciphertext).length>10000||un64(file.salt).length!==16||un64(file.iv).length!==16||un64(file.mac).length!==32)throw Error('Invalid key backup.');const iv=un64(file.iv),bytes=un64(file.ciphertext),material=await kdf(password,un64(file.salt),file.version);try{const mac=await s.importKey('raw',material.slice(32),{name:'HMAC',hash:'SHA-256'},false,['verify']);if(!await s.verify('HMAC',mac,un64(file.mac),join(iv,bytes)))throw Error('Wrong backup password or damaged key file.');const aes=await s.importKey('raw',material.slice(0,32),'AES-CBC',false,['decrypt']);const xml=dec.decode(await s.decrypt({name:'AES-CBC',iv},aes,bytes));const j=publicJwk(xml);for(const [tag,k] of Object.entries({P:'p',Q:'q',DP:'dp',DQ:'dq',InverseQ:'qi',D:'d'})){const v=xml.match(new RegExp('<'+tag+'>([^<]+)</'+tag+'>'))?.[1];if(!v)throw Error('Incomplete key backup.');j[k]=url64(un64(v));}const publicKey='<RSAKeyValue><Modulus>'+b64(fromUrl(j.n))+'</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>';return {...await importPair(j),publicKey,exportJwk:j};}finally{material.fill(0);}}
 export async function db(){return new Promise((yes,no)=>{let settled=false;const r=indexedDB.open('illusion-device-v1',1),finish=(fn,value)=>{if(settled)return;settled=true;clearTimeout(timer);fn(value);},timer=setTimeout(()=>finish(no,Error('Device key storage timed out. Close other Illusion tabs and try again.')),15000);r.onupgradeneeded=()=>r.result.createObjectStore('device');r.onsuccess=()=>{if(settled){r.result.close();return;}finish(yes,r.result);};r.onerror=()=>finish(no,Error('This Telegram/browser storage is unavailable. Open on a supported device.'));r.onblocked=()=>finish(no,Error('Device key storage is busy. Close other Illusion tabs and try again.'));});}
 export async function storage(action,id,value){const database=await db();try{return await new Promise((yes,no)=>{const tx=database.transaction('device',action==='get'?'readonly':'readwrite'),store=tx.objectStore('device');let request;if(action==='put'){let safe=value;if(value && typeof value==='object' && value.decryptKey){const {exportJwk,...keys}=value;safe=keys;}request=store.put(safe,id);}else request=action==='get'?store.get(id):store.delete(id);let result;request.onsuccess=()=>result=request.result;tx.oncomplete=()=>yes(result);tx.onerror=()=>no(Error('Could not save device keys.'));});}finally{database.close();}}
+
+// End-to-end attachment sealing: random AES key + HMAC key travel inside the
+// encrypted message content; the relay only ever stores ciphertext.
+export async function sealMedia(bytes){
+  const key=crypto.getRandomValues(new Uint8Array(32)),macKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(16));
+  const aes=await s.importKey('raw',key,'AES-CBC',false,['encrypt']);
+  const data=new Uint8Array(await s.encrypt({name:'AES-CBC',iv},aes,bytes));
+  const mac=await s.importKey('raw',macKey,{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  return {data,meta:{key:b64(key),macKey:b64(macKey),iv:b64(iv),mac:b64(await s.sign('HMAC',mac,join(iv,data)))}};
+}
+export async function openMedia(data,meta){
+  if(!meta||meta.kind!=='sealed')return data;
+  const key=un64(meta.key),macKey=un64(meta.macKey),iv=un64(meta.iv);
+  const mac=await s.importKey('raw',macKey,{name:'HMAC',hash:'SHA-256'},false,['verify']);
+  if(!await s.verify('HMAC',mac,un64(meta.mac),join(iv,data)))throw Error('Attachment integrity failed.');
+  const aes=await s.importKey('raw',key,'AES-CBC',false,['decrypt']);
+  return new Uint8Array(await s.decrypt({name:'AES-CBC',iv},aes,data));
+}

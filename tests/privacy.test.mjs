@@ -131,3 +131,14 @@ test('sessions can be listed and revoked without exposing tokens',async()=>{
   assert.equal((await api(alice,'/v1/sessions')).body.sessions.length,1);
   assert.equal((await api(alice,'/v1/sessions/not-a-session','DELETE')).status,400);
 });
+
+test('sealed attachments are stored opaquely; unsupported or oversized blobs are rejected',async()=>{
+  const cipher=randomBytes(512).toString('base64');
+  const post=async(media)=>{const packet=encrypted('sealed');packet.payload.media=media;return api(alice,'/v1/messages','POST',packet.payload);};
+  assert.equal((await post({kind:'sealed',mime:'image/jpeg',data:cipher})).status,200);
+  assert.equal((await post({kind:'sealed',mime:'application/pdf',data:cipher})).status,400);
+  assert.equal((await post({kind:'sealed',mime:'image/png',data:'!!!notbase64'})).status,400);
+  const huge=Buffer.alloc(4*1024*1024+65,1).toString('base64');
+  assert.equal((await post({kind:'sealed',mime:'image/png',data:huge})).status,413);
+  assert.equal((await post({kind:'photo',mime:'image/jpeg',data:cipher})).status,400);
+});

@@ -42,7 +42,7 @@ namespace Illusion {
     void UpdateSelfProfile(){if(me==null)return;var text=Get<TextBlock>("Avatar");var surface=text.Parent as Border;if(surface==null)return;var profile=UserProfile(me);surface.Background=Brush(Str(profile,"accent","#22395D"));text.Visibility=Visibility.Visible;try{var image=ImageData(Str(profile,"avatar"));if(image!=null){surface.Background=new ImageBrush(image){Stretch=Stretch.UniformToFill};text.Visibility=Visibility.Collapsed;}}catch{}text.Text=Str(me,"displayName","I").Substring(0,1).ToUpperInvariant();}
     void ClosePrivateContent(){foreach(var w in contentWindows.ToArray())w.Close();foreach(var f in mediaFiles.ToArray())try{File.Delete(f);}catch{}mediaFiles.Clear();}
     void ResetPrivacy(){ClosePrivateContent();pendingMedia=null;chatTimers.Clear();videoThumbCache.Clear();Get<CheckBox>("ViewOnceCheck").IsChecked=false;UpdateAttachment();}
-    void UpdateAttachment(){Get<Border>("AttachmentBar").Visibility=pendingMedia==null?Visibility.Collapsed:Visibility.Visible;string kind=pendingMedia==null?"":Str(pendingMedia,"kind");Get<TextBlock>("AttachmentLabel").Text=pendingMedia==null?"":kind=="photo"?T("Photo attached · sent without end-to-end encryption"):kind=="video"?T("Video attached · sent without end-to-end encryption"):kind=="audio"?T("Audio attached · sent without end-to-end encryption"):T("Document attached · sent without end-to-end encryption");}
+    void UpdateAttachment(){Get<Border>("AttachmentBar").Visibility=pendingMedia==null?Visibility.Collapsed:Visibility.Visible;Get<TextBlock>("AttachmentLabel").Text=pendingMedia==null?"":T("Encrypted attachment");}
     string VerifiedPath(string id){return System.IO.Path.Combine(ProfileDir,"verified-"+Crypto.Fingerprint(id)+".txt");}
     bool IsVerified(Dictionary<string,object> user){try{string id=Convert.ToString(user["id"]);if(me!=null&&id==Convert.ToString(me["id"]))return false;string path=VerifiedPath(id);return File.Exists(path)&&File.ReadAllText(path)==Crypto.Fingerprint(Convert.ToString(user["publicKey"]));}catch{return false;}}
     string ChatSubtitleText(Dictionary<string,object> user){string text="@"+user["username"]+"  ·  "+T("encrypted conversation");if(IsVerified(user))text+="  ·  ✓ "+T("Verified");return text;}
@@ -80,6 +80,20 @@ namespace Illusion {
       return EncodeImage(image,limit);
     }
     static string EncodeImage(BitmapSource source,int limit){using(var stream=new MemoryStream()){var encoder=new JpegBitmapEncoder{QualityLevel=85};encoder.Frames.Add(BitmapFrame.Create(source));encoder.Save(stream);if(stream.Length>limit)throw new Exception("This image is too large after resizing. Choose a smaller image.");return "data:image/jpeg;base64,"+Convert.ToBase64String(stream.ToArray());}}
+    static readonly string[] SealedMimes={"image/jpeg","image/png","video/mp4","audio/wav","audio/x-wav","audio/wave","audio/mpeg","audio/mp3","text/plain","text/markdown","text/x-markdown"};
+    string MediaType(Dictionary<string,object> media){string kind=Str(media,"kind");if(kind!="sealed")return kind;string mime=Str(media,"mime");return mime.StartsWith("image/")?"photo":mime.StartsWith("video/")?"video":mime.StartsWith("audio/")?"audio":"file";}
+    byte[] MediaPlain(Dictionary<string,object> media){return Str(media,"kind")=="sealed"?Crypto.OpenMedia(Convert.FromBase64String(Str(media,"data")),Str(media,"key"),Str(media,"iv"),Str(media,"macKey"),Str(media,"mac")):Convert.FromBase64String(Str(media,"data"));}
+    static BitmapSource ImageFromBytes(byte[] bytes){var image=new System.Windows.Media.Imaging.BitmapImage();using(var stream=new MemoryStream(bytes)){image.BeginInit();image.CacheOption=System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;image.StreamSource=stream;image.EndInit();}image.Freeze();return image;}
+    Dictionary<string,object> SealedMediaMeta(Dictionary<string,object> meta){
+      if(meta!=null && Str(meta,"kind")=="sealed"){bool ok=true;foreach(var field in new[]{"key","iv","macKey","mac","mime"})if(!meta.ContainsKey(field)||!(meta[field] is string)||((string)meta[field]).Length==0||((string)meta[field]).Length>200)ok=false;if(!ok||!SealedMimes.Contains(Str(meta,"mime")))throw new Exception("Invalid attachment.");return meta;}
+      throw new Exception("Invalid attachment.");
+    }
+    Dictionary<string,object> AttachMediaData(Dictionary<string,object> meta,Dictionary<string,object> row){
+      if(meta!=null){if(row==null||!row.ContainsKey("data")||!(row["data"] is string)||((string)row["data"]).Length>5600008)throw new Exception("Invalid encrypted attachment.");meta["data"]=row["data"];return meta;}
+      if(row==null||!row.ContainsKey("data")||!(row["data"] is string)||((string)row["data"]).Length>5592408||!new[]{"photo","video","audio","file"}.Contains(Str(row,"kind"))||!SealedMimes.Contains(Str(row,"mime")))throw new Exception("Invalid unencrypted attachment.");
+      return row;
+    }
+    Dictionary<string,object> LocalMedia(Dictionary<string,object> meta,Dictionary<string,object> row){if(meta==null||row==null)return null;var local=new Dictionary<string,object>(meta);local["data"]=Str(row,"data");return local;}
     static BitmapSource ImageData(string data){
       if(string.IsNullOrEmpty(data))return null;byte[] bytes=Convert.FromBase64String(data.Substring(data.IndexOf(',')+1));if(bytes.Length>4*1024*1024)throw new Exception("Image is too large.");
       int width,height;ImageSafety.Dimensions(bytes,out width,out height);double scale=Math.Min(1,Math.Min(1600.0/width,1600.0/height));
@@ -151,19 +165,19 @@ namespace Illusion {
       if(!content.Valid)throw new Exception(content.Text);var panel=new StackPanel();panel.Children.Add(Label(once?"VIEW ONCE · Closing this window removes this copy.":"Attachment",16));
       panel.Children.Add(new TextBlock{Text=content.Text,TextWrapping=TextWrapping.Wrap,FontSize=16,Foreground=Brushes.White,Margin=new Thickness(0,10,0,15)});
       string videoFile=null,audioFile=null;MediaElement player=null;
-      if(content.Media!=null){string kind=Str(content.Media,"kind"),data=Str(content.Media,"data");if(data.Length>5600000)throw new Exception("Attachment is too large.");
-        if(kind=="photo")panel.Children.Add(new Image{Source=ImageData("data:image/jpeg;base64,"+data),MaxHeight=430,Stretch=Stretch.Uniform});
+      if(content.Media!=null){string kind=MediaType(content.Media),data=Str(content.Media,"data");if(data.Length>5600008)throw new Exception("Attachment is too large.");
+        if(kind=="photo")panel.Children.Add(new Image{Source=ImageFromBytes(MediaPlain(content.Media)),MaxHeight=430,Stretch=Stretch.Uniform});
         else if(kind=="video"){
-          byte[] bytes=Convert.FromBase64String(data);if(bytes.Length<12 || Encoding.ASCII.GetString(bytes,4,4)!="ftyp")throw new Exception("Invalid MP4 attachment.");
+          byte[] bytes=MediaPlain(content.Media);if(bytes.Length<12 || Encoding.ASCII.GetString(bytes,4,4)!="ftyp")throw new Exception("Invalid MP4 attachment.");
           string dir=System.IO.Path.Combine(ProfileDir,"playback");Directory.CreateDirectory(dir);videoFile=System.IO.Path.Combine(dir,"illusion-"+Guid.NewGuid().ToString("N")+".mp4");File.WriteAllBytes(videoFile,bytes);Array.Clear(bytes,0,bytes.Length);mediaFiles.Add(videoFile);
           player=new MediaElement{Source=new Uri(videoFile),LoadedBehavior=MediaState.Manual,UnloadedBehavior=MediaState.Close,MaxHeight=400,Stretch=Stretch.Uniform};panel.Children.Add(player);var controls=new StackPanel{Orientation=Orientation.Horizontal};var play=new Button{Content=T("Play")};var pause=new Button{Content=T("Pause"),Margin=new Thickness(10,0,0,0)};controls.Children.Add(play);controls.Children.Add(pause);panel.Children.Add(controls);var captured=player;play.Click+=(s,e)=>captured.Play();pause.Click+=(s,e)=>captured.Pause();
           player.MediaFailed+=(s,e)=>MessageBox.Show("Windows could not play this video. Try an MP4 encoded with H.264/AAC.","Illusion");
         }else if(kind=="audio"){
-          byte[] bytes=Convert.FromBase64String(data);bool wav=Str(content.Media,"mime").Contains("wav");
+          byte[] bytes=MediaPlain(content.Media);bool wav=Str(content.Media,"mime").Contains("wav");
           string dir=System.IO.Path.Combine(ProfileDir,"playback");Directory.CreateDirectory(dir);audioFile=System.IO.Path.Combine(dir,"illusion-"+Guid.NewGuid().ToString("N")+(wav?".wav":".mp3"));File.WriteAllBytes(audioFile,bytes);Array.Clear(bytes,0,bytes.Length);mediaFiles.Add(audioFile);
           player=new MediaElement{Source=new Uri(audioFile),LoadedBehavior=MediaState.Manual,UnloadedBehavior=MediaState.Close,MaxHeight=120,Stretch=Stretch.Uniform};panel.Children.Add(player);var audioControls=new StackPanel{Orientation=Orientation.Horizontal};var audioPlay=new Button{Content=T("Play")};var audioPause=new Button{Content=T("Pause")};audioPlay.Click+=(s,e)=>{player.Play();};audioPause.Click+=(s,e)=>{player.Pause();};audioControls.Children.Add(audioPlay);audioControls.Children.Add(audioPause);panel.Children.Add(audioControls);
         }else if(kind=="file"){
-          byte[] bytes=Convert.FromBase64String(data);string text=new UTF8Encoding(false,true).GetString(bytes);
+          byte[] bytes=MediaPlain(content.Media);string text=new UTF8Encoding(false,true).GetString(bytes);
           panel.Children.Add(new TextBox{Text=text,IsReadOnly=true,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,FontFamily=new FontFamily("Consolas"),FontSize=13,MaxHeight=420,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Background=Brush("#0E1420"),Foreground=Brushes.White,BorderThickness=new Thickness(1),BorderBrush=Brush("#31466A"),Padding=new Thickness(10)});
         }else throw new Exception("Unsupported attachment type.");
       }

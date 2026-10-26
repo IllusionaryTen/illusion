@@ -216,7 +216,7 @@ namespace Illusion {
       Get<TextBlock>("IdentityLabel").Text="@"+(string)me["username"];
       Get<TextBlock>("Avatar").Text=((string)me["displayName"]).Substring(0,1).ToUpperInvariant();
       UpdateSelfProfile();
-      Get<TextBlock>("StatusLabel").Text="Connected · Message text encrypted on your device · Media uploads are unencrypted";
+      Get<TextBlock>("StatusLabel").Text=T("Connected · Message text encrypted on your device.");
       Get<TextBlock>("AuthError").Text="";StartExperience();timer.Start();
     }
     public Task Refresh() { return RefreshExperience(); }

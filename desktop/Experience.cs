@@ -127,7 +127,7 @@ namespace Illusion {
       sessionConnected=connected;
       Get<TextBlock>("ConnectionLabel").Text=connected?"●  "+T("Live connection")+(cloudLiveActive?" · "+T("Cloud"):""):"○  "+T("Reconnecting…");
       Get<TextBlock>("ConnectionLabel").Foreground=Brush(connected?"#79DDB5":"#E8B67C");
-      Get<TextBlock>("StatusLabel").Text=connected?T("Live updates · Encrypted message text · Media uploads are unencrypted")+(outbox.Count>0?" · "+outbox.Count+" "+T("queued"):" · "+T("Ctrl+K find someone / Ctrl+F search chat")):T("Offline · Your drafts and queued messages are safe on this device");
+      Get<TextBlock>("StatusLabel").Text=connected?T("Live connection · encrypted message bodies.")+(outbox.Count>0?" · "+outbox.Count+" "+T("queued"):" · "+T("Ctrl+K find someone / Ctrl+F search chat")):T("Offline · Your drafts and queued messages are safe on this device");
       if(connected)ShowNotice("",false);
     }
     static void AtomicWrite(string path,string text) {File.WriteAllText(path+".tmp",text);if(File.Exists(path))File.Replace(path+".tmp",path,null);else File.Move(path+".tmp",path);}
@@ -325,9 +325,9 @@ namespace Illusion {
         if(parsed!=null && (Str(parsed,"format")=="illusion.message.v1" || Str(parsed,"format")=="illusion.message.v2")){
           if(!parsed.ContainsKey("text") || !(parsed["text"] is string) || ((string)parsed["text"]).Length>2000)throw new Exception("Invalid message text.");text=(string)parsed["text"];
           if(parsed.ContainsKey("reply") && parsed["reply"]!=null){quote=parsed["reply"] as Dictionary<string,object>;if(quote==null || !quote.ContainsKey("name") || !(quote["name"] is string) || ((string)quote["name"]).Length>80 || !quote.ContainsKey("text") || !(quote["text"] is string) || ((string)quote["text"]).Length>320)throw new Exception("Invalid reply.");}
-          if(parsed.ContainsKey("media") && parsed["media"]!=null){media=parsed["media"] as Dictionary<string,object>;if(media==null || !media.ContainsKey("data") || !(media["data"] is string) || ((string)media["data"]).Length>5592408 || (Str(media,"kind")!="photo" && Str(media,"kind")!="video") || !new[]{"image/png","image/jpeg","video/mp4"}.Contains(Str(media,"mime")))throw new Exception("Invalid attachment.");}
+          if(parsed.ContainsKey("media") && parsed["media"]!=null)media=SealedMediaMeta(parsed["media"] as Dictionary<string,object>);
         }else if(text.Length>12000)throw new Exception("Message text is too large.");
-        if(message.ContainsKey("media") && message["media"]!=null){media=message["media"] as Dictionary<string,object>;if(media==null||!media.ContainsKey("data")||!(media["data"] is string)||((string)media["data"]).Length>5592408||(Str(media,"kind")!="photo"&&Str(media,"kind")!="video")||!new[]{"image/png","image/jpeg","video/mp4"}.Contains(Str(media,"mime")))throw new Exception("Invalid unencrypted attachment.");}
+        if(message.ContainsKey("media") && message["media"]!=null)media=AttachMediaData(media,message["media"] as Dictionary<string,object>);
         return new Content{Text=text,Reply=quote,Media=media,Deadline=message.ContainsKey("expiresAt")?Convert.ToInt64(message["expiresAt"]):0};
       }catch{return new Content{Text="Unable to verify or decrypt this message. Restore the correct key or verify with your contact.",Valid=false};}
     }
@@ -342,17 +342,17 @@ namespace Illusion {
       if(text.Length>2000)throw new Exception("Keep each message under 2,000 characters.");
       if(outbox.Count>=100)throw new Exception("Your outbox has 100 messages. Reconnect to deliver them before adding more.");
       sending=true;Get<Button>("SendButton").IsEnabled=false;int gen=generation;
-      string sender=(string)me["id"],recipient=(string)peer["id"],pub=(string)peer["publicKey"],key=privateKey,clientId=Guid.NewGuid().ToString();var quoted=reply;var attached=pendingMedia;bool once=Get<CheckBox>("ViewOnceCheck").IsChecked==true;
+      string sender=(string)me["id"],recipient=(string)peer["id"],pub=(string)peer["publicKey"],key=privateKey,clientId=Guid.NewGuid().ToString();var quoted=reply;var attached=pendingMedia;bool once=Get<CheckBox>("ViewOnceCheck").IsChecked==true;Dictionary<string,object> mediaMeta=null;if(attached!=null){byte[] plain=Convert.FromBase64String(Str(attached,"data"));string mk,miv,mmk,mmac;byte[] cipher=Crypto.SealMedia(plain,out mk,out miv,out mmk,out mmac);mediaMeta=new Dictionary<string,object>{{"kind","sealed"},{"mime",Str(attached,"mime")},{"key",mk},{"iv",miv},{"macKey",mmk},{"mac",mmac}};attached=new Dictionary<string,object>{{"kind","sealed"},{"mime",Str(attached,"mime")},{"data",Convert.ToBase64String(cipher)}};}
       if(once && sender==recipient){sending=false;Get<Button>("SendButton").IsEnabled=true;throw new Exception("View once is for messages to someone else.");}
       int ttl;chatTimers.TryGetValue(recipient,out ttl);var policy=new Dictionary<string,object>{{"viewOnce",once},{"ttlSeconds",ttl}};
-      string content=json.Serialize(new Dictionary<string,object>{{"format","illusion.message.v2"},{"text",text},{"reply",quoted},{"media",null}});
+      string content=json.Serialize(new Dictionary<string,object>{{"format","illusion.message.v2"},{"text",text},{"reply",quoted},{"media",mediaMeta}});
       try {
         var envelope=await Task.Run(()=>Crypto.Encrypt(content,sender,recipient,clientId,key,pub,policy));if(gen!=generation || me==null)return;
         var entry=new Dictionary<string,object>{{"senderId",sender},{"recipientId",recipient},{"clientId",clientId},{"envelope",envelope},{"media",attached},{"viewOnce",once},{"createdAt",DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}};
         if(outbox.Sum(m=>json.Serialize(m).Length)+json.Serialize(entry).Length>8000000)throw new Exception("Your encrypted outbox is full (8 MB). Reconnect before adding another attachment.");
         outbox.Add(entry);
         try{SaveLocalState();}catch{outbox.Remove(entry);throw;}
-        decoded[sender+"|"+clientId]=new Content{Text=once?"View-once message":text,Reply=once?null:quoted,Media=once?null:attached};
+        decoded[sender+"|"+clientId]=new Content{Text=once?"View-once message":text,Reply=once?null:quoted,Media=once?null:LocalMedia(mediaMeta,attached)};
         if(drafts.ContainsKey(recipient) && drafts[recipient]==raw)drafts.Remove(recipient);replyDrafts.Remove(recipient);
         if(peer!=null && (string)peer["id"]==recipient && Get<TextBox>("Composer").Text==raw){Get<TextBox>("Composer").Clear();reply=null;if(object.ReferenceEquals(pendingMedia,attached))pendingMedia=null;UpdateAttachment();Get<CheckBox>("ViewOnceCheck").IsChecked=false;UpdateReply();UpdateMessageViews(true,false);}
         SaveLocalState();Get<TextBlock>("ComposerHint").Text=sessionConnected?"◇  Sending securely…":"◇  Queued safely · sends when reconnected";
@@ -374,7 +374,7 @@ namespace Illusion {
             string id=(string)entry["recipientId"];
             if(!history.ContainsKey(id))history[id]=new List<Dictionary<string,object>>();if(!history[id].Any(m=>Convert.ToInt64(m["id"])==Convert.ToInt64(saved["id"])))history[id].Add(saved);
             if(peer!=null && (string)peer["id"]==id){messages[Convert.ToInt64(saved["id"])]=saved;UpdateMessageViews(AtBottom(),false);}
-            SaveLocalState();Connection(true);Get<TextBlock>("ComposerHint").Text="◇  Message text encrypted · attachment sent unencrypted";
+            Get<TextBlock>("ComposerHint").Text="◇  "+T("Encrypted attachment");
           } catch(ApiException e){if(e.Status==401)throw;if(e.Status>=500 || e.Status==429)Connection(false);ShowNotice("Message remains in your outbox: "+e.Message,false);return;}
           catch(OperationCanceledException){if(gen!=generation || closing || sessionStop==null)return;Connection(false);return;}
           catch {if(gen==generation && !closing){Connection(false);ShowNotice("Your message is queued safely. It will retry after the connection returns.",false);}return;}
@@ -431,11 +431,11 @@ namespace Illusion {
       var card=new Border{Margin=new Thickness(0,8,0,0),Cursor=System.Windows.Input.Cursors.Hand,CornerRadius=new CornerRadius(12),BorderThickness=new Thickness(1),BorderBrush=Brush("#31466A"),ClipToBounds=true};
       var panel=new Grid();
 
-      string mediaKind=Str(content.Media,"kind");
+      string mediaKind=MediaType(content.Media);
 
       if(mediaKind=="audio"||mediaKind=="file"){var row=new StackPanel{Orientation=Orientation.Horizontal};row.Children.Add(new TextBlock{Text=mediaKind=="audio"?"♪":"📄",FontSize=20,Foreground=Brush("#8CB3FF"),Margin=new Thickness(0,0,10,0),VerticalAlignment=VerticalAlignment.Center});row.Children.Add(new TextBlock{Text=mediaKind=="audio"?T("Play"):T("Attachment"),FontSize=13,Foreground=Brushes.White,VerticalAlignment=VerticalAlignment.Center});card.Padding=new Thickness(12,10,12,10);card.Child=row;card.MouseLeftButtonUp+=(s,e)=>ShowMessageContent(message,content,user,false);return card;}
       System.Windows.Media.Imaging.BitmapSource photo=null;
-      try{if(Str(content.Media,"kind")=="photo")photo=ImageData(Str(content.Media,"data"));}catch{}
+      try{if(mediaKind=="photo")photo=ImageFromBytes(MediaPlain(content.Media));}catch{}
       if(photo!=null){panel.Children.Add(ScalePreview(photo));}
       else{
         var key=message.ContainsKey("id")?Convert.ToString(message["id"]):"q:"+Convert.ToString(message["clientId"]);
@@ -444,7 +444,7 @@ namespace Illusion {
         else{
           var pending=new TextBlock{Text="▶",FontSize=22,Foreground=Brush("#8CB3FF"),HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Width=120,Height=80};
           panel.Children.Add(pending);
-          var bytes=Convert.FromBase64String(Str(content.Media,"data"));
+          var bytes=MediaPlain(content.Media);
           var gen=generation;
           System.Threading.Tasks.Task.Run(async()=>{
             var thumb=await RenderVideoFirstFrame(bytes);

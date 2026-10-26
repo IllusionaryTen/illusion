@@ -15,6 +15,17 @@ export function messageContent(text){
   if(!['illusion.message.v1','illusion.message.v2'].includes(c?.format)){if(text.length>12000)throw Error('Message text is too large.');return {text};}
   if(typeof c.text!=='string'||c.text.length>2000)throw Error('Invalid message text.');
   if(c.reply&&(typeof c.reply!=='object'||typeof c.reply.name!=='string'||c.reply.name.length>80||typeof c.reply.text!=='string'||c.reply.text.length>320))throw Error('Invalid reply.');
-  if(c.media&&(!['photo','video'].includes(c.media.kind)||typeof c.media.data!=='string'||c.media.data.length>5592408||!['image/jpeg','image/png','video/mp4'].includes(c.media.mime)))throw Error('Invalid attachment.');
-  return {format:c.format,text:c.text,reply:c.reply?{id:Number.isSafeInteger(c.reply.id)?c.reply.id:0,name:c.reply.name,text:c.reply.text}:null,media:c.media?{kind:c.media.kind,mime:c.media.mime,data:c.media.data}:null};
+  let media=null;
+  if(c.media){
+    if(c.media.kind==='sealed'){
+      const fields=['key','iv','macKey','mac','mime'];
+      if(!fields.every(k=>typeof c.media[k]==='string'&&c.media[k].length>0&&c.media[k].length<200))throw Error('Invalid attachment.');
+      if(!['image/jpeg','image/png','video/mp4','audio/wav','audio/x-wav','audio/wave','audio/mpeg','audio/mp3','text/plain','text/markdown','text/x-markdown'].includes(c.media.mime))throw Error('Invalid attachment.');
+      media={kind:'sealed',mime:c.media.mime,key:c.media.key,iv:c.media.iv,macKey:c.media.macKey,mac:c.media.mac};
+    }else{
+      if(!['photo','video'].includes(c.media.kind)||typeof c.media.data!=='string'||c.media.data.length>5592408||!['image/jpeg','image/png','video/mp4'].includes(c.media.mime))throw Error('Invalid attachment.');
+      media={kind:c.media.kind,mime:c.media.mime,data:c.media.data};
+    }
+  }
+  return {format:c.format,text:c.text,reply:c.reply?{id:Number.isSafeInteger(c.reply.id)?c.reply.id:0,name:c.reply.name,text:c.reply.text}:null,media};
 }
