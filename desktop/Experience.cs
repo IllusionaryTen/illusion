@@ -23,6 +23,7 @@ namespace Illusion {
     readonly Dictionary<string,List<Dictionary<string,object>>> history=new Dictionary<string,List<Dictionary<string,object>>>();
     readonly List<Dictionary<string,object>> outbox=new List<Dictionary<string,object>>();
     readonly HashSet<string> pinned=new HashSet<string>();
+    readonly HashSet<string> mutedChats=new HashSet<string>();
     readonly Dictionary<string,ListBoxItem> chatItems=new Dictionary<string,ListBoxItem>();
     readonly Dictionary<string,Content> decoded=new Dictionary<string,Content>();
     readonly Dictionary<string,MessageView> views=new Dictionary<string,MessageView>();
@@ -94,6 +95,7 @@ namespace Illusion {
       Window.Closed+=(s,e)=>{CloseNotificationToast();if(notificationPlayer!=null){notificationPlayer.Stop();notificationPlayer.Close();notificationPlayer=null;}};
     }
     void NotifyIncoming(Dictionary<string,object> chat,long count){
+      if(mutedChats.Contains(Str(chat,"id","")))return;
       try{if(notificationPlayer!=null && notificationPlayer.Source!=null){notificationPlayer.Position=TimeSpan.Zero;notificationPlayer.Play();}}catch{}
       if(!Window.IsActive){string name=Str(chat,"displayName","Illusion"),body=count>1?count+" new messages":"New message";ShowNotificationToast(name,body);}
     }
@@ -144,9 +146,16 @@ namespace Illusion {
       var state=new Dictionary<string,object>{{"drafts",drafts},{"replies",replyDrafts},{"contacts",cachedContacts},{"pinned",pinned.ToArray()},{"outbox",outbox.ToArray()},{"lastPeer",lastPeer},{"history",caches}};
       AtomicWrite(localStatePath,Crypto.Protect(json.Serialize(state)));dirtyLocal=false;
     }
+    void LoadMutes(){
+      mutedChats.Clear();if(me==null)return;
+      try{var list=json.Deserialize<string[]>(Setting("mutes:"+(string)me["id"],"[]"));if(list!=null)foreach(var id in list)if(!string.IsNullOrEmpty(id))mutedChats.Add(id);}catch{}
+    }
+    void SaveMutes(){
+      if(me==null)return;settings["mutes:"+(string)me["id"]]=json.Serialize(mutedChats.ToArray());SaveSettings();
+    }
     void ResetExperience() {
       ResetPrivacy();
-      drafts.Clear();replyDrafts.Clear();contacts.Clear();outbox.Clear();pinned.Clear();chatItems.Clear();history.Clear();decoded.Clear();views.Clear();notifiedUnread.Clear();notificationBaselineReady=false;latestChats=new Dictionary<string,object>[0];reply=null;lastPeer="";localStatePath="";dirtyLocal=false;localStateReady=false;lastReadSent=0;readThrough=0;
+      drafts.Clear();replyDrafts.Clear();contacts.Clear();outbox.Clear();pinned.Clear();mutedChats.Clear();chatItems.Clear();history.Clear();decoded.Clear();views.Clear();notifiedUnread.Clear();notificationBaselineReady=false;latestChats=new Dictionary<string,object>[0];reply=null;lastPeer="";localStatePath="";dirtyLocal=false;localStateReady=false;lastReadSent=0;readThrough=0;
       Get<StackPanel>("MessageList").Children.Clear();Get<StackPanel>("MessageList").Children.Add(Get<Button>("OlderButton"));emptyMessage=null;
       Get<Border>("ReplyBar").Visibility=Visibility.Collapsed;Get<Border>("NoticePanel").Visibility=Visibility.Collapsed;Get<Button>("NewMessagesButton").Visibility=Visibility.Collapsed;
       Get<TextBlock>("ConnectionLabel").Text="○  Not connected";Window.Title="Illusion";
@@ -167,6 +176,7 @@ namespace Illusion {
         } catch {ShowNotice("Your local workspace could not be read. Your server history and encryption key are unchanged. The original workspace file has been kept.",true);throw new Exception("Unable to read local drafts and outbox. Keep the workspace file for recovery before resetting it.");}
       }
       contacts[(string)me["id"]]=me;
+      LoadMutes();
       localStateReady=true;
       ExpireLocal();
     }
@@ -244,13 +254,13 @@ namespace Illusion {
           var row=new Grid();row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(40)});row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
           var avatar=ProfileAvatar(chat,34);avatar.VerticalAlignment=VerticalAlignment.Top;row.Children.Add(avatar);
           var text=new StackPanel();Grid.SetColumn(text,1);
-          text.Children.Add(new TextBlock{Text=(pinned.Contains(id)?"◇  ":"")+(string)chat["displayName"]+(unread>0?"   • "+unread:""),Foreground=Brushes.White,FontSize=14,FontWeight=FontWeights.SemiBold,TextTrimming=TextTrimming.CharacterEllipsis});
+          text.Children.Add(new TextBlock{Text=(pinned.Contains(id)?"◇  ":"")+(mutedChats.Contains(id)?"🔕  ":"")+(string)chat["displayName"]+(unread>0?"   • "+unread:""),Foreground=Brushes.White,FontSize=14,FontWeight=FontWeights.SemiBold,TextTrimming=TextTrimming.CharacterEllipsis});
           string preview="@"+chat["username"];
           if(drafts.ContainsKey(id))preview=T("Draft: ")+drafts[id].Replace('\n',' ');
           else if(chat.ContainsKey("lastMessage")){var last=(Dictionary<string,object>)chat["lastMessage"];Content content;if(decoded.TryGetValue(ContentKey(last),out content))preview=((string)last["senderId"]==(string)me["id"]?T("You: "):"")+content.Text.Replace('\n',' ');}
           text.Children.Add(new TextBlock{Text=preview,Foreground=Brush(drafts.ContainsKey(id)?"#91B7FF":"#7C8DAA"),FontSize=11,Margin=new Thickness(0,5,0,0),TextTrimming=TextTrimming.CharacterEllipsis});row.Children.Add(text);
           // Keep the item itself and its selection; content changes do not reset the list.
-          string signature=(string)chat["displayName"]+"|"+preview+"|"+unread+"|"+pinned.Contains(id)+"|"+Crypto.Fingerprint(json.Serialize(UserProfile(chat)));
+          string signature=(string)chat["displayName"]+"|"+preview+"|"+unread+"|"+pinned.Contains(id)+"|"+mutedChats.Contains(id)+"|"+Crypto.Fingerprint(json.Serialize(UserProfile(chat)));
           if(item.Uid!=signature){item.Content=row;item.Uid=signature;item.ToolTip="@"+chat["username"]+" · Right-click to pin";}
           int old=list.Items.IndexOf(item);if(old!=index){if(old>=0)list.Items.RemoveAt(old);list.Items.Insert(index,item);}index++;
           if(peer!=null && (string)peer["id"]==id)list.SelectedItem=item;
@@ -264,6 +274,7 @@ namespace Illusion {
       if(me==null)return;if(peer!=null && (string)peer["id"]==(string)user["id"])return;
       CaptureDraft();SaveLocalState();Pin(user);peer=user;string id=(string)user["id"];contacts[id]=user;lastPeer=id;conversationVersion++;lastReadSent=0;readThrough=0;
       pendingMedia=null;UpdateAttachment();Get<CheckBox>("ViewOnceCheck").IsChecked=false;
+      LoadContactWallpaper(id);
       messages.Clear();views.Clear();emptyMessage=null;
       var list=Get<StackPanel>("MessageList");while(list.Children.Count>1)list.Children.RemoveAt(1);
       restoringDraft=true;Get<TextBox>("Composer").Text=drafts.ContainsKey(id)?drafts[id]:"";restoringDraft=false;reply=replyDrafts.ContainsKey(id)?replyDrafts[id]:null;UpdateReply();

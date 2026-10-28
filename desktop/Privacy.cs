@@ -41,7 +41,21 @@ namespace Illusion {
     }
     void UpdateSelfProfile(){if(me==null)return;var text=Get<TextBlock>("Avatar");var surface=text.Parent as Border;if(surface==null)return;var profile=UserProfile(me);surface.Background=Brush(Str(profile,"accent","#22395D"));text.Visibility=Visibility.Visible;try{var image=ImageData(Str(profile,"avatar"));if(image!=null){surface.Background=new ImageBrush(image){Stretch=Stretch.UniformToFill};text.Visibility=Visibility.Collapsed;}}catch{}text.Text=Str(me,"displayName","I").Substring(0,1).ToUpperInvariant();}
     void ClosePrivateContent(){foreach(var w in contentWindows.ToArray())w.Close();foreach(var f in mediaFiles.ToArray())try{File.Delete(f);}catch{}mediaFiles.Clear();}
-    void ResetPrivacy(){ClosePrivateContent();pendingMedia=null;chatTimers.Clear();videoThumbCache.Clear();Get<CheckBox>("ViewOnceCheck").IsChecked=false;UpdateAttachment();}
+    void ResetPrivacy(){ClosePrivateContent();pendingMedia=null;chatTimers.Clear();videoThumbCache.Clear();ClearContactWallpaper();Get<CheckBox>("ViewOnceCheck").IsChecked=false;UpdateAttachment();}
+    string WallpaperPath(string peerId){return Path.Combine(ProfileDir,"wallpapers","wallpaper-"+Crypto.Fingerprint(server+"/"+(string)me["id"]+"/"+peerId)+".jpg");}
+    void ClearContactWallpaper(){Get<Grid>("ContactWallpaper").Visibility=Visibility.Collapsed;Get<Border>("ContactWallpaperImage").Background=null;}
+    void LoadContactWallpaper(string peerId){
+      try{if(me==null||peerId==(string)me["id"]){ClearContactWallpaper();return;}string path=WallpaperPath(peerId);if(!File.Exists(path)){ClearContactWallpaper();return;}var bitmap=new BitmapImage();bitmap.BeginInit();bitmap.CacheOption=BitmapCacheOption.OnLoad;bitmap.UriSource=new Uri(path);bitmap.EndInit();bitmap.Freeze();Get<Border>("ContactWallpaperImage").Background=new ImageBrush(bitmap){Stretch=Stretch.UniformToFill};Get<Grid>("ContactWallpaper").Visibility=Visibility.Visible;}catch{ClearContactWallpaper();}
+    }
+    void SaveContactWallpaper(string peerId,string source){
+      var bitmap=new BitmapImage();bitmap.BeginInit();bitmap.CacheOption=BitmapCacheOption.OnLoad;bitmap.UriSource=new Uri(source);bitmap.DecodePixelWidth=1080;bitmap.EndInit();bitmap.Freeze();
+      double scale=Math.Min(1.0,1080.0/Math.Max(bitmap.PixelWidth,bitmap.PixelHeight));BitmapSource output=bitmap;if(scale<1){var transformed=new TransformedBitmap(bitmap,new ScaleTransform(scale,scale));transformed.Freeze();output=transformed;}
+      byte[] bytes=null;foreach(int quality in new[]{82,68,52,40}){var encoder=new JpegBitmapEncoder{QualityLevel=quality};encoder.Frames.Add(BitmapFrame.Create(output));using(var stream=new MemoryStream()){encoder.Save(stream);bytes=stream.ToArray();}if(bytes.Length<=200000)break;}
+      if(bytes==null||bytes.Length>200000)throw new Exception(T("Choose a smaller image."));
+      string dir=Path.Combine(ProfileDir,"wallpapers");Directory.CreateDirectory(dir);string path=WallpaperPath(peerId),temp=path+".tmp";File.WriteAllBytes(temp,bytes);if(File.Exists(path))File.Replace(temp,path,null);else File.Move(temp,path);PruneWallpapers();LoadContactWallpaper(peerId);
+    }
+    void RemoveContactWallpaper(string peerId){string path=WallpaperPath(peerId);if(File.Exists(path))File.Delete(path);ClearContactWallpaper();}
+    void PruneWallpapers(){try{string dir=Path.Combine(ProfileDir,"wallpapers");if(!Directory.Exists(dir))return;var files=new DirectoryInfo(dir).GetFiles("wallpaper-*.jpg").OrderByDescending(f=>f.LastWriteTimeUtc).ToArray();for(int i=24;i<files.Length;i++)files[i].Delete();}catch{}}
     void UpdateAttachment(){Get<Border>("AttachmentBar").Visibility=pendingMedia==null?Visibility.Collapsed:Visibility.Visible;Get<TextBlock>("AttachmentLabel").Text=pendingMedia==null?"":T("Encrypted attachment");}
     string VerifiedPath(string id){return System.IO.Path.Combine(ProfileDir,"verified-"+Crypto.Fingerprint(id)+".txt");}
     bool IsVerified(Dictionary<string,object> user){try{string id=Convert.ToString(user["id"]);if(me!=null&&id==Convert.ToString(me["id"]))return false;string path=VerifiedPath(id);return File.Exists(path)&&File.ReadAllText(path)==Crypto.Fingerprint(Convert.ToString(user["publicKey"]));}catch{return false;}}
@@ -124,9 +138,14 @@ namespace Illusion {
       var response=await Api("GET","/v1/chat-settings?peer="+id);if(gen!=generation)return;chatTimers[id]=Convert.ToInt32(response["ttlSeconds"]);
       var panel=new StackPanel();panel.Children.Add(Label(T("Conversation with")+" @"+user["username"],18));
       var profile=new Button{Content=T("View profile")};panel.Children.Add(profile);profile.Click+=(s,e)=>ShowProfile(user,false);
+      var mute=new Button{Content=T(mutedChats.Contains(id)?"Unmute conversation":"Mute conversation"),IsEnabled=id!=(string)me["id"],Margin=new Thickness(0,8,0,0)};panel.Children.Add(mute);
+      mute.Click+=(s,e)=>{if(!mutedChats.Add(id))mutedChats.Remove(id);SaveMutes();UpdateChats(latestChats);mute.Content=T(mutedChats.Contains(id)?"Unmute conversation":"Mute conversation");};
       panel.Children.Add(Label("Automatically delete new messages"));var timerChoice=new ComboBox{ItemsSource=Array.ConvertAll(TimerNames,name=>T(name)),SelectedIndex=Array.IndexOf(ChatTimers,chatTimers[id]),Margin=new Thickness(0,0,0,10)};panel.Children.Add(timerChoice);
       panel.Children.Add(Label("Either participant can change this shared timer. It applies to messages sent afterward, starting when the relay accepts them. Expired content is removed from the relay and this app's cache. Copies, screenshots and backups cannot be recalled."));
       var save=new Button{Content=T("Save chat timer")};panel.Children.Add(save);var status=Label("");panel.Children.Add(status);
+      panel.Children.Add(Label(T("Wallpaper")));var wallpaperRow=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,8)};var chooseWallpaper=new Button{Content=T("Choose wallpaper"),Margin=new Thickness(0,0,8,0)};var removeWallpaper=new Button{Content=T("Remove wallpaper"),Visibility=File.Exists(WallpaperPath(id))?Visibility.Visible:Visibility.Collapsed};wallpaperRow.Children.Add(chooseWallpaper);wallpaperRow.Children.Add(removeWallpaper);panel.Children.Add(wallpaperRow);
+      chooseWallpaper.Click+=(s,e)=>Guard(async()=>{var pick=new OpenFileDialog{Filter="Images (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg"};if(pick.ShowDialog()!=true)return;if(new FileInfo(pick.FileName).Length>4*1024*1024)throw new Exception(T("Choose a smaller image."));SaveContactWallpaper(id,pick.FileName);removeWallpaper.Visibility=Visibility.Visible;});
+      removeWallpaper.Click+=(s,e)=>Guard(async()=>{RemoveContactWallpaper(id);removeWallpaper.Visibility=Visibility.Collapsed;});
       var block=new Button{Content=(bool)response["blocked"]?"Unblock this user":"Block this user",IsEnabled=id!=(string)me["id"],Margin=new Thickness(0,12,0,0)};panel.Children.Add(block);
       var report=new Button{Content=T("Report profile"),IsEnabled=id!=(string)me["id"],Margin=new Thickness(0,8,0,0)};panel.Children.Add(report);report.Click+=(s,e)=>ReportDialog(user,null,null);
       var dialog=Dialog("Chat settings",panel);

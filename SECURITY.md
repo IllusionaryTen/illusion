@@ -87,3 +87,11 @@ Web sign-out clears messages, contacts, drafts and pending UI work and attempts 
 History pages are selected using metadata before hydrating ciphertext (8 MB page budget); sidebar responses have a 4 MB budget and avoid loading large bodies. Expiry works in bounded batches and coalesces notifications. A conservative 256 MiB accounting budget includes bodies, profiles, reports and metadata; SQLite/index overhead and platform quotas remain separate. Public signup is limited to 1000 active accounts and 10 registrations per IP per day. Quota limits can deny legitimate use under attack; this preview is not a distributed DDoS defense.
 
 Images are checked for PNG/JPEG dimensions before decoding: at most 8192 per side and 16 megapixels. Native decoders resize without upscaling skinny images. Native responses, client message windows, decoded text, reply fields and media sizes are bounded. Remote profile fonts use only the shared system-font list. Active XML constructs are rejected before native RSA import; this is defense in depth, not evidence that an XXE/RCE vulnerability was exploited. Codec/OS zero-days were not assessed.
+
+## Device-local preferences (1.4)
+
+Per-chat mute lists and per-contact wallpapers are device-only: IndexedDB on web/Android, settings and profile files on Windows. They are never included in API payloads and the relay never learns them. Muting suppresses the local sound and toast only; Windows currently has no OS notification channel, so 1.4 does not claim to silence one.
+
+Theme import files are untrusted input. They pass a whitelist before application: `version` must be 1, the theme id must be one of the shipped themes, the font must be in the configured system-font list, and both colours must match `^#[0-9a-f]{6}$`. Unknown fields are ignored rather than merged, so a crafted file cannot inject CSS or a font family.
+
+Wallpapers are validated with the existing image-dimension checks before decoding, resized to about 1080 px, re-encoded locally as JPEG, capped at 200 KB, and limited to 24 stored images. They are never uploaded. A dark scrim sits over the image; screenshots and local disk access remain outside this guarantee.

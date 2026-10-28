@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /v1/
+Disallow: /admin/
+Disallow: /telegram/
+
+Sitemap: https://illusionary.my.id/sitemap.xml

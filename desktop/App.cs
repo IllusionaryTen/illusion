@@ -292,6 +292,9 @@ namespace Illusion {
       var themeIds=new[]{"blue","astraios","crimson-moon","dreammetric","eden","hellborn","monarch","oblivion","oppression","tomorrow"};var themeLabels=new[]{"Illusionary","Astraios","Calamity of the Crimson Moon","Dreammetric","Eden","Hellborn","Monarch","Oblivion","Oppression","Tomorrow"};var themes=new ComboBox{ItemsSource=Array.ConvertAll(themeLabels,label=>T(label)),SelectedIndex=Math.Max(0,Array.IndexOf(themeIds,CurrentThemeId())),Margin=new Thickness(0,0,0,16)};panel.Children.Add(themes);
       panel.Children.Add(Label("Message text size"));var font=new Slider {Minimum=12,Maximum=20,TickFrequency=1,IsSnapToTickEnabled=true,Value=int.Parse(Setting("font","14")),Margin=new Thickness(0,0,0,16)};panel.Children.Add(font);
       panel.Children.Add(Label("Chat font"));var family=new ComboBox{ItemsSource=ProfileFonts,SelectedItem=Setting("chatFont","Segoe UI"),Margin=new Thickness(0,0,0,12)};panel.Children.Add(family);
+      var lookRow=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,14)};
+      var exportLook=new Button{Content=T("Export look"),Margin=new Thickness(0,0,8,0)};var importLook=new Button{Content=T("Import look")};
+      lookRow.Children.Add(exportLook);lookRow.Children.Add(importLook);panel.Children.Add(lookRow);
       var textColor=new ColorStudio("Message text color",Setting("textColor","#F1F5FF"));panel.Children.Add(new Expander{Header=T("Message text color · RGB studio"),Foreground=Brushes.White,Content=textColor});
       var bubbleColor=new ColorStudio("Your message bubble",Setting("bubbleColor",Setting("accent","#467AFF")));panel.Children.Add(new Expander{Header=T("Bubble color · RGB studio"),Foreground=Brushes.White,Content=bubbleColor});
       var compact=new CheckBox {Content=T("Compact message spacing"),IsChecked=Setting("compact","false")=="true",Foreground=Brushes.White,Margin=new Thickness(0,0,0,14)};panel.Children.Add(compact);
@@ -299,6 +302,26 @@ namespace Illusion {
       var motion=new CheckBox {Content=T("Gentle message animations"),IsChecked=Setting("motion","true")=="true",Foreground=Brushes.White,Margin=new Thickness(0,0,0,20)};panel.Children.Add(motion);
       var receipts=new CheckBox {Content=T("Share read receipts"),IsChecked=Setting("receipts","true")=="true",Foreground=Brushes.White,Margin=new Thickness(0,0,0,20),ToolTip="Allow contacts to see when you read their messages. You can turn this off for future messages."};panel.Children.Add(receipts);
       themes.SelectionChanged+=(s,e)=>bubbleColor.Hex=ThemeColors[themeIds[themes.SelectedIndex]][4];
+      exportLook.Click+=async(s,e)=>await Guard(async()=>{
+        var pick=new SaveFileDialog{FileName="illusion-theme.json",DefaultExt=".json",Filter="Illusion theme (*.json)|*.json"};
+        if(pick.ShowDialog()!=true)return;
+        var look=new Dictionary<string,object>{{"version",1},{"theme",CurrentThemeId()},{"font",Setting("chatFont","Segoe UI")},{"textColor",Setting("textColor","#F1F5FF")},{"accent",Setting("accent","#467AFF")}};
+        File.WriteAllText(pick.FileName,json.Serialize(look));
+      });
+      importLook.Click+=async(s,e)=>await Guard(async()=>{
+        var pick=new OpenFileDialog{Filter="Illusion theme (*.json)|*.json"};
+        if(pick.ShowDialog()!=true)return;
+        if(new FileInfo(pick.FileName).Length>20000)throw new Exception(T("That theme file isn't valid."));
+        var data=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(pick.FileName));
+        string importedTheme=data!=null&&data.ContainsKey("theme")?Convert.ToString(data["theme"]):"";
+        string importedFont=data!=null&&data.ContainsKey("font")?Convert.ToString(data["font"]):"";
+        string importedText=data!=null&&data.ContainsKey("textColor")?Convert.ToString(data["textColor"]):"";
+        string importedAccent=data!=null&&data.ContainsKey("accent")?Convert.ToString(data["accent"]):"";
+        if(data==null||Convert.ToInt32(data.ContainsKey("version")?data["version"]:0)!=1||Array.IndexOf(themeIds,importedTheme)<0||Array.IndexOf(ProfileFonts,importedFont)<0||!IsLookHex(importedText)||!IsLookHex(importedAccent))throw new Exception(T("That theme file isn't valid."));
+        settings["theme"]=importedTheme;settings["chatFont"]=importedFont;settings["textColor"]=importedText;settings["accent"]=importedAccent;SaveSettings();
+        themes.SelectedIndex=Array.IndexOf(themeIds,importedTheme);family.SelectedItem=importedFont;textColor.Hex=importedText;
+        ApplyTheme();DrawAura();RelocalizeEverything();
+      });
       var apply=new Button {Content=T("Save appearance"),Background=(Brush)Window.Resources["Accent"]};panel.Children.Add(apply);
       var privacyButton=new Button{Content=T("Privacy, policies and data deletion"),Margin=new Thickness(0,10,0,0)};panel.Children.Add(privacyButton);privacyButton.Click+=(s,e)=>ShowPrivacyAndData();
       var backup=new Button {Content=T("Back up my encryption key"),IsEnabled=me!=null,Margin=new Thickness(0,12,0,0)};panel.Children.Add(backup);

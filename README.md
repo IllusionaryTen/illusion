@@ -1,6 +1,16 @@
-# ◈ Illusion 1.3.0
+# ◈ Illusion 1.4.0
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.4.0
+
+**Device-local mute and calmer alerts.** Every conversation can be muted from Profile / Timer. Mute lists live only on your device — IndexedDB on web/Android, settings.json on Windows — so the relay never learns which chats matter. Muted chats show a marker, play no sound and raise no toast, and grouped alerts keep their per-chat tag plus a message count. Windows uses its existing in-app toast; there are no Windows OS notifications to silence.
+
+**Portable looks.** Appearance can export the current theme, chat font, text colour and accent as `illusion-theme.json`, and import one back through a strict whitelist (known theme id, installed font, six-digit hex colours). Unknown themes, fonts and colour formats are rejected before anything is applied.
+
+**Per-contact wallpapers.** Set a local wallpaper for each conversation. Images are validated before decode, resized to about 1080 px, re-encoded as JPEG, capped at 200 KB, kept under a 24-image limit and never uploaded. A dark scrim keeps messages readable. The image is cleared from view on sign-out and can be removed per chat.
+
+**No wire changes.** Envelopes, relay routes and storage format are unchanged; 1.4 is a client-only release.
 
 ## What's new in 1.3.0
 

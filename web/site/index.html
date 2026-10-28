@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Illusion — private messenger for every screen</title>
+<meta name="description" content="Private, customizable, free. End-to-end encrypted messages, files and voice notes, disappearing chats and ten aura themes — on Windows, Android, the web and Telegram.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#080B16">
+<link rel="canonical" href="https://illusionary.my.id/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Illusion">
+<meta property="og:title" content="Illusion — talk in your own dimension">
+<meta property="og:description" content="Private, customizable, free. End-to-end encrypted messages, files and voice notes, disappearing chats and ten aura themes — on Windows, Android, the web and Telegram.">
+<meta property="og:url" content="https://illusionary.my.id/">
+<meta property="og:image" content="https://illusionary.my.id/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Illusion messenger — orbital rings around a white diamond">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Illusion — talk in your own dimension">
+<meta name="twitter:description" content="Private, customizable, free. Encrypted messaging on Windows, Android, the web and Telegram.">
+<meta name="twitter:image" content="https://illusionary.my.id/og.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/app/icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/app/icons/icon-192.png">
+<link rel="stylesheet" href="/site/site.css">
+<script src="/site/site.js" defer></script>
+</head>
+<body id="top">
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+
+<header class="topbar" id="topbar">
+  <div class="nav-wrap">
+    <a class="brand" href="#top" aria-label="Illusion home">
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <g class="mark-rings" fill="none" stroke="currentColor" stroke-width="3.6">
+          <ellipse cx="32" cy="32" rx="29" ry="13" transform="rotate(-24 32 32)"/>
+          <ellipse cx="32" cy="32" rx="22" ry="9.5" transform="rotate(-24 32 32)"/>
+        </g>
+        <rect class="mark-core" x="32" y="32" width="15" height="15" transform="rotate(45 32 32)"/>
+      </svg>
+      <span class="wordmark">Illusion</span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Sections">
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#security" data-i18n="nav.security">Security</a>
+      <a href="#themes" data-i18n="nav.themes">Themes</a>
+      <a href="#download" data-i18n="nav.download">Download</a>
+      <a href="#faq" data-i18n="nav.faq">FAQ</a>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" class="lang-btn active" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" class="lang-btn" data-lang="ru" aria-pressed="false">RU</button>
+      </div>
+      <a class="btn btn-primary nav-cta" href="/app/" data-i18n="nav.open">Open Illusion</a>
+    </nav>
+    <button class="menu-btn" id="menu" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-bg" aria-hidden="true">
+      <div class="checker"></div>
+      <div class="ring ring-a"></div>
+      <div class="ring ring-b"></div>
+      <div class="glow"></div>
+    </div>
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="badge"><span class="badge-dot"></span><span data-i18n="hero.badge">Private · Customizable · Free</span></p>
+        <h1 id="hero-title" data-i18n-html="hero.title">Talk in your own <span class="grad">dimension.</span></h1>
+        <p class="lede" data-i18n="hero.lede">Illusion is a private messenger with encrypted messages and files, disappearing chats, voice notes and ten aura themes — on Windows, Android, the web and inside Telegram.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary btn-lg" href="/app/" data-i18n="hero.cta">Open the web app</a>
+          <a class="btn btn-ghost btn-lg" href="#download" data-i18n="hero.download">Download apps</a>
+        </div>
+        <ul class="hero-meta">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span data-i18n="hero.meta1">End-to-end encrypted</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9Z"/></svg><span data-i18n="hero.meta2">29 languages</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m5 5 14 14"/></svg><span data-i18n="hero.meta3">No trackers</span></li>
+        </ul>
+        <p class="hero-platforms" data-i18n="hero.platforms">Windows · Android · Web · Telegram</p>
+      </div>
+
+      <div class="hero-visual">
+        <div class="preview-shell">
+          <div class="app-window" id="preview-window" data-aura="blue" role="img" aria-label="Preview of the Illusion chat interface with orbital aura themes">
+            <div class="chrome" aria-hidden="true">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="url"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>illusionary.my.id/app</span>
+              <span class="chrome-end"></span>
+            </div>
+            <div class="app-body">
+              <aside class="app-side" aria-hidden="true">
+                <div class="side-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><span>Search</span></div>
+                <div class="chat-row updates">
+                  <span class="avatar diamond">◈</span>
+                  <span class="chat-meta"><span class="chat-name">Illusion updates</span><span class="chat-preview">1.3: search, replies, voice</span></span>
+                  <span class="chat-time">now</span>
+                </div>
+                <div class="chat-row active">
+                  <span class="avatar a1">N</span>
+                  <span class="chat-meta"><span class="chat-name">Nova <em class="tick">✓</em></span><span class="chat-preview">See you at nine ✦</span></span>
+                  <span class="chat-time">21:04</span>
+                </div>
+                <div class="chat-row">
+                  <span class="avatar a2">A</span>
+                  <span class="chat-meta"><span class="chat-name">Aster</span><span class="chat-preview">Voice note · 0:12</span></span>
+                  <span class="chat-time">20:57</span>
+                </div>
+                <div class="chat-row">
+                  <span class="avatar a3">D</span>
+                  <span class="chat-meta"><span class="chat-name">Design crew</span><span class="chat-preview">Aura pack is live</span></span>
+                  <span class="chat-time">19:12</span>
+                </div>
+              </aside>
+              <section class="app-chat" aria-hidden="true">
+                <div class="chat-head">
+                  <span class="chat-title">Nova <em class="tick">✓</em></span>
+                  <span class="timer-pill">⏱ 24h</span>
+                </div>
+                <div class="messages">
+                  <div class="bubble-row in">
+                    <div class="bubble in">The stars are aligned tonight ✦<span class="meta">21:02</span></div>
+                  </div>
+                  <div class="bubble-row out">
+                    <div class="bubble out">Then let's make it official. Nine?<span class="meta">21:03 <span class="ticks">✓✓</span></span></div>
+                  </div>
+                  <div class="bubble-row in">
+                    <div class="bubble in voice">
+                      <span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+                      <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                      <span class="dur">0:12</span>
+                    </div>
+                  </div>
+                  <div class="bubble-row out">
+                    <div class="bubble out">
+                      <span class="quote"><b>Nova</b> The stars are aligned tonight ✦</span>
+                      I'll bring the telescope.<span class="meta">21:04 <span class="ticks">✓✓</span></span>
+                    </div>
+                  </div>
+                  <div class="bubble-row in">
+                    <div class="view-once"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Sealed message · Open once</div>
+                  </div>
+                </div>
+                <div class="composer">
+                  <span class="composer-text">Message…</span>
+                  <span class="mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+                  <span class="once">View once</span>
+                  <span class="send">Send</span>
+                </div>
+              </section>
+            </div>
+          </div>
+          <div class="preview-bar">
+            <span class="preview-label" data-i18n="preview.label">Live preview — pick an aura</span>
+            <div class="aura-controls">
+              <span class="aura-active" id="aura-active">Illusionary</span>
+              <div class="aura-dots" id="aura-switches" role="group" aria-label="Preview themes">
+                <button type="button" class="aura-dot aura-blue active" data-aura-set="blue" data-name="Illusionary" aria-pressed="true" title="Illusionary" aria-label="Illusionary"></button>
+                <button type="button" class="aura-dot aura-astraios" data-aura-set="astraios" data-name="Astraios" aria-pressed="false" title="Astraios" aria-label="Astraios"></button>
+                <button type="button" class="aura-dot aura-crimson" data-aura-set="crimson-moon" data-name="Crimson Moon" aria-pressed="false" title="Calamity of the Crimson Moon" aria-label="Calamity of the Crimson Moon"></button>
+                <button type="button" class="aura-dot aura-dreammetric" data-aura-set="dreammetric" data-name="Dreammetric" aria-pressed="false" title="Dreammetric" aria-label="Dreammetric"></button>
+                <button type="button" class="aura-dot aura-eden" data-aura-set="eden" data-name="Eden" aria-pressed="false" title="Eden" aria-label="Eden"></button>
+                <button type="button" class="aura-dot aura-hellborn" data-aura-set="hellborn" data-name="Hellborn" aria-pressed="false" title="Hellborn" aria-label="Hellborn"></button>
+                <button type="button" class="aura-dot aura-monarch" data-aura-set="monarch" data-name="Monarch" aria-pressed="false" title="Monarch" aria-label="Monarch"></button>
+                <button type="button" class="aura-dot aura-oblivion" data-aura-set="oblivion" data-name="Oblivion" aria-pressed="false" title="Oblivion" aria-label="Oblivion"></button>
+                <button type="button" class="aura-dot aura-oppression" data-aura-set="oppression" data-name="Oppression" aria-pressed="false" title="Oppression" aria-label="Oppression"></button>
+                <button type="button" class="aura-dot aura-tomorrow" data-aura-set="tomorrow" data-name="Tomorrow" aria-pressed="false" title="Tomorrow" aria-label="Tomorrow"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="trust" aria-label="Highlights">
+    <div class="container trust-row">
+      <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3Z"/></svg><span data-i18n="trust.1">Sealed on your device</span></span>
+      <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10l4 4v14H3V3h4Z"/><path d="m8 12 3 3 5-6"/></svg><span data-i18n="trust.2">No third-party scripts</span></span>
+      <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9Z"/></svg><span data-i18n="trust.3">29 languages</span></span>
+      <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M12 4v16"/><circle cx="12" cy="12" r="9"/></svg><span data-i18n="trust.4">Free during preview</span></span>
+    </div>
+  </section>
+
+  <section class="section" id="features" aria-labelledby="features-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow" data-i18n="features.eyebrow">Inside Illusion</p>
+        <h2 id="features-title" data-i18n="features.title">Everything a conversation needs. Nothing it doesn't.</h2>
+        <p class="section-sub" data-i18n="features.sub">Built around the small things — quotes, timers, voice notes, auras — without giving up control of your words.</p>
+      </div>
+      <div class="bento">
+        <article class="card feature span-6">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></div>
+          <h3 data-i18n="f1.title">Sealed on your device</h3>
+          <p data-i18n="f1.body">Messages, captions, replies and files are encrypted and signed on your device, then wrapped for each recipient with RSA-3072. The relay only ever forwards sealed envelopes.</p>
+          <p class="tags"><span>AES-256-CBC</span><span>HMAC-SHA-256</span><span>RSA-OAEP</span></p>
+        </article>
+        <article class="card feature span-6">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="13" height="10" rx="1.5"/><path d="M7 18h9M20 8v9a2 2 0 0 1-2 2h-1"/><rect x="16" y="10" width="5" height="12" rx="1.5"/></svg></div>
+          <h3 data-i18n="f2.title">Every screen you own</h3>
+          <p data-i18n="f2.body">A portable Windows app, a native Android shell, the browser app and a Telegram Mini App. One account, one network — the conversation continues where you left it.</p>
+          <p class="pills"><span>Windows</span><span>Android</span><span>Web</span><span>Telegram</span></p>
+        </article>
+        <article class="card feature span-4">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
+          <h3 data-i18n="f3.title">Voice notes, sealed</h3>
+          <p data-i18n="f3.body">Hold the mic to record up to 40 seconds. Recordings ride the same encrypted attachment pipeline as photos, videos and documents.</p>
+        </article>
+        <article class="card feature span-4">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg></div>
+          <h3 data-i18n="f4.title">Timers that tidy up</h3>
+          <p data-i18n="f4.body">Set a chat to disappear from one minute to 30 days. Either participant can change the timer; new messages follow it from the moment they land.</p>
+        </article>
+        <article class="card feature span-4">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/><path d="m4 4 16 16"/></svg></div>
+          <h3 data-i18n="f5.title">Open once</h3>
+          <p data-i18n="f5.body">Send text, a photo or a video with View once. The recipient gets a sealed Open button, and the relay drops its copy after the first use.</p>
+        </article>
+        <article class="card feature span-4">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4M13 8.5H9M11 6.5V11"/></svg></div>
+          <h3 data-i18n="f6.title">Search, quotes and pins</h3>
+          <p data-i18n="f6.body">Find any loaded message with in-chat search and step through hits with ↑/↓. Quote replies, pin chats, and mute a conversation locally — mute lists never leave your device.</p>
+        </article>
+        <article class="card feature span-4">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18M3.5 9h17M3.5 15h17"/></svg></div>
+          <h3 data-i18n="f7.title">Profiles with auras</h3>
+          <p data-i18n="f7.body">Display name, description, fonts and colors — plus per-contact wallpapers, portable look files and ten aura themes that recolor the whole app.</p>
+        </article>
+        <article class="card feature span-4">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <h3 data-i18n="f8.title">Verified, device by device</h3>
+          <p data-i18n="f8.body">Compare key fingerprints out of band and mark a contact verified. Review every signed-in device and sign any of them out instantly.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="security" aria-labelledby="security-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow" data-i18n="security.eyebrow">Security model</p>
+        <h2 id="security-title" data-i18n="security.title">The relay forwards. It can't read.</h2>
+        <p class="section-sub" data-i18n="security.sub">Illusion keeps the keys on your devices. What travels is envelopes and routing information — never plaintext.</p>
+      </div>
+      <div class="pipeline">
+        <article class="pipe">
+          <span class="step-no">01</span>
+          <h3 data-i18n="sec.p1.title">On your device</h3>
+          <p data-i18n="sec.p1.body">Text, captions, replies and file keys are sealed with AES-256-CBC plus an HMAC-SHA-256 tag, then wrapped with RSA-OAEP for each recipient.</p>
+        </article>
+        <span class="pipe-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+        <article class="pipe">
+          <span class="step-no">02</span>
+          <h3 data-i18n="sec.p2.title">On the relay</h3>
+          <p data-i18n="sec.p2.body">Sealed envelopes and public keys. The relay can see accounts, contact pairs, timestamps, sizes and IPs — it cannot open the bodies.</p>
+        </article>
+        <span class="pipe-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+        <article class="pipe">
+          <span class="step-no">03</span>
+          <h3 data-i18n="sec.p3.title">On their device</h3>
+          <p data-i18n="sec.p3.body">The receiver checks the signature and MAC, unwraps the content key with a private key that never left their device, and decrypts in memory.</p>
+        </article>
+      </div>
+      <div class="honest">
+        <div class="honest-head">
+          <span class="honest-tag" data-i18n="sec.honest.tag">Honest limits</span>
+          <h3 data-i18n="sec.honest.title">What we don't claim</h3>
+        </div>
+        <p data-i18n="sec.honest.body">There is no forward secrecy or post-compromise recovery, and this custom protocol has not had an independent audit. A compromised device key exposes messages encrypted to it. Relay operators can retain ciphertext, and screenshots or modified clients can't be prevented.</p>
+        <a class="text-link" href="https://github.com/IllusionaryTen/illusion/blob/main/SECURITY.md" target="_blank" rel="noopener"><span data-i18n="sec.honest.link">Read the full security model</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
+      </div>
+      <p class="fineprint" data-i18n="sec.fine">Cloudflare terminates TLS for the hosted relay, so Cloudflare sees connection metadata. There are no analytics, no remote fonts and no third-party scripts on the app or this site.</p>
+    </div>
+  </section>
+
+  <section class="section" id="themes" aria-labelledby="themes-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow" data-i18n="themes.eyebrow">Appearance</p>
+        <h2 id="themes-title" data-i18n="themes.title">Ten auras. One messenger.</h2>
+        <p class="section-sub" data-i18n="themes.sub">Each palette is sampled from Sol's RNG aura artwork and checked for readable contrast, then applied across the web app, Windows and Android alike. Try them live in the preview above.</p>
+      </div>
+      <div class="theme-grid">
+        <article class="theme-card aura-blue"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Illusionary</h3><p data-i18n="theme.base">The original blue orbit.</p></article>
+        <article class="theme-card aura-astraios"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Astraios</h3><p data-i18n="theme.astraios">Starlit teal.</p></article>
+        <article class="theme-card aura-crimson"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Calamity of the Crimson Moon</h3><p data-i18n="theme.crimson">Crimson eclipse.</p></article>
+        <article class="theme-card aura-dreammetric"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Dreammetric</h3><p data-i18n="theme.dreammetric">Violet drift.</p></article>
+        <article class="theme-card aura-eden"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Eden</h3><p data-i18n="theme.eden">Silver void.</p></article>
+        <article class="theme-card aura-hellborn"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Hellborn</h3><p data-i18n="theme.hellborn">Ember glow.</p></article>
+        <article class="theme-card aura-monarch"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Monarch</h3><p data-i18n="theme.monarch">Violet crown.</p></article>
+        <article class="theme-card aura-oblivion"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Oblivion</h3><p data-i18n="theme.oblivion">Deep purple.</p></article>
+        <article class="theme-card aura-oppression"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Oppression</h3><p data-i18n="theme.oppression">Steel and shadow.</p></article>
+        <article class="theme-card aura-tomorrow"><span class="theme-swatch"><i></i><i></i><i></i><i></i></span><h3>Tomorrow</h3><p data-i18n="theme.tomorrow">Dawn horizon.</p></article>
+      </div>
+      <p class="fineprint" data-i18n="themes.fine">Aura names are proper nouns and stay as written in every language.</p>
+    </div>
+  </section>
+
+  <section class="section" id="download" aria-labelledby="download-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow" data-i18n="dl.eyebrow">Get Illusion</p>
+        <h2 id="download-title" data-i18n="dl.title">Start in under a minute.</h2>
+        <p class="section-sub" data-i18n="dl.sub">One account everywhere. Preview builds are unsigned or debug-signed — compare the published SHA-256 before installing.</p>
+      </div>
+      <div class="platform-grid">
+        <article class="card platform">
+          <div class="platform-head">
+            <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9Z"/></svg></div>
+            <h3 data-i18n="dl.web.title">Web app</h3>
+          </div>
+          <p data-i18n="dl.web.body">Runs in any modern browser and installs as a home-screen app. Keys stay in this browser's protected storage.</p>
+          <p class="platform-meta" data-i18n="dl.web.meta">No install · works on phones</p>
+          <a class="btn btn-primary" href="/app/" data-i18n="dl.web.cta">Open the web app</a>
+        </article>
+        <article class="card platform">
+          <div class="platform-head">
+            <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="1.6"/><path d="M1 20h22"/></svg></div>
+            <h3 data-i18n="dl.win.title">Windows</h3>
+          </div>
+          <p data-i18n="dl.win.body">Portable EXE for Windows 10/11 with .NET Framework 4.8. No installer, no auto-updater, unsigned preview build.</p>
+          <p class="platform-meta" id="meta-win">v1.4.0 · portable · SHA-256 manifest</p>
+          <div class="btn-row">
+            <a class="btn btn-primary" id="dl-win" href="/download/Illusion-1.4.0.exe" data-i18n="dl.win.cta">Download for Windows</a>
+            <a class="btn btn-ghost btn-sm" id="dl-zip" href="/download/Illusion-Windows.zip" data-i18n="dl.win.zip">ZIP</a>
+            <a class="btn btn-ghost btn-sm" id="dl-conn" href="/download/Illusion-Connection.illusion" data-i18n="dl.win.conn">Connection file</a>
+          </div>
+        </article>
+        <article class="card platform">
+          <div class="platform-head">
+            <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 18h4"/></svg></div>
+            <h3 data-i18n="dl.android.title">Android</h3>
+          </div>
+          <p data-i18n="dl.android.body">Android 6.0 or later. A WebView shell around the hosted app with microphone support for voice notes.</p>
+          <p class="platform-meta" id="meta-android">v1.4.0 · APK · debug-signed</p>
+          <div class="btn-row">
+            <a class="btn btn-primary" id="dl-android" href="/download/android/Illusion-1.4.0.apk" data-i18n="dl.android.cta">Download APK</a>
+            <a class="btn btn-ghost btn-sm" href="/download/android/release.json" data-i18n="dl.android.sha">SHA-256</a>
+          </div>
+        </article>
+        <article class="card platform">
+          <div class="platform-head">
+            <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 3-9.5 18-2.3-7.2L2 11.5 21 3Z"/><path d="m9.2 13.8 5.3-5.3"/></svg></div>
+            <h3 data-i18n="dl.tg.title">Telegram</h3>
+          </div>
+          <p data-i18n="dl.tg.body">Launch the Mini App and receive installers or a ready-made connection file straight from the bot.</p>
+          <p class="platform-meta" data-i18n="dl.tg.meta">/app · /apk · /download · /connect</p>
+          <a class="btn btn-primary" href="https://t.me/IllusedBot" target="_blank" rel="noopener" data-i18n="dl.tg.cta">Open @IllusedBot</a>
+        </article>
+      </div>
+      <p class="fineprint verify-note">
+        <span data-i18n="dl.verify">Every release publishes a SHA-256 manifest:</span>
+        <a href="/download/release.json">release.json</a> ·
+        <a href="/download/android/release.json">Android release.json</a>.
+        <span data-i18n="dl.verify2">The Windows app is unsigned and Android uses a debug key — prefer the web app if you don't want to sideload.</span>
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="languages" aria-labelledby="languages-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow" data-i18n="lang.eyebrow">Languages</p>
+        <h2 id="languages-title" data-i18n="lang.title">29 languages. Every screen.</h2>
+        <p class="section-sub" data-i18n="lang.sub">The whole interface — chats, timers, settings, recovery, reports — is translated. Illusion and aura names stay as written.</p>
+      </div>
+      <ul class="lang-chips">
+        <li>English</li><li>Русский</li><li>Español</li><li>Français</li><li>Deutsch</li><li>Português (BR)</li><li>Українська</li><li>Türkçe</li><li>العربية</li><li>日本語</li><li>한국어</li><li>हिन्दी</li><li>中文</li><li>+ 16</li>
+      </ul>
+      <p class="fineprint" data-i18n="lang.fine">Policy documents are currently English only.</p>
+    </div>
+  </section>
+
+  <section class="section" id="start" aria-labelledby="start-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow" data-i18n="start.eyebrow">Get started</p>
+        <h2 id="start-title" data-i18n="start.title">Four steps, then you're in.</h2>
+      </div>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-no">01</span>
+          <h3 data-i18n="start.s1.title">Pick a client</h3>
+          <p data-i18n="start.s1.body">Open the web app, install Windows or Android, or launch the Mini App from Telegram.</p>
+        </li>
+        <li class="step">
+          <span class="step-no">02</span>
+          <h3 data-i18n="start.s2.title">Choose a name</h3>
+          <p data-i18n="start.s2.body">Usernames are 2–24 letters, digits, _ or - and are case-insensitive. Passwords need at least 10 characters.</p>
+        </li>
+        <li class="step">
+          <span class="step-no">03</span>
+          <h3 data-i18n="start.s3.title">Save your key</h3>
+          <p data-i18n="start.s3.body">Download the .illusionkey backup when it's offered. It's the only way to read old messages on another device.</p>
+        </li>
+        <li class="step">
+          <span class="step-no">04</span>
+          <h3 data-i18n="start.s4.title">Find someone</h3>
+          <p data-i18n="start.s4.body">Search the exact username, or start with Saved messages. Ctrl+K finds people, Ctrl+F searches a chat.</p>
+        </li>
+      </ol>
+      <div class="warn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5M12 17.5v.5"/></svg>
+        <p data-i18n="start.warn">Your password resets the account, not the encryption. Without the device key or its backup, old chats can't be decrypted — by anyone. The preview is 18+ and limited to 1000 active accounts.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="faq" aria-labelledby="faq-title">
+    <div class="container narrow">
+      <div class="section-head">
+        <p class="eyebrow" data-i18n="faq.eyebrow">FAQ</p>
+        <h2 id="faq-title" data-i18n="faq.title">Fair questions, straight answers.</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary data-i18n="faq.q1">Is Illusion free?</summary>
+          <p data-i18n="faq.a1">Yes. There are no payments, subscriptions, ads or marketing emails during the preview. The service is funded and hosted by its operator.</p>
+        </details>
+        <details>
+          <summary data-i18n="faq.q2">Do I need Telegram to use it?</summary>
+          <p data-i18n="faq.a2">No. Windows, Android and the web app work on their own. The bot @IllusedBot only delivers the Mini App, installers and connection files.</p>
+        </details>
+        <details>
+          <summary data-i18n="faq.q3">Can the operator read my chats?</summary>
+          <p data-i18n="faq.a3">Message text, captions, replies and files are sealed on your device before upload. The relay stores ciphertext, public keys and delivery metadata — who talked, when, how large, from which IP. It cannot turn that into readable messages without your keys. Notices from the host are explicitly not end-to-end encrypted.</p>
+        </details>
+        <details>
+          <summary data-i18n="faq.q4">What happens if I lose my key?</summary>
+          <p data-i18n="faq.a4">Your password cannot recreate it. Restore the .illusionkey backup or use a device that still has the key. Account recovery — a device-key challenge or a linked Gmail code — resets the password, but never restores missing history.</p>
+        </details>
+        <details>
+          <summary data-i18n="faq.q5">Which devices are supported?</summary>
+          <p data-i18n="faq.a5">Windows 10/11 with .NET Framework 4.8, Android 6.0+, any modern browser, and Telegram through the Mini App. The Windows app is portable and unsigned; the Android preview APK uses a debug key.</p>
+        </details>
+        <details>
+          <summary data-i18n="faq.q6">Can I edit or unsend messages?</summary>
+          <p data-i18n="faq.a6">No. Messages can't be edited or unsent. Disappearing timers remove content after their deadline, and View once removes it after the first open — but copies already made can't be recalled.</p>
+        </details>
+        <details>
+          <summary data-i18n="faq.q7">Is Illusion open source?</summary>
+          <p data-i18n="faq.a7">The source is public at github.com/IllusionaryTen/illusion. Administrative and moderation tooling is not published, and the hosted service keeps its own secrets.</p>
+        </details>
+        <details>
+          <summary data-i18n="faq.q8">How do I report someone?</summary>
+          <p data-i18n="faq.a8">Right-click an incoming message to report it, or use Profile / Timer to report or block. Reports go to a manual review queue, and blocking stops new messages in both directions.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="finale" aria-labelledby="finale-title">
+    <div class="container finale-inner">
+      <div>
+        <h2 id="finale-title" data-i18n="final.title">Your next conversation could be private.</h2>
+        <p data-i18n="final.sub">Open the web app, or take the portable build with you.</p>
+      </div>
+      <div class="cta-row">
+        <a class="btn btn-primary btn-lg" href="/app/" data-i18n="final.cta">Open Illusion</a>
+        <a class="btn btn-ghost btn-lg" href="#download" data-i18n="final.dl">Download</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <a class="brand" href="#top" aria-label="Illusion home">
+        <svg class="mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <g class="mark-rings" fill="none" stroke="currentColor" stroke-width="3.6">
+            <ellipse cx="32" cy="32" rx="29" ry="13" transform="rotate(-24 32 32)"/>
+            <ellipse cx="32" cy="32" rx="22" ry="9.5" transform="rotate(-24 32 32)"/>
+          </g>
+          <rect class="mark-core" x="32" y="32" width="15" height="15" transform="rotate(45 32 32)"/>
+        </svg>
+        <span class="wordmark">Illusion</span>
+      </a>
+      <p data-i18n="foot.tag">Private. Customizable. Free. A preview messenger run by an independent operator.</p>
+      <p class="status-line"><span class="status-dot" id="status-dot"></span><span id="status" data-i18n="foot.status">Checking service…</span></p>
+    </div>
+    <nav class="footer-col" aria-label="Product">
+      <h3 data-i18n="foot.product">Product</h3>
+      <a href="/app/" data-i18n="nav.open">Open Illusion</a>
+      <a href="#download" data-i18n="nav.download">Download</a>
+      <a href="https://t.me/IllusedBot" target="_blank" rel="noopener">@IllusedBot</a>
+      <a href="https://github.com/IllusionaryTen/illusion" target="_blank" rel="noopener" data-i18n="foot.source">Source code</a>
+    </nav>
+    <nav class="footer-col" aria-label="Legal">
+      <h3 data-i18n="foot.legal">Legal</h3>
+      <a href="/policies/privacy" data-i18n="foot.privacy">Privacy</a>
+      <a href="/policies/terms" data-i18n="foot.terms">Terms</a>
+      <a href="/policies/cookies" data-i18n="foot.cookies">Cookies</a>
+      <a href="/policies/refunds" data-i18n="foot.refunds">Refunds</a>
+      <a href="/policies/licenses" data-i18n="foot.licenses">Licenses</a>
+      <a href="/policies/accessibility" data-i18n="foot.a11y">Accessibility</a>
+    </nav>
+    <nav class="footer-col" aria-label="Security">
+      <h3 data-i18n="foot.security">Security</h3>
+      <a href="https://github.com/IllusionaryTen/illusion/blob/main/SECURITY.md" target="_blank" rel="noopener" data-i18n="foot.model">Security model</a>
+      <a href="https://t.me/IllusedBot" target="_blank" rel="noopener" data-i18n="foot.report">Report a problem</a>
+      <a href="/health" data-i18n="foot.health">Service health</a>
+    </nav>
+  </div>
+  <div class="container footer-bottom">
+    <p>© 2026 Illusion · <span data-i18n="foot.version">Version</span> <span id="foot-version">1.4.0</span></p>
+    <p data-i18n="foot.note">No analytics. No third-party scripts. Operator details pending.</p>
+  </div>
+</footer>
+</body>
+</html>

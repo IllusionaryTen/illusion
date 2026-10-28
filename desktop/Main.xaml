@@ -62,6 +62,7 @@
         <Border x:Name="NoticePanel" DockPanel.Dock="Top" Background="#17253B" Padding="14,10" Visibility="Collapsed"><Grid><TextBlock x:Name="NoticeText" TextWrapping="Wrap" Foreground="#B7CBEA" FontSize="12" Margin="0,0,100,0" VerticalAlignment="Center"/><Button x:Name="RetryButton" Content="Reconnect" HorizontalAlignment="Right" Padding="10,6"/></Grid></Border>
         <Border x:Name="ChatSearchBar" DockPanel.Dock="Top" Background="#101A29" Padding="20,10" Visibility="Collapsed"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="ChatSearchInput" ToolTip="Search messages loaded in this conversation"/><StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0"><TextBlock x:Name="SearchCount" Foreground="#8FA3C4" VerticalAlignment="Center" Margin="0,0,12,0"/><Button x:Name="PreviousMatchButton" Content="↑" Padding="10,6" Margin="0,0,4,0"/><Button x:Name="NextMatchButton" Content="↓" Padding="10,6" Margin="0,0,4,0"/><Button x:Name="CloseSearchButton" Content="×" Padding="10,6"/></StackPanel></Grid></Border>
       <Grid>
+        <Grid x:Name="ContactWallpaper" IsHitTestVisible="False" Visibility="Collapsed"><Border x:Name="ContactWallpaperImage"/><Border Background="#B8080C13"/></Grid>
         <Canvas x:Name="ChatWallpaper" IsHitTestVisible="False" ClipToBounds="True"/>
         <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" VerticalAlignment="Center">
           <Canvas x:Name="AuraCanvas" Width="300" Height="230"/>

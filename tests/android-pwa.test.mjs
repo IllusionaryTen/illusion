@@ -10,7 +10,7 @@ test('Android install guide and PWA resources are served with install scope and 
   for(const [path,contentType,pattern] of [
     ['/android/','text/html',/home screen/i],
     ['/app/manifest.webmanifest','application/manifest+json',/"display": "standalone"/],
-    ['/app/sw.js','text/javascript',/illusion-app-shell-v3/],
+    ['/app/sw.js','text/javascript',/illusion-app-shell-v4/],
     ['/app/mobile.css','text/css',/chat-row/],
     ['/app/sounds/illusionsfx.mp3','audio/mpeg',null],
     ['/app/request-signal.mjs','text/javascript',/AbortSignal\.any\/timeout/],
@@ -24,7 +24,7 @@ test('Android install guide and PWA resources are served with install scope and 
   }
   const worker=readFileSync(join(root,'sw.js'),'utf8');
   assert.match(worker,/if \(request\.method !== 'GET'/);assert.match(worker,/if \(!SHELL\.includes\(path\)\) return/);assert.doesNotMatch(worker,/\/v1\//);
-  assert.match(worker,/illusion-app-shell-v3/);assert.match(worker,/notificationclick/);assert.match(worker,/illusionsfx\.mp3/);
+  assert.match(worker,/illusion-app-shell-v4/);assert.match(worker,/notificationclick/);assert.match(worker,/illusionsfx\.mp3/);
   const app=readFileSync(join(root,'app.mjs'),'utf8');assert.match(app,/serviceWorker\.register\('\/app\/sw\.js'/);assert.match(app,/requestSignal\(sessionController\.signal/);assert.doesNotMatch(app,/AbortSignal\.(any|timeout)\(/);assert.match(app,/status\(register\?'Preparing your account…':'Signing in…'\)/);assert.match(app,/password\.length<10\|\|password\.length>128/);assert.match(app,/chat-pins:/);assert.match(app,/notifyMessage/);assert.match(app,/media:pendingSend\.media/);
   const stylesheet=readFileSync(join(root,'style.css'),'utf8')+readFileSync(join(root,'mobile.css'),'utf8');assert.match(stylesheet,/\.chat-row/);assert.match(stylesheet,/#workspace\[data-view=list\]/);
   const index=readFileSync(join(root,'index.html'),'utf8');assert.match(index,/<form id="auth-form" novalidate>/);assert.match(index,/id="favorites-row"/);assert.match(index,/attachments are encrypted on your device/i);

@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {securityHeaders} from '../cloudflare/public.mjs';
 import {loadRelease} from '../bot/index.mjs';
 const root=resolve('build/cloud-assets');mkdirSync(join(root,'app/icons'),{recursive:true});mkdirSync(join(root,'android'),{recursive:true});
-const appFiles=['index.html','app.mjs','crypto.mjs','security.mjs','request-signal.mjs','i18n.mjs','style.css','mobile.css','manifest.webmanifest','sw.js'];
+const appFiles=['index.html','app.mjs','crypto.mjs','security.mjs','request-signal.mjs','i18n.mjs','theme-file.mjs','style.css','mobile.css','manifest.webmanifest','sw.js'];
 const allowed=new Set(['_headers','android/index.html',...appFiles.map(n=>'app/'+n),'app/icons/icon-192.png','app/icons/icon-512.png','app/sounds/illusionsfx.mp3']);
 for(const name of appFiles)copyFileSync(join('web',name),join(root,'app',name));
 mkdirSync(join(root,'app/sounds'),{recursive:true});copyFileSync(join('web/sounds/illusionsfx.mp3'),join(root,'app/sounds/illusionsfx.mp3'));
@@ -28,6 +28,13 @@ if(existsSync('dist/android-release.json')){
   allowed.add('download/android/'+release.file);allowed.add('download/android/release.json');
   writeFileSync(join(root,'_headers'),readFileSync(join(root,'_headers'),'utf8')+'\n/download/android/*\n  X-Content-Type-Options: nosniff\n  Content-Disposition: attachment\n  Cache-Control: no-cache\n  Content-Type: application/vnd.android.package-archive\n');
 }
+// Public landing page: HTML is served at / by cloudflare/public.mjs; styles, script and SEO files are static assets.
+mkdirSync(join(root,'site'),{recursive:true});
+for(const name of ['index.html','site.css','site.js'])copyFileSync(join('web/site',name),join(root,'site',name));
+for(const name of ['robots.txt','sitemap.xml','favicon.ico'])copyFileSync(join('web/site',name),join(root,name));
+allowed.add('site/index.html');allowed.add('site/site.css');allowed.add('site/site.js');allowed.add('robots.txt');allowed.add('sitemap.xml');allowed.add('favicon.ico');
+if(existsSync('web/site/og.png')){copyFileSync('web/site/og.png',join(root,'og.png'));allowed.add('og.png');}
+writeFileSync(join(root,'_headers'),readFileSync(join(root,'_headers'),'utf8')+'\n/site/*\n  Cache-Control: public, max-age=300\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  X-Frame-Options: DENY\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n  Content-Security-Policy: default-src \'none\'; script-src \'self\'; style-src \'self\'; img-src \'self\' data:; connect-src \'self\'; font-src \'self\'; base-uri \'none\'; form-action \'self\'; frame-ancestors \'none\'\n\n/robots.txt\n  Cache-Control: public, max-age=3600\n\n/sitemap.xml\n  Cache-Control: public, max-age=3600\n'+(existsSync('web/site/og.png')?'\n/og.png\n  Cache-Control: public, max-age=3600\n':''));
 function audit(dir,prefix=''){for(const item of readdirSync(dir,{withFileTypes:true})){const relative=prefix+item.name;if(item.isDirectory())audit(join(dir,item.name),relative+'/');else if(!item.isFile()||!allowed.has(relative))throw Error('Unexpected staged asset: '+relative+'. Review and remove it before publishing.');}}
 audit(root);
 console.log('Prepared Mini App assets; no secrets, relay database or .env included.');
