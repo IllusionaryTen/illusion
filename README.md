@@ -1,6 +1,16 @@
-# ◈ Illusion 1.4.0
+# ◈ Illusion 1.5.0
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.5.0
+
+**Windows updates itself.** Once a day the Windows app reads the hosted release manifest, compares versions, downloads the new EXE to a temporary folder, and verifies its byte count and SHA-256. A small PowerShell helper then waits for the app to exit, moves the old EXE to `Illusion-previous.exe`, drops the replacement in place and relaunches. Failed verification leaves the current build untouched. Builds remain unsigned, so trust is HTTPS plus the manifest hash and SmartScreen may still warn.
+
+**Share into Android.** Text and image `ACTION_SEND` intents open Illusion. Images are treated as untrusted: MIME, size and dimensions are checked and the image is re-encoded as JPEG before it reaches the composer. Notifications now open the conversation with the composer focused instead of attempting a native encrypted inline reply.
+
+**Encrypted reactions.** Tap the smile control on a message and choose from a fixed six-emoji palette. A reaction travels as a normal encrypted control message, so the relay only sees the usual envelope. Web and Android hide reaction controls from the bubble list and aggregate them per target; tapping your own chip removes it. Windows 1.5 shows the readable fallback line until its reaction picker ships.
+
+**Tests:** reaction aggregation/removal/validation, native version comparison and manifest/hash/size verification, plus the existing suite.
 
 ## What's new in 1.4.0
 

@@ -95,3 +95,11 @@ Per-chat mute lists and per-contact wallpapers are device-only: IndexedDB on web
 Theme import files are untrusted input. They pass a whitelist before application: `version` must be 1, the theme id must be one of the shipped themes, the font must be in the configured system-font list, and both colours must match `^#[0-9a-f]{6}$`. Unknown fields are ignored rather than merged, so a crafted file cannot inject CSS or a font family.
 
 Wallpapers are validated with the existing image-dimension checks before decoding, resized to about 1080 px, re-encoded locally as JPEG, capped at 200 KB, and limited to 24 stored images. They are never uploaded. A dark scrim sits over the image; screenshots and local disk access remain outside this guarantee.
+
+## Update channel, share intents and reactions (1.5)
+
+The Windows update check fetches `/download/release.json` over the configured HTTPS relay. The manifest must use a numeric version, a file name matching `Illusion-<version>.exe`, a size of at most 50 MB and a 64-character SHA-256. The downloaded EXE's size and hash are verified before an external PowerShell helper swaps files; a failed swap restores the previous EXE. The executable is unsigned: HTTPS plus the manifest hash is not Authenticode, and SmartScreen can still warn.
+
+Android share intents are untrusted. Only image MIME types, inputs up to 4 MB and PNG/JPEG dimensions up to 8192 per side and 16 megapixels are accepted; images are re-encoded locally as JPEG up to 4 MB before the WebView receives a data URL. Shared text is bounded by the composer. Notification actions carry only a username, never message text.
+
+Reactions travel as ordinary encrypted control messages; the relay sees the same envelopes and never sees target IDs or emojis. The client validates target identifiers, limits the palette to six fixed emoji, ignores unknown emoji, and hides reaction controls from the bubble list. Older clients display the readable fallback line instead of attempting to render the reaction.

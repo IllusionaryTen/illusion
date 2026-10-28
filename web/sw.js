@@ -1,4 +1,4 @@
-const CACHE = 'illusion-app-shell-v4';
+const CACHE = 'illusion-app-shell-v5';
 const SHELL = [
   '/app/',
   '/app/style.css',
@@ -9,6 +9,7 @@ const SHELL = [
   '/app/request-signal.mjs',
   '/app/i18n.mjs',
   '/app/theme-file.mjs',
+  '/app/reactions.mjs',
   '/app/manifest.webmanifest',
   '/app/icons/icon-192.png',
   '/app/icons/icon-512.png'

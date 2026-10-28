@@ -77,7 +77,7 @@ namespace Illusion {
       InitializeExperience();
       InitializePrivacy();InitializeConsent();
       Window.Closed+=(s,e)=>{StopExperience();closing=true;generation++;timer.Stop();http.Dispose();};
-      Window.ContentRendered+=async(s,e)=>await Guard(Resume);
+      Window.ContentRendered+=async(s,e)=>{await Guard(Resume);CheckForUpdates();};
     }
     string ConfigPath { get { return System.IO.Path.Combine(ProfileDir,"settings.json"); } }
     string Setting(string key,string fallback) { string value; return settings.TryGetValue(key,out value)?value:fallback; }

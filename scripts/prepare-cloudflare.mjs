@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {securityHeaders} from '../cloudflare/public.mjs';
 import {loadRelease} from '../bot/index.mjs';
 const root=resolve('build/cloud-assets');mkdirSync(join(root,'app/icons'),{recursive:true});mkdirSync(join(root,'android'),{recursive:true});
-const appFiles=['index.html','app.mjs','crypto.mjs','security.mjs','request-signal.mjs','i18n.mjs','theme-file.mjs','style.css','mobile.css','manifest.webmanifest','sw.js'];
+const appFiles=['index.html','app.mjs','crypto.mjs','security.mjs','request-signal.mjs','i18n.mjs','theme-file.mjs','reactions.mjs','style.css','mobile.css','manifest.webmanifest','sw.js'];
 const allowed=new Set(['_headers','android/index.html',...appFiles.map(n=>'app/'+n),'app/icons/icon-192.png','app/icons/icon-512.png','app/sounds/illusionsfx.mp3']);
 for(const name of appFiles)copyFileSync(join('web',name),join(root,'app',name));
 mkdirSync(join(root,'app/sounds'),{recursive:true});copyFileSync(join('web/sounds/illusionsfx.mp3'),join(root,'app/sounds/illusionsfx.mp3'));

@@ -27,5 +27,13 @@ export function messageContent(text){
       media={kind:c.media.kind,mime:c.media.mime,data:c.media.data};
     }
   }
-  return {format:c.format,text:c.text,reply:c.reply?{id:Number.isSafeInteger(c.reply.id)?c.reply.id:0,name:c.reply.name,text:c.reply.text}:null,media};
+  let reaction=null;
+  if(c.reaction){
+    if(typeof c.reaction!=='object')throw Error('Invalid reaction.');
+    const target=typeof c.reaction.targetId==='number'?String(c.reaction.targetId):c.reaction.targetId;
+    if(typeof target!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(target))throw Error('Invalid reaction target.');
+    if(typeof c.reaction.emoji!=='string'||c.reaction.emoji.length>16||/[\u0000-\u001f]/.test(c.reaction.emoji))throw Error('Invalid reaction.');
+    reaction={targetId:target,emoji:c.reaction.emoji};
+  }
+  return {format:c.format,text:c.text,reply:c.reply?{id:Number.isSafeInteger(c.reply.id)?c.reply.id:0,name:c.reply.name,text:c.reply.text}:null,media,reaction};
 }

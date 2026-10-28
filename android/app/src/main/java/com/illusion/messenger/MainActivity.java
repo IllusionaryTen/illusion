@@ -8,13 +8,17 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Base64;
 import android.view.Window;
 import android.view.WindowInsets;
+import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
 import android.webkit.SafeBrowsingResponse;
 import android.webkit.ValueCallback;
@@ -28,6 +32,9 @@ import android.webkit.SslErrorHandler;
 import android.net.http.SslError;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 
 public final class MainActivity extends Activity {
     private static final int FILE_PICKER_REQUEST = 41;
@@ -35,6 +42,9 @@ public final class MainActivity extends Activity {
     private static final String MESSAGE_CHANNEL = "illusion_messages";
     private WebView webView;
     private ValueCallback<Uri[]> pendingFileCallback;
+    private String pendingShare = "";
+    private String pendingChat = "";
+    private boolean pageReady = false;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -134,8 +144,115 @@ public final class MainActivity extends Activity {
         setContentView(root);
         if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 4102);
         ensureNotificationChannel();
+        handleIncomingIntent(getIntent());
 
         if (state == null || webView.restoreState(state) == null) webView.loadUrl(BuildConfig.ILLUSION_START_URL);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingIntent(intent);
+    }
+
+    private void handleIncomingIntent(Intent intent) {
+        if (intent == null) return;
+        String chat = intent.getStringExtra("illusion_chat");
+        if (chat != null && !chat.isEmpty()) { pendingChat = chat; deliverPendingChat(); }
+        if (!Intent.ACTION_SEND.equals(intent.getAction())) return;
+        String text = intent.getStringExtra(Intent.EXTRA_TEXT);
+        Uri stream = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        String type = intent.getType();
+        final String sharedText = text == null ? "" : text;
+        if (type != null && type.startsWith("image/") && stream != null) {
+            new Thread(() -> {
+                String image = shareImage(stream, type);
+                if (!image.isEmpty() || !sharedText.trim().isEmpty()) deliverShare(sharedText, image);
+            }).start();
+        } else if (!sharedText.trim().isEmpty()) {
+            deliverShare(sharedText, "");
+        }
+    }
+
+    private void deliverShare(String text, String image) {
+        try {
+            JSONObject share = new JSONObject();
+            share.put("text", text == null ? "" : text);
+            share.put("image", image == null ? "" : image);
+            share.put("name", "shared-image.jpg");
+            pendingShare = share.toString();
+            runOnUiThread(this::deliverPendingShare);
+        } catch (Exception ignored) {}
+    }
+
+    private void deliverPendingShare() {
+        if (!pageReady || pendingShare.isEmpty() || webView == null) return;
+        final String payload = pendingShare;
+        pendingShare = "";
+        webView.evaluateJavascript("window.illusionReceiveShare&&window.illusionReceiveShare(" + JSONObject.quote(payload) + ")", null);
+    }
+
+    private void deliverPendingChat() {
+        if (!pageReady || pendingChat.isEmpty() || webView == null) return;
+        final String username = pendingChat;
+        pendingChat = "";
+        webView.evaluateJavascript("window.illusionOpenChat&&window.illusionOpenChat(" + JSONObject.quote(username) + ")", null);
+    }
+
+    private String shareImage(Uri uri, String fallbackType) {
+        try {
+            String mime = getContentResolver().getType(uri);
+            if (mime == null) mime = fallbackType;
+            if (mime == null || !mime.startsWith("image/")) return "";
+            byte[] input = readLimited(uri, 4 * 1024 * 1024);
+            if (input == null) return "";
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(input, 0, input.length, bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0 || bounds.outWidth > 8192 || bounds.outHeight > 8192) return "";
+            if ((long) bounds.outWidth * bounds.outHeight > 16000000L) return "";
+            int sample = 1;
+            while (bounds.outWidth / sample > 1600 || bounds.outHeight / sample > 1600) sample *= 2;
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = sample;
+            Bitmap decoded = BitmapFactory.decodeByteArray(input, 0, input.length, options);
+            if (decoded == null) return "";
+            double scale = Math.min(1.0, 1600.0 / Math.max(decoded.getWidth(), decoded.getHeight()));
+            Bitmap scaled = decoded;
+            if (scale < 1) {
+                scaled = Bitmap.createScaledBitmap(decoded, Math.max(1, (int) Math.round(decoded.getWidth() * scale)), Math.max(1, (int) Math.round(decoded.getHeight() * scale)), true);
+                if (scaled != decoded) decoded.recycle();
+            }
+            byte[] jpeg = null;
+            for (int quality : new int[]{85, 70, 55, 40}) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                scaled.compress(Bitmap.CompressFormat.JPEG, quality, out);
+                jpeg = out.toByteArray();
+                if (jpeg.length <= 4 * 1024 * 1024) break;
+            }
+            scaled.recycle();
+            if (jpeg == null || jpeg.length > 4 * 1024 * 1024) return "";
+            return "data:image/jpeg;base64," + Base64.encodeToString(jpeg, Base64.NO_WRAP);
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private byte[] readLimited(Uri uri, int limit) {
+        try (InputStream in = getContentResolver().openInputStream(uri); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            if (in == null) return null;
+            byte[] buffer = new byte[8192];
+            int read, total = 0;
+            while ((read = in.read(buffer)) != -1) {
+                total += read;
+                if (total > limit) return null;
+                out.write(buffer, 0, read);
+            }
+            return out.toByteArray();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private void ensureNotificationChannel() {
@@ -164,11 +281,17 @@ public final class MainActivity extends Activity {
 
         @JavascriptInterface
         public void notifyMessage(String title, String body) {
+            notifyMessage(title, body, "");
+        }
+
+        @JavascriptInterface
+        public void notifyMessage(String title, String body, String chat) {
             runOnUiThread(() -> {
                 if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
                 NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 Intent open = new Intent(MainActivity.this, MainActivity.class);
                 open.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                open.putExtra("illusion_chat", chat == null ? "" : chat);
                 PendingIntent pending = PendingIntent.getActivity(MainActivity.this, 0, open,
                         PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
                 Notification.Builder notice = Build.VERSION.SDK_INT >= 26
@@ -180,6 +303,30 @@ public final class MainActivity extends Activity {
                         .setAutoCancel(true).setContentIntent(pending);
                 manager.notify((int) (System.currentTimeMillis() & 0x7fffffff), notice.build());
             });
+        }
+
+        @JavascriptInterface
+        public void focusKeyboard() {
+            runOnUiThread(() -> {
+                if (webView == null) return;
+                webView.requestFocus();
+                InputMethodManager input = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (input != null) input.showSoftInput(webView, InputMethodManager.SHOW_IMPLICIT);
+            });
+        }
+
+        @JavascriptInterface
+        public String takePendingShare() {
+            String value = pendingShare;
+            pendingShare = "";
+            return value;
+        }
+
+        @JavascriptInterface
+        public String takePendingChat() {
+            String value = pendingChat;
+            pendingChat = "";
+            return value;
         }
 
         private String safeNotificationText(String value, String fallback) {
@@ -262,6 +409,13 @@ public final class MainActivity extends Activity {
                                       SafeBrowsingResponse response) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) response.backToSafety(true);
             else view.stopLoading();
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            pageReady = true;
+            deliverPendingShare();
+            deliverPendingChat();
         }
     }
 }

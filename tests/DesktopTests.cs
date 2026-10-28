@@ -92,7 +92,26 @@ namespace Illusion {
       bob.Capture(System.IO.Path.GetFullPath("artifacts/illusion-privacy.png"));
     }
     static async Task Network(string control,bool online) {using(var client=new HttpClient(new HttpClientHandler{UseProxy=false}))using(var response=await client.GetAsync(control+(online?"/online":"/offline")))response.EnsureSuccessStatusCode();}
+    static void UpdateChecks() {
+      Check(Messenger.CompareVersions("1.4.0","1.5.0")<0,"Update versions compare numerically");
+      Check(Messenger.CompareVersions("1.5.0","1.5.0")==0,"Equal update versions compare equal");
+      Check(Messenger.CompareVersions("2.0.0","1.9.9")>0,"Newer major update versions sort later");
+      bool malformed=false;try{Messenger.CompareVersions("1.5","1.5.0");}catch{malformed=true;}Check(malformed,"Malformed update versions are rejected");
+      var manifest=new Dictionary<string,object>{{"version","1.5.0"},{"file","Illusion-1.5.0.exe"},{"bytes",1234L},{"sha256",new string('a',64)}};
+      var valid=Messenger.ValidateUpdateManifest(manifest);
+      Check((string)valid["version"]=="1.5.0","Valid update manifest is accepted");
+      var badTraversal=new Dictionary<string,object>(manifest);badTraversal["file"]="../Illusion-1.5.0.exe";
+      var badFileName=new Dictionary<string,object>(manifest);badFileName["file"]="Illusion-9.9.9.exe";
+      var badSize=new Dictionary<string,object>(manifest);badSize["bytes"]=0L;
+      var badHash=new Dictionary<string,object>(manifest);badHash["sha256"]=new string('z',64);
+      foreach(var bad in new[]{badTraversal,badFileName,badSize,badHash}) {bool rejected=false;try{Messenger.ValidateUpdateManifest(bad);}catch{rejected=true;}Check(rejected,"Unsafe update manifest is rejected");}
+      byte[] payload={1,2,3,4};string hash=Messenger.Sha256(payload);
+      bool hashOk=false;try{Messenger.VerifyUpdateBytes(payload,payload.Length,hash);hashOk=true;}catch{}Check(hashOk,"Update hash and size verification accepts exact bytes");
+      bool wrongSize=false;try{Messenger.VerifyUpdateBytes(payload,payload.Length+1,hash);}catch{wrongSize=true;}Check(wrongSize,"Update size mismatch is rejected");
+      bool wrongHash=false;try{Messenger.VerifyUpdateBytes(payload,payload.Length,new string('0',64));}catch{wrongHash=true;}Check(wrongHash,"Update hash mismatch is rejected");
+    }
     static async Task Run(string server,string redirectServer) {
+      UpdateChecks();
       root=System.IO.Path.GetFullPath(System.IO.Path.Combine(Environment.CurrentDirectory,"build","desktop-qa-"+Guid.NewGuid().ToString("N")));Directory.CreateDirectory(root);
       Directory.CreateDirectory("artifacts");
       var alice=new Messenger(System.IO.Path.Combine(root,"alice"));alice.Window.Show();await Task.Delay(200);
@@ -243,7 +262,7 @@ namespace Illusion {
       var guardedFont=(FontFamily)typeof(Messenger).GetMethod("ProfileFont",BindingFlags.Static|BindingFlags.NonPublic).Invoke(null,new object[]{"Unlisted Synthetic Font"});Check(guardedFont.Source=="Segoe UI","Untrusted profile font names are restricted to the shared system-font list");
       envelope["ciphertext"]=Convert.ToBase64String(new byte[16]);bool tampered=false;
       try{Crypto.Decrypt(message,(string)me["id"],key,pub);}catch(System.Security.Cryptography.CryptographicException){tampered=true;}Check(tampered,"Tampered native message is rejected");
-      var settings=(Dictionary<string,string>)Field(alice,"settings");settings["accent"]="#297C91";settings["font"]="16";settings["compact"]="true";Call(alice,"SaveSettings");Call(alice,"ApplyTheme");
+      var settings=(Dictionary<string,string>)Field(alice,"settings");settings["theme"]="blue";settings["accent"]="#297C91";settings["font"]="16";settings["compact"]="true";Call(alice,"SaveSettings");Call(alice,"ApplyTheme");
       Check(((SolidColorBrush)alice.Window.Resources["Accent"]).Color==(Color)ColorConverter.ConvertFromString("#297C91"),"Accent customization applies");
       Click(alice,"SavedButton");await Wait(()=>alice.Get<TextBlock>("ChatTitle").Text=="Saved messages","Saved messages opens");await Task.Delay(250);await Send(alice,"Remember to back up the encryption key.");
       Check(AllText(alice.Get<StackPanel>("MessageList")).Contains("Remember to back up"),"Saved message is encrypted and readable");
