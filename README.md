@@ -1,6 +1,10 @@
-# ◈ Illusion 1.5.0
+# ◈ Illusion 1.5.5
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.5.5
+
+**Five more languages.** Malay, Filipino, Swahili, Persian and Hebrew join the catalog, taking Illusion to **34 languages** with complete UI rows. Persian and Hebrew switch the web layout and the Windows window to RTL. No wire changes.
 
 ## What's new in 1.5.0
 
@@ -78,7 +82,7 @@ The 12 palette-only themes are replaced by **10 themes drawn from Sol's RNG Chal
 
 ## What's new in 0.9.0
 
-****15 full interface themes** instead of 3 (since revised to 13 aura-based themes in 0.9.1). The classic blue, ice and silver are joined by Midnight indigo, Violet dusk, Rose quartz, Crimson ember, Ember glow, Forest moss, Deep ocean, Desert sand, Aurora veil, Plum haze, Sunset blush and Pure contrast. Each theme recolors the background, panels, controls, borders, accent buttons and muted text consistently on the web app, the Android APK and the Windows app, and every theme name is translated in all 29 languages. A new test suite checks that every theme exists on both platforms, keeps its colors in sync between web and Windows, and keeps text at WCAG 4.5:1 contrast or better.
+****15 full interface themes** instead of 3 (since revised to 13 aura-based themes in 0.9.1). The classic blue, ice and silver are joined by Midnight indigo, Violet dusk, Rose quartz, Crimson ember, Ember glow, Forest moss, Deep ocean, Desert sand, Aurora veil, Plum haze, Sunset blush and Pure contrast. Each theme recolors the background, panels, controls, borders, accent buttons and muted text consistently on the web app, the Android APK and the Windows app, and every theme name is translated in all 34 languages. A new test suite checks that every theme exists on both platforms, keeps its colors in sync between web and Windows, and keeps text at WCAG 4.5:1 contrast or better.
 
 ## What's new in 0.8.9
 
@@ -98,7 +102,7 @@ Photos and videos now appear as inline previews in the conversation instead of o
 
 ## What's new in 0.8.5
 
-The interface is now fully translated in **29 languages** — the chat list, conversations, disappearing-message timers, settings, account recovery, reports and update notices no longer mix English into a translated UI, on the web, Android and Windows alike. Finnish, Swedish, Norwegian, Danish, Czech, Romanian and Hungarian join the catalog. You can also **paste a photo straight from the clipboard** (Ctrl+V on Windows, long-press → Paste on phones) to attach and send it like any photo. Existing accounts, chats and keys are unaffected.
+The interface is now fully translated in **34 languages** — the chat list, conversations, disappearing-message timers, settings, account recovery, reports and update notices no longer mix English into a translated UI, on the web, Android and Windows alike. Finnish, Swedish, Norwegian, Danish, Czech, Romanian and Hungarian join the catalog. You can also **paste a photo straight from the clipboard** (Ctrl+V on Windows, long-press → Paste on phones) to attach and send it like any photo. Existing accounts, chats and keys are unaffected.
 
 ## What's new in 0.8.4
 
@@ -118,7 +122,7 @@ To rebuild it on Windows, run `npm run build:android`. The resulting `dist/Illus
 
 ## Language support 0.8.3
 
-The Windows app and Telegram Mini App share a 29-language catalog. The full interface — chat list, conversation, timers, settings, recovery, reports and notices — is translated in every language: English, Spanish, French, German, Brazilian Portuguese, Russian, Ukrainian, Turkish, Arabic, Simplified and Traditional Chinese, Japanese, Korean, Hindi, Indonesian, Vietnamese, Thai, Polish, Italian, Dutch, Bengali, Greek, Finnish, Swedish, Norwegian, Danish, Czech, Romanian and Hungarian. Illusion remains untranslated as the app name. In Windows, open **Settings → Language**, choose a language, then **Save appearance**. The language choice is saved with local settings.
+The Windows app and Telegram Mini App share a 34-language catalog. The full interface — chat list, conversation, timers, settings, recovery, reports and notices — is translated in every language: English, Spanish, French, German, Brazilian Portuguese, Russian, Ukrainian, Turkish, Arabic, Simplified and Traditional Chinese, Japanese, Korean, Hindi, Indonesian, Vietnamese, Thai, Polish, Italian, Dutch, Bengali, Greek, Finnish, Swedish, Norwegian, Danish, Czech, Romanian and Hungarian. Illusion remains untranslated as the app name. In Windows, open **Settings → Language**, choose a language, then **Save appearance**. The language choice is saved with local settings.
 
 ## Public access
 
@@ -152,7 +156,7 @@ The relay serves **`/app/`**: a responsive Mini App with sign-up/login, client-s
 
 Telegram Mini Apps **are web apps inside Telegram**, requiring reachable HTTPS. This relay can serve the Mini App without a separate paid website. The cloud deployment configures the bot: it sets **Open Illusion** as the menu button; `/app` sends a Mini App launcher and `/download` retains the Windows version. An unconfigured/offline relay cannot offer a working public launch. Local preview: **http://127.0.0.1:3789/app/** with the updated relay running. The web client retains unsent text/retry IDs only in memory; reloading loses unsent web drafts, unlike the Windows durable outbox.
 
-The Mini App and Windows client include a language picker with **29 options** and browser-language detection: Spanish, French, German, Brazilian Portuguese, Russian, Ukrainian, Turkish, Arabic, Simplified and Traditional Chinese, Japanese, Korean, Hindi, Indonesian, Vietnamese, Thai, Polish, Italian, Dutch, Bengali, Greek, Finnish, Swedish, Norwegian, Danish, Czech, Romanian and Hungarian, with English source text. Policy documents are still English.
+The Mini App and Windows client include a language picker with **34 options** and browser-language detection: Spanish, French, German, Brazilian Portuguese, Russian, Ukrainian, Turkish, Arabic, Simplified and Traditional Chinese, Japanese, Korean, Hindi, Indonesian, Vietnamese, Thai, Polish, Italian, Dutch, Bengali, Greek, Finnish, Swedish, Norwegian, Danish, Czech, Romanian and Hungarian, with English source text. Policy documents are still English.
 
 ## Policies and the 20-item review
 

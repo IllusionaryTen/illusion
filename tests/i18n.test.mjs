@@ -4,7 +4,7 @@ import { languageOptions, translate, translationCatalog } from '../web/i18n.mjs'
 
 test('all published locales have a complete UI phrase row', () => {
   const { languages, english, rows } = translationCatalog;
-  assert.equal(languages.length, 29);
+  assert.equal(languages.length, 34);
   assert.ok(languages.some(([code]) => code === 'el'));
   assert.ok(languages.some(([code]) => code === 'vi'));
   assert.ok(languages.some(([code]) => code === 'fi'));

@@ -1,6 +1,6 @@
 # Translations
 
-Illusion ships 29 languages. The web app, the Android WebView and the Windows client all read the same catalog.
+Illusion ships 34 languages. The web app, the Android WebView and the Windows client all read the same catalog.
 
 ## Where strings live
 
