@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Illusion — private messenger for every screen</title>
-<meta name="description" content="Private, customizable, free. End-to-end encrypted messages, files and voice notes, disappearing chats and ten aura themes — on Windows, Android, the web and Telegram.">
+<meta name="description" content="Private, customizable, free. End-to-end encrypted messages, files and voice notes, disappearing chats, group chats and ten aura themes — on Windows, Android, the web and Telegram.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#080B16">
 <link rel="canonical" href="https://illusionary.my.id/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Illusion">
 <meta property="og:title" content="Illusion — talk in your own dimension">
-<meta property="og:description" content="Private, customizable, free. End-to-end encrypted messages, files and voice notes, disappearing chats and ten aura themes — on Windows, Android, the web and Telegram.">
+<meta property="og:description" content="Private, customizable, free. End-to-end encrypted messages, files and voice notes, disappearing chats, group chats and ten aura themes — on Windows, Android, the web and Telegram.">
 <meta property="og:url" content="https://illusionary.my.id/">
 <meta property="og:image" content="https://illusionary.my.id/og.png">
 <meta property="og:image:width" content="1200">
@@ -19,7 +19,7 @@
 <meta property="og:image:alt" content="Illusion messenger — orbital rings around a white diamond">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Illusion — talk in your own dimension">
-<meta name="twitter:description" content="Private, customizable, free. Encrypted messaging on Windows, Android, the web and Telegram.">
+<meta name="twitter:description" content="Private, customizable, free. Encrypted messages and small group chats on Windows, Android, the web and Telegram.">
 <meta name="twitter:image" content="https://illusionary.my.id/og.png">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/app/icons/icon-192.png" type="image/png" sizes="192x192">
@@ -79,7 +79,7 @@
         </div>
         <ul class="hero-meta">
           <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span data-i18n="hero.meta1">End-to-end encrypted</span></li>
-          <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9Z"/></svg><span data-i18n="hero.meta2">34 languages</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9Z"/></svg><span data-i18n="hero.meta2">39 languages</span></li>
           <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m5 5 14 14"/></svg><span data-i18n="hero.meta3">No trackers</span></li>
         </ul>
         <p class="hero-platforms" data-i18n="hero.platforms">Windows · Android · Web · Telegram</p>
@@ -182,7 +182,7 @@
     <div class="container trust-row">
       <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3Z"/></svg><span data-i18n="trust.1">Sealed on your device</span></span>
       <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10l4 4v14H3V3h4Z"/><path d="m8 12 3 3 5-6"/></svg><span data-i18n="trust.2">No third-party scripts</span></span>
-      <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9Z"/></svg><span data-i18n="trust.3">34 languages</span></span>
+      <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9Z"/></svg><span data-i18n="trust.3">39 languages</span></span>
       <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M12 4v16"/><circle cx="12" cy="12" r="9"/></svg><span data-i18n="trust.4">Free during preview</span></span>
     </div>
   </section>
@@ -198,7 +198,7 @@
         <article class="card feature span-6">
           <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></div>
           <h3 data-i18n="f1.title">Sealed on your device</h3>
-          <p data-i18n="f1.body">Messages, captions, replies and files are encrypted and signed on your device, then wrapped for each recipient with RSA-3072. The relay only ever forwards sealed envelopes.</p>
+          <p data-i18n="f1.body">Messages, captions, replies and files are encrypted and signed on your device, then wrapped for each recipient with RSA-3072. The relay only ever forwards sealed envelopes. Group chats fan out one sealed copy per member, up to 20 people.</p>
           <p class="tags"><span>AES-256-CBC</span><span>HMAC-SHA-256</span><span>RSA-OAEP</span></p>
         </article>
         <article class="card feature span-6">
@@ -325,9 +325,9 @@
             <h3 data-i18n="dl.win.title">Windows</h3>
           </div>
           <p data-i18n="dl.win.body">Portable EXE for Windows 10/11 with .NET Framework 4.8. No installer; it verifies and installs its own updates. Unsigned preview build.</p>
-          <p class="platform-meta" id="meta-win">v1.5.5 · portable · SHA-256 manifest</p>
+          <p class="platform-meta" id="meta-win">v1.6.0 · portable · SHA-256 manifest</p>
           <div class="btn-row">
-            <a class="btn btn-primary" id="dl-win" href="/download/Illusion-1.5.5.exe" data-i18n="dl.win.cta">Download for Windows</a>
+            <a class="btn btn-primary" id="dl-win" href="/download/Illusion-1.6.0.exe" data-i18n="dl.win.cta">Download for Windows</a>
             <a class="btn btn-ghost btn-sm" id="dl-zip" href="/download/Illusion-Windows.zip" data-i18n="dl.win.zip">ZIP</a>
             <a class="btn btn-ghost btn-sm" id="dl-conn" href="/download/Illusion-Connection.illusion" data-i18n="dl.win.conn">Connection file</a>
           </div>
@@ -338,9 +338,9 @@
             <h3 data-i18n="dl.android.title">Android</h3>
           </div>
           <p data-i18n="dl.android.body">Android 6.0 or later. A WebView shell around the hosted app with voice notes and share-from-other-apps support.</p>
-          <p class="platform-meta" id="meta-android">v1.5.5 · APK · debug-signed</p>
+          <p class="platform-meta" id="meta-android">v1.6.0 · APK · debug-signed</p>
           <div class="btn-row">
-            <a class="btn btn-primary" id="dl-android" href="/download/android/Illusion-1.5.5.apk" data-i18n="dl.android.cta">Download APK</a>
+            <a class="btn btn-primary" id="dl-android" href="/download/android/Illusion-1.6.0.apk" data-i18n="dl.android.cta">Download APK</a>
             <a class="btn btn-ghost btn-sm" href="/download/android/release.json" data-i18n="dl.android.sha">SHA-256</a>
           </div>
         </article>
@@ -367,11 +367,11 @@
     <div class="container">
       <div class="section-head">
         <p class="eyebrow" data-i18n="lang.eyebrow">Languages</p>
-        <h2 id="languages-title" data-i18n="lang.title">34 languages. Every screen.</h2>
+        <h2 id="languages-title" data-i18n="lang.title">39 languages. Every screen.</h2>
         <p class="section-sub" data-i18n="lang.sub">The whole interface — chats, timers, settings, recovery, reports — is translated. Illusion and aura names stay as written.</p>
       </div>
       <ul class="lang-chips">
-        <li>English</li><li>Русский</li><li>Español</li><li>Français</li><li>Deutsch</li><li>Português (BR)</li><li>Українська</li><li>Türkçe</li><li>العربية</li><li>日本語</li><li>한국어</li><li>हिन्दी</li><li>中文</li><li>Bahasa Melayu</li><li>Filipino</li><li>Kiswahili</li><li>فارسی</li><li>עברית</li><li>+ 16</li>
+        <li>English</li><li>Русский</li><li>Español</li><li>Français</li><li>Deutsch</li><li>Português (BR)</li><li>Українська</li><li>Türkçe</li><li>العربية</li><li>日本語</li><li>한국어</li><li>हिन्दी</li><li>中文</li><li>Bahasa Melayu</li><li>Filipino</li><li>Kiswahili</li><li>فارسی</li><li>עברית</li><li>Hrvatski</li><li>Српски</li><li>Bosanski</li><li>Български</li><li>Slovenčina</li><li>+ 16</li>
       </ul>
       <p class="fineprint" data-i18n="lang.fine">Policy documents are currently English only.</p>
     </div>
@@ -509,7 +509,7 @@
     </nav>
   </div>
   <div class="container footer-bottom">
-    <p>© 2026 Illusion · <span data-i18n="foot.version">Version</span> <span id="foot-version">1.5.5</span></p>
+    <p>© 2026 Illusion · <span data-i18n="foot.version">Version</span> <span id="foot-version">1.6.0</span></p>
     <p data-i18n="foot.note">No analytics. No third-party scripts. Operator details pending.</p>
   </div>
 </footer>

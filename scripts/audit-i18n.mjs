@@ -35,7 +35,9 @@ const identicalOK = new Set([
   '13–15','16–17','English','Greek','Vietnamese','Chats','Cloud','1 minute','Pause','1 week',
   'Photo / Video','Report','Play','Draft: ','You: ','Illusion','Telegram','MP4','RGB','Skip to messages',
   'Illusion ','Spam','Silver','Conversations','Message','Description','Password','Privacy','Send','Orbit',
-  'load','timeout','seek'
+  'load','timeout','seek',
+  '@username','@username, @another',  // ASCII account examples, not prose
+  'Sender key unavailable.'           // internal fallback for a missing contact key
 ]);
 
 let total = 0;
@@ -50,6 +52,6 @@ for (const [code] of languages) {
   total += leaks;
 }
 console.log(`catalog rows: ${(await import('../web/i18n.mjs')).translationCatalog.english.length}`);
-console.log(`checked ${strings.size} distinct UI strings x 28 languages`);
+console.log(`checked ${strings.size} distinct UI strings x ${languages.length - 1} languages`);
 console.log(`TOTAL LEAKS: ${total}`);
 for (const line of report) console.log(line);

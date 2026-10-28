@@ -40,7 +40,15 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     CREATE INDEX IF NOT EXISTS message_recipient ON messages(recipientId, id);
     CREATE TABLE IF NOT EXISTS reads(userId TEXT NOT NULL, peerId TEXT NOT NULL, lastId INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(userId, peerId));
     CREATE TABLE IF NOT EXISTS receipts(userId TEXT NOT NULL, peerId TEXT NOT NULL, lastId INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(userId, peerId));
-    CREATE TABLE IF NOT EXISTS notices(id INTEGER PRIMARY KEY AUTOINCREMENT, version TEXT NOT NULL, text TEXT NOT NULL, createdAt INTEGER NOT NULL);`);
+    CREATE TABLE IF NOT EXISTS notices(id INTEGER PRIMARY KEY AUTOINCREMENT, version TEXT NOT NULL, text TEXT NOT NULL, createdAt INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS groups(id TEXT PRIMARY KEY, name TEXT NOT NULL, createdBy TEXT NOT NULL REFERENCES users(id), createdAt INTEGER NOT NULL, ttlSeconds INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS group_members(groupId TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE, userId TEXT NOT NULL REFERENCES users(id), joinedAt INTEGER NOT NULL, PRIMARY KEY(groupId,userId));
+    CREATE TABLE IF NOT EXISTS group_messages(id INTEGER PRIMARY KEY AUTOINCREMENT, groupId TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE, senderId TEXT NOT NULL REFERENCES users(id), recipientId TEXT NOT NULL REFERENCES users(id), clientId TEXT NOT NULL, envelope TEXT NOT NULL, createdAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL DEFAULT 0, envelopeHash TEXT NOT NULL, envelopeBytes INTEGER NOT NULL, UNIQUE(senderId,clientId,recipientId));
+    CREATE INDEX IF NOT EXISTS group_message_group ON group_messages(groupId,id);
+    CREATE INDEX IF NOT EXISTS group_message_recipient ON group_messages(recipientId,id);
+    CREATE TABLE IF NOT EXISTS group_reads(groupId TEXT NOT NULL, userId TEXT NOT NULL, lastId INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(groupId,userId));
+    CREATE TABLE IF NOT EXISTS group_events(id INTEGER PRIMARY KEY AUTOINCREMENT, groupId TEXT NOT NULL, type TEXT NOT NULL, actorId TEXT NOT NULL, targetId TEXT, createdAt INTEGER NOT NULL);
+    CREATE INDEX IF NOT EXISTS group_event_group ON group_events(groupId,id);`);
   try { db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch(e) { if (!String(e.message).includes('duplicate column')) throw e; }
   try { db.exec('ALTER TABLE users ADD COLUMN emailVerifiedAt INTEGER'); } catch(e) { if (!String(e.message).includes('duplicate column')) throw e; }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users(email) WHERE email IS NOT NULL; CREATE TABLE IF NOT EXISTS email_codes(id TEXT PRIMARY KEY,userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,purpose TEXT NOT NULL,email TEXT NOT NULL,codeHash TEXT NOT NULL,expiresAt INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,createdAt INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS email_codes_lookup ON email_codes(userId,purpose,expiresAt); CREATE TABLE IF NOT EXISTS account_recovery_challenges(id TEXT PRIMARY KEY,username TEXT NOT NULL,userId TEXT,nonce TEXT NOT NULL,expiresAt INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS recovery_challenges_expiry ON account_recovery_challenges(expiresAt);');
@@ -165,6 +173,17 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     return row;
   }
   const messageRow = row => extra.serialize(row);
+  const groupMessageRow = row => ({ id: row.id, senderId: row.senderId, recipientId: row.recipientId, clientId: row.clientId, envelope: typeof row.envelope === 'string' ? JSON.parse(row.envelope) : row.envelope, createdAt: row.createdAt, expiresAt: row.expiresAt, viewOnce: false, media: null, sender: safeUser(getUser(row.senderId)) });
+  const groupMembers = groupId => db.prepare('SELECT u.* FROM group_members gm JOIN users u ON u.id=gm.userId WHERE gm.groupId=? ORDER BY gm.joinedAt,u.username').all(groupId).map(safeUser);
+  const groupFor = (groupId,userId) => { const group=db.prepare('SELECT * FROM groups WHERE id=?').get(groupId); if(!group)fail(404,'Group not found.'); if(!db.prepare('SELECT 1 FROM group_members WHERE groupId=? AND userId=?').get(groupId,userId))fail(403,'You are not a member of this group.'); return group; };
+  const groupEvents = groupId => db.prepare('SELECT * FROM group_events WHERE groupId=? ORDER BY id DESC LIMIT 100').all(groupId).reverse().map(row=>({id:row.id,type:row.type,actorId:row.actorId,actor:(getUser(row.actorId)||{}).displayName||'Illusion',targetId:row.targetId||'',target:row.targetId?((getUser(row.targetId)||{}).displayName||''):'',createdAt:row.createdAt}));
+  const insertGroupEvent = (groupId,type,actorId,targetId=null) => db.prepare('INSERT INTO group_events(groupId,type,actorId,targetId,createdAt) VALUES(?,?,?,?,?)').run(groupId,type,actorId,targetId,now());
+  const groupSummary = (group,userId) => {
+    const last=db.prepare('SELECT id,senderId,clientId,createdAt,expiresAt FROM group_messages WHERE groupId=? AND recipientId=? ORDER BY id DESC LIMIT 1').get(group.id,userId);
+    const lastRead=db.prepare('SELECT lastId FROM group_reads WHERE groupId=? AND userId=?').get(group.id,userId)?.lastId||0;
+    const unread=db.prepare('SELECT COUNT(*) AS n FROM group_messages WHERE groupId=? AND recipientId=? AND id>? AND (expiresAt=0 OR expiresAt>?) AND senderId<>?').get(group.id,userId,lastRead,now(),userId).n;
+    return {id:group.id,name:group.name,createdBy:group.createdBy,createdAt:group.createdAt,ttlSeconds:group.ttlSeconds,members:groupMembers(group.id),unread,lastMessage:last||null,updatedAt:last?.createdAt||group.createdAt};
+  };
   async function route(req, res) {
     const url = new URL(req.url, 'http://localhost');
     const path = url.pathname;
@@ -362,6 +381,90 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
       const result = db.prepare('INSERT INTO messages(senderId,recipientId,clientId,envelope,createdAt,expiresAt,viewOnce,envelopeHash,envelopeBytes,media,mediaBytes) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(me.id, b.recipientId, b.clientId, encoded, createdAt, p.ttlSeconds ? createdAt + p.ttlSeconds * 1000 : 0, p.viewOnce ? 1 : 0, hash(encoded), Buffer.byteLength(encoded),mediaEncoded,mediaBytes);
       notify(me.id);if (b.recipientId !== me.id) notify(b.recipientId);
       return { message: messageRow(db.prepare('SELECT * FROM messages WHERE id=?').get(Number(result.lastInsertRowid))) };
+    }
+    if (req.method === 'GET' && path === '/v1/groups') return { groups: db.prepare('SELECT g.* FROM groups g JOIN group_members gm ON gm.groupId=g.id WHERE gm.userId=? ORDER BY g.createdAt DESC').all(me.id).map(g=>groupSummary(g,me.id)) };
+    if (req.method === 'POST' && path === '/v1/groups') {
+      limit('group-create:'+me.id, 10, 60000, true);
+      const b=await body(req,30000);
+      const name=typeof b.name==='string'?b.name.trim():'';
+      if(name.length<1||name.length>60)fail(400,'Group name must be 1–60 characters.');
+      if(!Array.isArray(b.memberIds)||b.memberIds.length<1||b.memberIds.length>19)fail(400,'Choose 1–19 members.');
+      const ids=[...new Set([me.id,...b.memberIds.filter(id=>typeof id==='string')])];
+      if(ids.length<2||ids.length>20)fail(400,'Groups need 2–20 members.');
+      for(const id of ids)if(!getUser(id))fail(404,'A selected member no longer exists.');
+      const id=randomUUID(),at=now();
+      transaction(db,()=>{db.prepare('INSERT INTO groups(id,name,createdBy,createdAt,ttlSeconds) VALUES(?,?,?,?,0)').run(id,name,me.id,at);const insert=db.prepare('INSERT INTO group_members(groupId,userId,joinedAt) VALUES(?,?,?)');for(const uid of ids)insert.run(id,uid,at);insertGroupEvent(id,'create',me.id);});
+      for(const uid of ids)notify(uid);
+      return {group:groupSummary(db.prepare('SELECT * FROM groups WHERE id=?').get(id),me.id)};
+    }
+    const groupMessagesMatch=path.match(/^\/v1\/groups\/([A-Za-z0-9-]{6,64})\/messages$/);
+    if(groupMessagesMatch){
+      const gid=groupMessagesMatch[1],group=groupFor(gid,me.id);
+      if(req.method==='GET'){
+        const url=new URL(req.url,'http://local'),before=Number(url.searchParams.get('before')),after=Number(url.searchParams.get('after'));
+        const source=after>0?db.prepare('SELECT * FROM group_messages WHERE groupId=? AND recipientId=? AND id>? AND (expiresAt=0 OR expiresAt>?) ORDER BY id ASC LIMIT 100').all(gid,me.id,after,now()):db.prepare('SELECT * FROM group_messages WHERE groupId=? AND recipientId=? AND id<? AND (expiresAt=0 OR expiresAt>?) ORDER BY id DESC LIMIT 100').all(gid,me.id,before>0?before:Number.MAX_SAFE_INTEGER,now());
+        const rows=(after>0?source:source.reverse()).map(groupMessageRow);
+        const read=db.prepare('SELECT lastId FROM group_reads WHERE groupId=? AND userId=?').get(gid,me.id)?.lastId||0;
+        return {group:groupSummary(group,me.id),messages:rows,events:groupEvents(gid),hasMore:source.length===100,readThrough:read};
+      }
+      if(req.method==='POST'){
+        limit('group-send:'+me.id,90,60000,true);
+        const b=await body(req,8000000);
+        if(typeof b.clientId!=='string'||!/^[a-zA-Z0-9-]{16,64}$/.test(b.clientId))fail(400,'Invalid message identifier.');
+        if(b.media)fail(400,'Attachments are not available in groups yet.');
+        if(!Array.isArray(b.envelopes)||b.envelopes.length<1||b.envelopes.length>20)fail(400,'Send one envelope per group member.');
+        const members=groupMembers(gid),byId=new Map(members.map(m=>[m.id,m]));
+        if(b.envelopes.length!==members.length)fail(409,'The group changed. Refresh and send again.');
+        const seen=new Set(),validated=[];
+        for(const item of b.envelopes){if(!item||typeof item.recipientId!=='string'||!byId.has(item.recipientId)||seen.has(item.recipientId))fail(400,'Invalid group envelope.');seen.add(item.recipientId);const envelope=validateEnvelope(item.envelope,me.id,item.recipientId,b.clientId,me.publicKey);if(envelope.policy&&envelope.policy.viewOnce)fail(400,'View once is not available in groups.');const encoded=JSON.stringify(envelope);if(Buffer.byteLength(encoded)>200000)fail(413,'Group messages are limited to text and replies.');validated.push({recipientId:item.recipientId,encoded,hash:hash(encoded)});}
+        const createdAt=now(),expiresAt=group.ttlSeconds?createdAt+group.ttlSeconds*1000:0;
+        const existing=db.prepare('SELECT recipientId,envelopeHash FROM group_messages WHERE senderId=? AND clientId=?').all(me.id,b.clientId);
+        for(const item of existing){const match=validated.find(v=>v.recipientId===item.recipientId);if(!match||match.hash!==item.envelopeHash)fail(409,'Message identifier already used.');}
+        if(existing.length<validated.length){
+          let used=db.prepare('SELECT COALESCE(SUM(envelopeBytes),0) AS n FROM group_messages WHERE senderId=?').get(me.id).n;
+          for(const item of validated)used+=Buffer.byteLength(item.encoded);
+          if(used>64*1024*1024)fail(507,'Relay storage limit reached.');
+          transaction(db,()=>{const insert=db.prepare('INSERT OR IGNORE INTO group_messages(groupId,senderId,recipientId,clientId,envelope,createdAt,expiresAt,envelopeHash,envelopeBytes) VALUES(?,?,?,?,?,?,?,?,?)');for(const item of validated)insert.run(gid,me.id,item.recipientId,b.clientId,item.encoded,createdAt,expiresAt,item.hash,Buffer.byteLength(item.encoded));});
+          for(const uid of members.map(m=>m.id))notify(uid);
+        }
+        return {message:groupMessageRow(db.prepare('SELECT * FROM group_messages WHERE senderId=? AND clientId=? AND recipientId=?').get(me.id,b.clientId,me.id)),group:groupSummary(group,me.id)};
+      }
+    }
+    const groupMemberMatch=path.match(/^\/v1\/groups\/([A-Za-z0-9-]{6,64})\/members$/);
+    if(groupMemberMatch){
+      const gid=groupMemberMatch[1],group=groupFor(gid,me.id);
+      if(req.method==='POST'){
+        const b=await body(req,30000);const uid=typeof b.userId==='string'?b.userId:'';
+        if(!getUser(uid))fail(404,'Account not found.');
+        if(db.prepare('SELECT 1 FROM group_members WHERE groupId=? AND userId=?').get(gid,uid))return {group:groupSummary(group,me.id)};
+        if(groupMembers(gid).length>=20)fail(409,'Groups are limited to 20 members.');
+        transaction(db,()=>{db.prepare('INSERT INTO group_members(groupId,userId,joinedAt) VALUES(?,?,?)').run(gid,uid,now());const last=db.prepare('SELECT MAX(id) AS id FROM group_messages WHERE groupId=?').get(gid)?.id||0;db.prepare('INSERT OR REPLACE INTO group_reads(groupId,userId,lastId) VALUES(?,?,?)').run(gid,uid,last);insertGroupEvent(gid,'join',me.id,uid);});
+        for(const member of groupMembers(gid))notify(member.id);
+        return {group:groupSummary(group,me.id)};
+      }
+      if(req.method==='DELETE'){
+        db.prepare('DELETE FROM group_members WHERE groupId=? AND userId=?').run(gid,me.id);
+        const remaining=db.prepare('SELECT userId FROM group_members WHERE groupId=?').all(gid).map(row=>row.userId);
+        if(remaining.length){insertGroupEvent(gid,'leave',me.id);for(const uid of remaining)notify(uid);}
+        else{db.prepare('DELETE FROM group_messages WHERE groupId=?').run(gid);db.prepare('DELETE FROM group_events WHERE groupId=?').run(gid);db.prepare('DELETE FROM group_reads WHERE groupId=?').run(gid);db.prepare('DELETE FROM groups WHERE id=?').run(gid);}
+        return {ok:true};
+      }
+    }
+    const groupReadMatch=path.match(/^\/v1\/groups\/([A-Za-z0-9-]{6,64})\/read$/);
+    if(groupReadMatch&&req.method==='POST'){
+      const gid=groupReadMatch[1];groupFor(gid,me.id);const b=await body(req,30000);
+      const max=db.prepare('SELECT MAX(id) AS id FROM group_messages WHERE groupId=? AND recipientId=?').get(gid,me.id)?.id||0;
+      const last=Math.max(0,Math.min(Number.isSafeInteger(b.lastId)?b.lastId:0,max));
+      db.prepare('INSERT INTO group_reads(groupId,userId,lastId) VALUES(?,?,?) ON CONFLICT(groupId,userId) DO UPDATE SET lastId=MAX(lastId,excluded.lastId)').run(gid,me.id,last);
+      return {ok:true};
+    }
+    const groupSettingsMatch=path.match(/^\/v1\/groups\/([A-Za-z0-9-]{6,64})$/);
+    if(groupSettingsMatch&&req.method==='PUT'){
+      const gid=groupSettingsMatch[1],group=groupFor(gid,me.id),b=await body(req,30000);let changed=false;
+      if('name' in b){const name=typeof b.name==='string'?b.name.trim():'';if(name.length<1||name.length>60)fail(400,'Group name must be 1–60 characters.');db.prepare('UPDATE groups SET name=? WHERE id=?').run(name,gid);if(name!==group.name){insertGroupEvent(gid,'rename',me.id);changed=true;}}
+      if('ttlSeconds' in b){const ttl=Number(b.ttlSeconds);if(![0,60,3600,86400,604800,2592000].includes(ttl))fail(400,'Invalid group timer.');db.prepare('UPDATE groups SET ttlSeconds=? WHERE id=?').run(ttl,gid);changed=true;}
+      if(changed)for(const member of groupMembers(gid))notify(member.id);
+      return {group:groupSummary(db.prepare('SELECT * FROM groups WHERE id=?').get(gid),me.id)};
     }
     fail(404, 'Endpoint not found.');
   }

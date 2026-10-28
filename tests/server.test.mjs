@@ -13,8 +13,7 @@ function identity() {
   return { ...keys, xml };
 }
 const aliceKey = identity(), bobKey = identity(), eveKey = identity();
-function encrypt(sender, recipient, text) {
-  const clientId = randomUUID();
+function encrypt(sender, recipient, text, clientId = randomUUID()) {
   const material = randomBytes(64), iv = randomBytes(16);
   const cipher = createCipheriv('aes-256-cbc', material.subarray(0, 32), iv);
   const ciphertext = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
@@ -190,4 +189,36 @@ test('registration can be restricted with an invitation code', async () => {
     const denied = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });assert.equal(denied.status, 403);
     const allowed = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ...body, registrationCode: 'invited-friends' }) });assert.equal(allowed.status, 200);
   } finally { await restricted.close(); if (!restrictedDir.startsWith(join(tmpdir(), 'illusion-invite-test-'))) throw new Error('Unexpected path');rmSync(restrictedDir, { recursive: true, force: true }); }
+});
+
+test('pairwise groups fan out encrypted copies and manage membership', async () => {
+  const created = await api('/v1/groups', { method: 'POST', token: alice.token, body: { name: 'Test group', memberIds: [bob.user.id] } });
+  assert.equal(created.status, 200, JSON.stringify(created.body));
+  const groupId = created.body.group.id;
+  assert.equal(created.body.group.members.length, 2);
+  const clientId = randomUUID();
+  const toAlice = encrypt(alice, alice, 'group secret', clientId);
+  const toBob = encrypt(alice, bob, 'group secret', clientId);
+  const sent = await api('/v1/groups/' + groupId + '/messages', { method: 'POST', token: alice.token, body: { clientId, envelopes: [{ recipientId: alice.user.id, envelope: toAlice.envelope }, { recipientId: bob.user.id, envelope: toBob.envelope }] } });
+  assert.equal(sent.status, 200, JSON.stringify(sent.body));
+  const bobView = await api('/v1/groups/' + groupId + '/messages', { token: bob.token });
+  assert.equal(bobView.status, 200);
+  const message = bobView.body.messages.find(m => m.clientId === clientId);
+  assert.ok(message, 'Bob receives his pairwise copy');
+  assert.equal(decrypt(message, bob, alice), 'group secret');
+  assert.equal(bobView.body.group.members.length, 2);
+  const bobList = await api('/v1/groups', { token: bob.token });
+  assert.equal(bobList.body.groups[0].unread, 1);
+  const renamed = await api('/v1/groups/' + groupId, { method: 'PUT', token: bob.token, body: { name: 'Renamed group', ttlSeconds: 60 } });
+  assert.equal(renamed.status, 200);
+  assert.equal(renamed.body.group.name, 'Renamed group');
+  assert.equal(renamed.body.group.ttlSeconds, 60);
+  const left = await api('/v1/groups/' + groupId + '/members', { method: 'DELETE', token: bob.token });
+  assert.equal(left.status, 200);
+  const bobAfter = await api('/v1/groups', { token: bob.token });
+  assert.equal(bobAfter.body.groups.length, 0);
+  const aliceAfter = await api('/v1/groups', { token: alice.token });
+  assert.equal(aliceAfter.body.groups[0].members.length, 1);
+  const events = await api('/v1/groups/' + groupId + '/messages', { token: alice.token });
+  assert.ok(events.body.events.some(event => event.type === 'leave'));
 });

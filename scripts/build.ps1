@@ -46,7 +46,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Desktop compilation failed.' }
 $taskSize = (Get-Item -LiteralPath $taskExe).Length
 if ($taskSize -gt 50000000) { throw 'Release exceeds the Telegram bot upload limit.' }
 $taskHash = & $taskSha256 $taskExe
-$taskManifest = [ordered]@{name='Illusion';version=$taskVersion;file=$OutputName;bytes=$taskSize;sha256=$taskHash;notes='1.5.5: Malay, Filipino, Swahili, Persian and Hebrew complete the 34-language catalog, with RTL layout for Persian and Hebrew.'}
+$taskManifest = [ordered]@{name='Illusion';version=$taskVersion;file=$OutputName;bytes=$taskSize;sha256=$taskHash;notes='1.6: pairwise encrypted group chats on web and Android, plus Croatian, Serbian, Bosnian, Bulgarian and Slovak for 39 languages.'}
 $taskProfileRelease = Join-Path $taskRoot 'dist\Illusion-Connection.illusion'
 Copy-Item -LiteralPath $taskConnectionPath -Destination $taskProfileRelease -Force
 $taskProfile = Get-Content -LiteralPath $taskProfileRelease -Raw | ConvertFrom-Json

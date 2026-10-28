@@ -1,4 +1,4 @@
-# Illusion 0.6.1 preview security boundaries
+# Illusion 1.6.0 preview security boundaries
 
 Illusion is an early Cloudflare-hosted or local messenger, not an independently audited security product. This document describes the implemented design and its limits.
 
@@ -103,3 +103,9 @@ The Windows update check fetches `/download/release.json` over the configured HT
 Android share intents are untrusted. Only image MIME types, inputs up to 4 MB and PNG/JPEG dimensions up to 8192 per side and 16 megapixels are accepted; images are re-encoded locally as JPEG up to 4 MB before the WebView receives a data URL. Shared text is bounded by the composer. Notification actions carry only a username, never message text.
 
 Reactions travel as ordinary encrypted control messages; the relay sees the same envelopes and never sees target IDs or emojis. The client validates target identifiers, limits the palette to six fixed emoji, ignores unknown emoji, and hides reaction controls from the bubble list. Older clients display the readable fallback line instead of attempting to render the reaction.
+
+## Group chats (1.6)
+
+Groups use pairwise fanout, not a shared group key. For every send, the sender encrypts and signs one envelope per current member (including a sender copy) with the existing message format, reuses one client identifier across those copies, and the relay stores one row per recipient. The relay validates every signature, requires exactly one matching envelope for each current member, rejects attachments and view-once policies, caps each envelope at 200 KB and each sender at 64 MB of stored group ciphertext. Group message text remains unreadable to the relay; membership, group name, sender/recipient IDs, per-copy sizes, timestamps, expiry and read cursors are relay-visible metadata. A new member receives no historical envelopes and cannot decrypt messages sent before joining. Leaving deletes the departing member's rows and membership but does not recall copies already delivered or cached by others. There is no forward secrecy, post-compromise recovery, member removal by others, or cryptographic proof that every member received the same plaintext; a malicious sender could send different contents to different members under the same identifier.
+
+Group system events (created, renamed, joined, left) are plaintext relay records with actor and target account IDs. Group names are 1–60 characters and are not end-to-end encrypted; do not put secrets in them. Membership is capped at 20 accounts, names are visible to all members, and any member can rename the group or change its disappearing-message timer. Group messages are text and reply quotes only; reactions, media and view-once are disabled in group mode. The web and Android (WebView) clients implement groups in 1.6. The Windows client does not list or fetch groups, so it neither leaks nor displays group content; group data stays untouched on the relay for the web client.
