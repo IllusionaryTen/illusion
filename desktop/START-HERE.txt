@@ -1,4 +1,4 @@
-ILLUSION 0.8.3 - WINDOWS PREVIEW
+ILLUSION 1.6.1 - WINDOWS PREVIEW
 Private. Customizable. Free.
 
 Open Illusion-0.8.3.exe on Windows 10/11 with .NET Framework 4.8.
@@ -8,8 +8,9 @@ The Cloudflare-hosted connection works while the owner's laptop is off.
 Availability depends on Cloudflare, network access and free-plan quotas.
 Older laptop-hosted connections still require their host to stay online.
 
-The shared UI catalog includes 22 languages, including Greek and Vietnamese.
-Illusion is the product name and stays unchanged across languages.
+The shared UI catalog includes 39 languages, including Croatian, Serbian,
+Bosnian, Bulgarian and Slovak. Illusion is the product name and stays
+unchanged across languages.
 
 Usernames: 2-24 Latin letters, numbers, _ and -. Case-insensitive.
 Passwords: at least 10 characters. Back up your key in Settings.
@@ -22,8 +23,16 @@ Find an exact username. Enter sends; Shift+Enter adds a line.
 Ctrl+K finds someone. Ctrl+F searches loaded messages locally.
 Right-click a normal message to copy/reply/report it.
 
-+ Photo / Video: attach pictures or short MP4s up to 4 MB. These uploads are
-not end-to-end encrypted; the relay operator can access their contents.
++ New group: choose a name and exact usernames (up to 20 people). Every
+group message is sealed separately for each current member. Sender names,
+replies, unread badges, mute, group activity and a group timer are included.
+Attachments, view-once and reactions are disabled in groups. Group names,
+membership and join/leave events are visible to the relay. New members cannot
+read messages sent before they joined.
+Group settings: rename, add a member, change the timer, mute or leave.
+
++ Photo / Video: attach pictures or short MP4s up to 4 MB. New attachments are
+encrypted on your device before upload.
 View once: recipient opens once; closing removes this app's opened copy.
 Screenshots, recordings and modified clients cannot be prevented.
 Profile / Timer: profiles, reports, blocking and disappearing messages.
@@ -50,5 +59,6 @@ contact pairs, timestamps and sizes. Compare Verify keys through
 another channel. This custom protocol has no forward secrecy or independent
 audit. Video playback briefly uses a local decrypted MP4, deleted on close.
 
-Portable, unsigned, no auto-updater. Use a trusted host and verify SHA-256.
+Portable and unsigned. The app checks the relay's HTTPS release manifest once
+a day and verifies the download's size and SHA-256 before replacing itself.
 Not affiliated with Sol's RNG or Telegram.

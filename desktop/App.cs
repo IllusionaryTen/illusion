@@ -60,7 +60,10 @@ namespace Illusion {
       Get<TextBox>("SearchInput").KeyDown+=async(s,e)=>{if(e.Key==Key.Enter)await Guard(FindPeer);};
       Get<ListBox>("ChatList").SelectionChanged+=async(s,e)=>{
         var item=Get<ListBox>("ChatList").SelectedItem as ListBoxItem;
-        if(!updatingChats && item!=null && item.Tag!=null) await Guard(()=>SelectPeer((Dictionary<string,object>)item.Tag));
+        if(!updatingChats && item!=null && item.Tag is Dictionary<string,object>){
+          var target=(Dictionary<string,object>)item.Tag;
+          if(target.ContainsKey("username"))await Guard(()=>SelectPeer(target));else await Guard(()=>SelectGroup(target));
+        }
       };
       Get<Button>("SavedButton").Click+=async(s,e)=>{if(me!=null)await Guard(()=>SelectPeer(me));};
       Get<Button>("ChatsButton").Click+=(s,e)=>Get<TextBox>("SearchInput").Focus();
@@ -75,7 +78,7 @@ namespace Illusion {
       timer=new DispatcherTimer { Interval=TimeSpan.FromSeconds(1) };
       timer.Tick+=async(s,e)=>await Guard(ExperienceTick);
       InitializeExperience();
-      InitializePrivacy();InitializeConsent();
+      InitializeGroups();InitializePrivacy();InitializeConsent();
       Window.Closed+=(s,e)=>{StopExperience();closing=true;generation++;timer.Stop();http.Dispose();};
       Window.ContentRendered+=async(s,e)=>{await Guard(Resume);CheckForUpdates();};
     }
@@ -94,7 +97,7 @@ namespace Illusion {
       }
       foreach(object child in LogicalTreeHelper.GetChildren(root))if(child is DependencyObject)CaptureLocalizedElements((DependencyObject)child,excluded || (element!=null && (element.Name=="ChatList" || element.Name=="MessageList")));
     }
-    void RelocalizeEverything(){ApplyWindowLanguage();Get<Button>("FindButton").Content="+  "+T("Start a conversation");Get<Button>("AuthButton").Content=T("Sign in");Get<Button>("SwitchAuthButton").Content=T("Create an account");UpdateAttachment();if(me==null)return;UpdateChats(latestChats);if(peer!=null){Get<TextBlock>("ChatTitle").Text=(string)peer["id"]==(string)me["id"]?T("Saved messages"):Convert.ToString(peer["displayName"]);Get<TextBlock>("ChatSubtitle").Text=ChatSubtitleText(peer);UpdateTimerHint();}UpdateMessageViews(false,true);Connection(sessionConnected);}
+    void RelocalizeEverything(){ApplyWindowLanguage();Get<Button>("FindButton").Content="+  "+T("Start a conversation");Get<Button>("AuthButton").Content=T("Sign in");Get<Button>("SwitchAuthButton").Content=T("Create an account");UpdateAttachment();if(me==null)return;UpdateChats(latestChats);if(group!=null){Get<TextBlock>("ChatTitle").Text=GroupName(group);Get<TextBlock>("ChatSubtitle").Text=GroupSubtitle(group);Get<Button>("ChatOptionsButton").Content=T("Group settings");UpdateTimerHint();UpdateGroupEventsPanel();}else if(peer!=null){Get<TextBlock>("ChatTitle").Text=(string)peer["id"]==(string)me["id"]?T("Saved messages"):Convert.ToString(peer["displayName"]);Get<TextBlock>("ChatSubtitle").Text=ChatSubtitleText(peer);Get<Button>("ChatOptionsButton").Content=T("Profile / Timer");UpdateTimerHint();}UpdateMessageViews(false,true);Connection(sessionConnected);}
     void ApplyWindowLanguage(){Window.FlowDirection=Array.IndexOf(new[]{"ar","he","fa"},currentLanguage)>=0?FlowDirection.RightToLeft:FlowDirection.LeftToRight;foreach(var apply in languageBindings)apply();Get<Button>("OlderButton").Content=T("Load earlier messages");Get<Button>("FindButton").Content="+  "+T("Start a conversation");}
     sealed class LanguageChoice{public string Code{get;set;}public string Name{get;set;}}
     List<LanguageChoice> GetLanguageChoices(){var result=new List<LanguageChoice>();if(translationLanguages!=null)foreach(ArrayList item in translationLanguages)if(item.Count>=2)result.Add(new LanguageChoice{Code=Convert.ToString(item[0]),Name=Convert.ToString(item[1])});return result;}
@@ -230,8 +233,8 @@ namespace Illusion {
     }
     public Task SelectPeer(Dictionary<string,object> user) { return SelectConversation(user); }
     Task LoadMessages(bool initial) { return FetchConversation(initial); }
-    Task LoadOlder() { return FetchOlder(); }
-    public Task Send() { return QueueMessage(); }
+    Task LoadOlder() { return group!=null?FetchGroupOlder():FetchOlder(); }
+    public Task Send() { return group!=null?QueueGroupMessage():QueueMessage(); }
     static SolidColorBrush Brush(string color) { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); }
     void RenderMessages(bool bottom) { UpdateMessageViews(bottom,false); }
     void ApplyTheme() {ApplyPalette();string saved=Setting("accent","#467AFF");if(string.IsNullOrEmpty(Setting("theme",""))&&(saved=="#297C91"||saved=="#56657C"))saved="#467AFF";Window.Resources["Accent"]=Brush(saved);Window.FontFamily=new FontFamily(Setting("chatFont","Segoe UI"));}
@@ -278,7 +281,7 @@ namespace Illusion {
     TextBlock Label(string text,int size=13) {return LabelRaw(T(text),size);}
     TextBlock LabelRaw(string text,int size=13) {return new TextBlock {Text=text,FontSize=size,Foreground=Brush("#A8B9D2"),TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,12)};}
     void ShowSafety() {
-      if(peer==null)return;
+      if(peer==null||group!=null)return;
       var panel=new StackPanel();panel.Children.Add(Label("Compare these fingerprints with your contact using another channel. They identify the encryption keys stored on your devices.",14));
       foreach(var user in new[]{me,peer}) {panel.Children.Add(Label("@"+user["username"],16));string fp=Crypto.Fingerprint((string)user["publicKey"]);panel.Children.Add(Label(string.Join(" ",Enumerable.Range(0,8).Select(i=>fp.Substring(i*8,8))),13));}
       string peerPrint=Crypto.Fingerprint((string)peer["publicKey"]);
@@ -354,7 +357,7 @@ namespace Illusion {
       verify.Click+=async(s,e)=>await Guard(async()=>{var result=await Api("POST","/v1/email/verify",new{email=email.Text,code=code.Text});dialog.Close();Get<TextBlock>("StatusLabel").Text=T("Recovery email verified: ")+Convert.ToString(result["email"]);});dialog.ShowDialog();
     }
     void SignOutLocal() {
-      StopExperience();generation++;timer.Stop();me=null;peer=null;token="";privateKey="";messages.Clear();ResetExperience();settings.Remove("token");SaveSettings();
+      StopExperience();generation++;timer.Stop();me=null;peer=null;group=null;token="";privateKey="";messages.Clear();ResetExperience();ResetGroups();Get<Border>("GroupEventsPanel").Visibility=Visibility.Collapsed;settings.Remove("token");SaveSettings();
       Get<ListBox>("ChatList").Items.Clear();Get<Border>("AuthOverlay").Visibility=Visibility.Visible;Get<StackPanel>("EmptyState").Visibility=Visibility.Visible;Get<ScrollViewer>("MessageScroll").Visibility=Visibility.Collapsed;Get<Border>("ComposerPanel").Visibility=Visibility.Collapsed;Get<Button>("VerifyButton").Visibility=Visibility.Collapsed;
     }
     string BackupPassword(string title) {

@@ -134,8 +134,9 @@ namespace Illusion {
     }
     static void AtomicWrite(string path,string text) {File.WriteAllText(path+".tmp",text);if(File.Exists(path))File.Replace(path+".tmp",path,null);else File.Move(path+".tmp",path);}
     void CaptureDraft() {
-      if(me==null || peer==null || restoringDraft)return;
-      string id=(string)peer["id"],text=Get<TextBox>("Composer").Text;
+      if(me==null || (peer==null && group==null) || restoringDraft)return;
+      string id=CurrentConversationId(),text=Get<TextBox>("Composer").Text;
+      if(id=="")return;
       if(text.Length>0)drafts[id]=text;else drafts.Remove(id);
       if(reply!=null)replyDrafts[id]=reply;else replyDrafts.Remove(id);
     }
@@ -143,7 +144,7 @@ namespace Illusion {
       if(me==null || localStatePath=="" || !localStateReady)return;
       int cachedBytes=0;var caches=history.SelectMany(p=>p.Value.Where(m=>!Removed(m)).Select(m=>new {Peer=p.Key,Message=m})).OrderByDescending(p=>Convert.ToInt64(p.Message["id"])).Take(400).Where(p=>{int size=json.Serialize(p.Message).Length;if(cachedBytes+size>8000000)return false;cachedBytes+=size;return true;}).GroupBy(p=>p.Peer).ToDictionary(p=>p.Key,p=>(object)p.Select(m=>m.Message).OrderBy(m=>Convert.ToInt64(m["id"])).ToArray());
       var cachedContacts=contacts.Values.OrderByDescending(c=>Str(c,"id")==lastPeer).Take(100).Select(c=>{var copy=c.Where(p=>p.Key!="lastMessage").ToDictionary(p=>p.Key,p=>p.Value);copy["profile"]=UserProfile(c).Where(p=>p.Key!="avatar" && p.Key!="banner").ToDictionary(p=>p.Key,p=>p.Value);return copy;}).ToArray();
-      var state=new Dictionary<string,object>{{"drafts",drafts},{"replies",replyDrafts},{"contacts",cachedContacts},{"pinned",pinned.ToArray()},{"outbox",outbox.ToArray()},{"lastPeer",lastPeer},{"history",caches}};
+      var state=new Dictionary<string,object>{{"drafts",drafts},{"replies",replyDrafts},{"contacts",cachedContacts},{"pinned",pinned.ToArray()},{"outbox",outbox.ToArray()},{"lastPeer",lastPeer},{"lastGroup",lastGroup},{"history",caches}};
       AtomicWrite(localStatePath,Crypto.Protect(json.Serialize(state)));dirtyLocal=false;
     }
     void LoadMutes(){
@@ -154,10 +155,10 @@ namespace Illusion {
       if(me==null)return;settings["mutes:"+(string)me["id"]]=json.Serialize(mutedChats.ToArray());SaveSettings();
     }
     void ResetExperience() {
-      ResetPrivacy();
-      drafts.Clear();replyDrafts.Clear();contacts.Clear();outbox.Clear();pinned.Clear();mutedChats.Clear();chatItems.Clear();history.Clear();decoded.Clear();views.Clear();notifiedUnread.Clear();notificationBaselineReady=false;latestChats=new Dictionary<string,object>[0];reply=null;lastPeer="";localStatePath="";dirtyLocal=false;localStateReady=false;lastReadSent=0;readThrough=0;
+      ResetPrivacy();ResetGroups();
+      drafts.Clear();replyDrafts.Clear();contacts.Clear();outbox.Clear();pinned.Clear();mutedChats.Clear();chatItems.Clear();history.Clear();decoded.Clear();views.Clear();notifiedUnread.Clear();notificationBaselineReady=false;latestChats=new Dictionary<string,object>[0];reply=null;lastPeer="";lastGroup="";localStatePath="";dirtyLocal=false;localStateReady=false;lastReadSent=0;readThrough=0;
       Get<StackPanel>("MessageList").Children.Clear();Get<StackPanel>("MessageList").Children.Add(Get<Button>("OlderButton"));emptyMessage=null;
-      Get<Border>("ReplyBar").Visibility=Visibility.Collapsed;Get<Border>("NoticePanel").Visibility=Visibility.Collapsed;Get<Button>("NewMessagesButton").Visibility=Visibility.Collapsed;
+      Get<Border>("ReplyBar").Visibility=Visibility.Collapsed;Get<Border>("NoticePanel").Visibility=Visibility.Collapsed;Get<Button>("NewMessagesButton").Visibility=Visibility.Collapsed;Get<Border>("GroupEventsPanel").Visibility=Visibility.Collapsed;
       Get<TextBlock>("ConnectionLabel").Text="○  Not connected";Window.Title="Illusion";
     }
     void LoadLocalState() {
@@ -172,6 +173,7 @@ namespace Illusion {
           foreach(string id in (IEnumerable)state["pinned"])pinned.Add(id);
           foreach(Dictionary<string,object> item in (IEnumerable)state["outbox"])outbox.Add(item);
           lastPeer=state.ContainsKey("lastPeer")?(string)state["lastPeer"]:"";
+          lastGroup=state.ContainsKey("lastGroup")?(string)state["lastGroup"]:"";
           if(state.ContainsKey("history"))foreach(var p in (Dictionary<string,object>)state["history"])history[p.Key]=((IEnumerable)p.Value).Cast<Dictionary<string,object>>().ToList();
         } catch {ShowNotice("Your local workspace could not be read. Your server history and encryption key are unchanged. The original workspace file has been kept.",true);throw new Exception("Unable to read local drafts and outbox. Keep the workspace file for recovery before resetting it.");}
       }
@@ -206,7 +208,7 @@ namespace Illusion {
           }
           if(gen!=generation || cancellation.IsCancellationRequested)return;
           Connection(true);delay=1000;
-          if(peer==null && lastPeer!="" && contacts.ContainsKey(lastPeer))await SelectPeer(contacts[lastPeer]);
+          if(peer==null && group==null && lastPeer!="" && contacts.ContainsKey(lastPeer))await SelectPeer(contacts[lastPeer]);
           await FlushOutbox();
         } catch(OperationCanceledException){if(cancellation.IsCancellationRequested)return;Connection(false);}
         catch(ApiException e){if(gen!=generation||cancellation.IsCancellationRequested)return;if(e.Status==401){SignOutLocal();Get<TextBlock>("AuthError").Text="Your session expired. Sign in again.";return;}if(e.Status==404){fallback=true;continue;}Connection(false);}
@@ -229,7 +231,20 @@ namespace Illusion {
         foreach(var chat in chats){Pin(chat);contacts[(string)chat["id"]]=chat;}
         foreach(var chat in chats)if(chat.ContainsKey("lastMessage"))await DecodeMessages(new[]{(Dictionary<string,object>)chat["lastMessage"]},chat);
         if(gen!=generation || me==null)return;
-        latestChats=chats;UpdateChats(chats);if(peer!=null){var fresh=chats.FirstOrDefault(c=>(string)c["id"]==(string)peer["id"]);if(fresh!=null)peer=fresh;await FetchConversation(false);}
+        try{await FetchGroupsOnly();}
+        catch(ApiException groupError){if(groupError.Status==401)throw;}
+        catch{}
+        if(gen!=generation || me==null)return;
+        latestChats=chats;UpdateChats(chats);
+        if(group!=null){
+          var fresh=groups.FirstOrDefault(g=>GroupId(g)==GroupId(group));
+          if(fresh==null){CloseGroupConversation(false);ShowNotice("You are no longer a member of this group.",true);}
+          else{group=fresh;UpdateChats(chats);try{await FetchGroupConversation(false);}catch(ApiException groupError){if(groupError.Status==403||groupError.Status==404){CloseGroupConversation(false);ShowNotice(groupError.Message,true);}else throw;}}
+        }else if(peer!=null){var fresh=chats.FirstOrDefault(c=>(string)c["id"]==(string)peer["id"]);if(fresh!=null)peer=fresh;await FetchConversation(false);}
+        else if(lastGroup!=""){
+          var target=groups.FirstOrDefault(g=>GroupId(g)==lastGroup);
+          if(target!=null)await SelectGroup(target);else lastGroup="";
+        }
         if(gen==generation)Connection(true);
       } finally {refreshGate.Release();}
     }
@@ -237,14 +252,17 @@ namespace Illusion {
       var list=Get<ListBox>("ChatList");var scroll=FindScroll(list);double offset=scroll==null?0:scroll.VerticalOffset;
       var data=chats.ToDictionary(c=>(string)c["id"]);
       foreach(var c in contacts.Values)if(!data.ContainsKey((string)c["id"]) && ((string)c["id"]!=(string)me["id"] || drafts.ContainsKey((string)c["id"])))data[(string)c["id"]]=c;
-      var sorted=data.Values.OrderByDescending(c=>pinned.Contains((string)c["id"])).ThenByDescending(c=>c.ContainsKey("updatedAt")?Convert.ToInt64(c["updatedAt"]):0).ToArray();
-      var nextUnread=new Dictionary<string,long>();foreach(var chat in sorted){string id=(string)chat["id"];long count=chat.ContainsKey("unread")?Convert.ToInt64(chat["unread"]):0;nextUnread[id]=count;if(notificationBaselineReady&&count>0){long old;notifiedUnread.TryGetValue(id,out old);if(count>old && (peer==null || (string)peer["id"]!=id))NotifyIncoming(chat,count-old);}}
+      var entries=new List<Dictionary<string,object>>(data.Values);
+      foreach(var g in groups)if(!data.ContainsKey(GroupId(g)))entries.Add(g);
+      var sorted=entries.OrderByDescending(c=>pinned.Contains(Str(c,"id"))).ThenByDescending(c=>c.ContainsKey("updatedAt")?Convert.ToInt64(c["updatedAt"]):0).ToArray();
+      var nextUnread=new Dictionary<string,long>();foreach(var chat in sorted){if(!chat.ContainsKey("username"))continue;string id=(string)chat["id"];long count=chat.ContainsKey("unread")?Convert.ToInt64(chat["unread"]):0;nextUnread[id]=count;if(notificationBaselineReady&&count>0){long old;notifiedUnread.TryGetValue(id,out old);if(count>old && (peer==null || (string)peer["id"]!=id))NotifyIncoming(chat,count-old);}}
       notifiedUnread.Clear();foreach(var pair in nextUnread)notifiedUnread[pair.Key]=pair.Value;notificationBaselineReady=true;
+      foreach(var pair in chatItems.ToArray()){var tag=pair.Value.Tag as Dictionary<string,object>;if(tag!=null && !tag.ContainsKey("username") && !groups.Any(g=>GroupId(g)==pair.Key)){list.Items.Remove(pair.Value);chatItems.Remove(pair.Key);}}
       updatingChats=true;
       try {
         int index=0;long unreadTotal=0;
         foreach(var chat in sorted) {
-          string id=(string)chat["id"];long unread=chat.ContainsKey("unread")?Convert.ToInt64(chat["unread"]):0;unreadTotal+=unread;
+          string id=Str(chat,"id");bool isGroup=!chat.ContainsKey("username");long unread=isGroup?GroupUnread(chat):(chat.ContainsKey("unread")?Convert.ToInt64(chat["unread"]):0);unreadTotal+=unread;
           ListBoxItem item;
           if(!chatItems.TryGetValue(id,out item)) {
             item=new ListBoxItem();chatItems[id]=item;
@@ -252,28 +270,39 @@ namespace Illusion {
           }
           item.Tag=chat;
           var row=new Grid();row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(40)});row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
-          var avatar=ProfileAvatar(chat,34);avatar.VerticalAlignment=VerticalAlignment.Top;row.Children.Add(avatar);
+          var avatar=isGroup?GroupAvatar(34):ProfileAvatar(chat,34);avatar.VerticalAlignment=VerticalAlignment.Top;row.Children.Add(avatar);
           var text=new StackPanel();Grid.SetColumn(text,1);
-          text.Children.Add(new TextBlock{Text=(pinned.Contains(id)?"◇  ":"")+(mutedChats.Contains(id)?"🔕  ":"")+(string)chat["displayName"]+(unread>0?"   • "+unread:""),Foreground=Brushes.White,FontSize=14,FontWeight=FontWeights.SemiBold,TextTrimming=TextTrimming.CharacterEllipsis});
-          string preview="@"+chat["username"];
-          if(drafts.ContainsKey(id))preview=T("Draft: ")+drafts[id].Replace('\n',' ');
-          else if(chat.ContainsKey("lastMessage")){var last=(Dictionary<string,object>)chat["lastMessage"];Content content;if(decoded.TryGetValue(ContentKey(last),out content))preview=((string)last["senderId"]==(string)me["id"]?T("You: "):"")+content.Text.Replace('\n',' ');}
+          string title=isGroup?GroupName(chat):(string)chat["displayName"];
+          text.Children.Add(new TextBlock{Text=(pinned.Contains(id)?"◇  ":"")+(mutedChats.Contains(id)?"🔕  ":"")+title+(unread>0?"   • "+unread:""),Foreground=Brushes.White,FontSize=14,FontWeight=FontWeights.SemiBold,TextTrimming=TextTrimming.CharacterEllipsis});
+          string preview;string signature;
+          if(isGroup){
+            preview=GroupMembers(chat).Count+" "+T("members");
+            signature=T("Group")+"|"+title+"|"+preview+"|"+unread+"|"+pinned.Contains(id)+"|"+mutedChats.Contains(id)+"|"+GroupMembers(chat).Count;
+            item.ToolTip=T("Group")+" · "+GroupMembers(chat).Count+" "+T("members");
+          }else{
+            preview="@"+chat["username"];
+            if(drafts.ContainsKey(id))preview=T("Draft: ")+drafts[id].Replace('\n',' ');
+            else if(chat.ContainsKey("lastMessage")){var last=(Dictionary<string,object>)chat["lastMessage"];Content content;if(decoded.TryGetValue(ContentKey(last),out content))preview=((string)last["senderId"]==(string)me["id"]?T("You: "):"")+content.Text.Replace('\n',' ');}
+            signature=(string)chat["displayName"]+"|"+preview+"|"+unread+"|"+pinned.Contains(id)+"|"+mutedChats.Contains(id)+"|"+Crypto.Fingerprint(json.Serialize(UserProfile(chat)));
+            item.ToolTip="@"+chat["username"]+" · Right-click to pin";
+          }
           text.Children.Add(new TextBlock{Text=preview,Foreground=Brush(drafts.ContainsKey(id)?"#91B7FF":"#7C8DAA"),FontSize=11,Margin=new Thickness(0,5,0,0),TextTrimming=TextTrimming.CharacterEllipsis});row.Children.Add(text);
           // Keep the item itself and its selection; content changes do not reset the list.
-          string signature=(string)chat["displayName"]+"|"+preview+"|"+unread+"|"+pinned.Contains(id)+"|"+mutedChats.Contains(id)+"|"+Crypto.Fingerprint(json.Serialize(UserProfile(chat)));
-          if(item.Uid!=signature){item.Content=row;item.Uid=signature;item.ToolTip="@"+chat["username"]+" · Right-click to pin";}
+          if(item.Uid!=signature){item.Content=row;item.Uid=signature;}
           int old=list.Items.IndexOf(item);if(old!=index){if(old>=0)list.Items.RemoveAt(old);list.Items.Insert(index,item);}index++;
-          if(peer!=null && (string)peer["id"]==id)list.SelectedItem=item;
+          if((peer!=null && (string)peer["id"]==id) || (group!=null && GroupId(group)==id))list.SelectedItem=item;
         }
         Window.Title=unreadTotal>0?"("+unreadTotal+") Illusion":"Illusion";FilterChats();
       } finally {updatingChats=false;if(scroll!=null)scroll.ScrollToVerticalOffset(offset);}
     }
     static ScrollViewer FindScroll(DependencyObject node) {if(node is ScrollViewer)return (ScrollViewer)node;for(int i=0;i<VisualTreeHelper.GetChildrenCount(node);i++){var found=FindScroll(VisualTreeHelper.GetChild(node,i));if(found!=null)return found;}return null;}
-    void FilterChats() {string filter=Get<TextBox>("SearchInput").Text.Trim().TrimStart('@');foreach(var pair in chatItems){var user=pair.Value.Tag as Dictionary<string,object>;if(user!=null)pair.Value.Visibility=filter=="" || ((string)user["username"]).IndexOf(filter,StringComparison.OrdinalIgnoreCase)>=0 || ((string)user["displayName"]).IndexOf(filter,StringComparison.OrdinalIgnoreCase)>=0?Visibility.Visible:Visibility.Collapsed;}}
+    void FilterChats() {string filter=Get<TextBox>("SearchInput").Text.Trim().TrimStart('@');foreach(var pair in chatItems){var target=pair.Value.Tag as Dictionary<string,object>;if(target==null)continue;bool match;if(target.ContainsKey("username"))match=filter=="" || ((string)target["username"]).IndexOf(filter,StringComparison.OrdinalIgnoreCase)>=0 || ((string)target["displayName"]).IndexOf(filter,StringComparison.OrdinalIgnoreCase)>=0;else match=filter=="" || GroupName(target).IndexOf(filter,StringComparison.OrdinalIgnoreCase)>=0;pair.Value.Visibility=match?Visibility.Visible:Visibility.Collapsed;}}
     async Task SelectConversation(Dictionary<string,object> user) {
       if(me==null)return;if(peer!=null && (string)peer["id"]==(string)user["id"])return;
-      CaptureDraft();SaveLocalState();Pin(user);peer=user;string id=(string)user["id"];contacts[id]=user;lastPeer=id;conversationVersion++;lastReadSent=0;readThrough=0;
-      pendingMedia=null;UpdateAttachment();Get<CheckBox>("ViewOnceCheck").IsChecked=false;
+      CaptureDraft();SaveLocalState();group=null;groupEvents.Clear();lastGroup="";UpdateGroupEventsPanel();Get<Border>("GroupEventsPanel").Visibility=Visibility.Collapsed;
+      Pin(user);peer=user;string id=(string)user["id"];contacts[id]=user;lastPeer=id;conversationVersion++;lastReadSent=0;readThrough=0;
+      pendingMedia=null;UpdateAttachment();Get<CheckBox>("ViewOnceCheck").IsChecked=false;Get<CheckBox>("ViewOnceCheck").IsEnabled=true;Get<Button>("AttachButton").IsEnabled=true;
+      Get<TextBlock>("AttachmentNotice").Visibility=Visibility.Visible;Get<StackPanel>("AttachmentControls").Visibility=Visibility.Visible;Get<Button>("ChatOptionsButton").Content=T("Profile / Timer");
       LoadContactWallpaper(id);
       messages.Clear();views.Clear();emptyMessage=null;
       var list=Get<StackPanel>("MessageList");while(list.Children.Count>1)list.Children.RemoveAt(1);
@@ -320,9 +349,16 @@ namespace Illusion {
       while((messages.Count>400 || bytes>16000000) && messages.Count>1){long id=older?messages.Keys.Last():messages.Keys.First();var row=messages[id];var e=row.ContainsKey("envelope")?row["envelope"] as Dictionary<string,object>:null;bytes-=2048+(e!=null && e.ContainsKey("ciphertext")?Convert.ToString(e["ciphertext"]).Length:0);decoded.Remove(ContentKey(row));messages.Remove(id);Get<Button>("OlderButton").Visibility=Visibility.Visible;}
     }
     async Task MarkVisibleRead() {
-      if(me==null || peer==null || !sessionConnected || !Window.IsActive || !AtBottom() || messages.Count==0)return;
-      long last=messages.Keys.Last();if(last<=lastReadSent)return;string id=(string)peer["id"];int version=conversationVersion;
+      if(me==null || (peer==null && group==null) || !sessionConnected || !Window.IsActive || !AtBottom() || messages.Count==0)return;
+      long last=messages.Keys.Last();if(last<=lastReadSent)return;int version=conversationVersion;
       lastReadSent=last;
+      if(group!=null){
+        string groupId=GroupId(group);
+        try{await Api("POST","/v1/groups/"+Uri.EscapeDataString(groupId)+"/read",new{lastId=last});if(group!=null){group["unread"]=0;UpdateChats(latestChats);}}
+        catch{if(version==conversationVersion)lastReadSent=0;throw;}
+        return;
+      }
+      string id=(string)peer["id"];
       try {await Api("POST","/v1/read",new{peer=id,lastId=last,shareReceipts=Setting("receipts","true")=="true"});}catch {if(version==conversationVersion)lastReadSent=0;throw;}
     }
     Content Decode(Dictionary<string,object> message,string myId,string key,string senderKey,bool opened=false) {
@@ -376,6 +412,7 @@ namespace Illusion {
         while(outbox.Count>0 && gen==generation && me!=null && !closing) {
           var entry=outbox[0];
           activeSend=(string)entry["clientId"];
+          if(entry.ContainsKey("groupId")){bool keepGoing=await TryFlushGroupEntry(entry,gen);if(!keepGoing)return;continue;}
           try {
             var response=await Api("POST","/v1/messages",new{recipientId=entry["recipientId"],clientId=entry["clientId"],envelope=entry["envelope"],media=entry.ContainsKey("media")?entry["media"]:null});
             if(gen!=generation || me==null)return;
@@ -393,15 +430,22 @@ namespace Illusion {
       }finally{activeSend="";outboxGate.Release();}
     }
     void BeginReply(Dictionary<string,object> message,Content content) {
-      string who=(string)message["senderId"]==(string)me["id"]?(string)me["displayName"]:(string)peer["displayName"];
+      string who;
+      if((string)message["senderId"]==(string)me["id"])who=(string)me["displayName"];
+      else if(group!=null){var sender=GroupSender(message);who=sender==null?Str(message,"senderId"):GroupMemberLabel(sender);}
+      else who=(string)peer["displayName"];
       reply=new Dictionary<string,object>{{"id",message.ContainsKey("id")?message["id"]:0},{"name",who},{"text",content.Text.Length>160?content.Text.Substring(0,160):content.Text}};UpdateReply();CaptureDraft();dirtyLocal=true;Get<TextBox>("Composer").Focus();
     }
     void UpdateReply() {Get<Border>("ReplyBar").Visibility=reply==null?Visibility.Collapsed:Visibility.Visible;Get<TextBlock>("ReplyText").Text=reply==null?"":"Replying to "+reply["name"]+": "+reply["text"];}
     void UpdateMessageViews(bool bottom,bool force,bool manageScroll=true) {
-      if(me==null || peer==null)return;var list=Get<StackPanel>("MessageList");
+      if(me==null || (peer==null && group==null))return;var list=Get<StackPanel>("MessageList");string conversationId=CurrentConversationId();
       if(force){views.Clear();while(list.Children.Count>1)list.Children.RemoveAt(1);emptyMessage=null;}
       var scroll=Get<ScrollViewer>("MessageScroll");double previousOffset=scroll.VerticalOffset;int intent=++scrollIntent,version=conversationVersion;
-      var rows=messages.Values.Concat(outbox.Where(m=>(string)m["recipientId"]==(string)peer["id"] && !messages.Values.Any(s=>(string)s["clientId"]==(string)m["clientId"]))).Where(m=>!Removed(m)).ToArray();
+      var pendingRows=outbox.Where(m=>{
+        if(group!=null)return m.ContainsKey("groupId") && Str(m,"groupId")==conversationId && !messages.Values.Any(s=>Str(s,"clientId")==Str(m,"clientId") && Str(s,"senderId")==Str(m,"senderId"));
+        return !m.ContainsKey("groupId") && Str(m,"recipientId")==conversationId && !messages.Values.Any(s=>Str(s,"clientId")==Str(m,"clientId") && Str(s,"senderId")==Str(m,"senderId"));
+      });
+      var rows=messages.Values.Concat(pendingRows).Where(m=>!Removed(m)).ToArray();
       if(emptyMessage!=null){list.Children.Remove(emptyMessage);emptyMessage=null;}
       var wanted=new HashSet<string>();DateTime? date=null;int index=1;
       foreach(var message in rows) {
@@ -412,8 +456,9 @@ namespace Illusion {
         if(view==null) {
           view=new MessageView{Root=new StackPanel(),Date=new TextBlock{HorizontalAlignment=HorizontalAlignment.Center,Foreground=Brush("#637898"),FontSize=11,Margin=new Thickness(0,12,0,18)},Content=content};
           view.Root.Children.Add(view.Date);var inner=new StackPanel();
+          if(group!=null && !own){var sender=GroupSender(message);inner.Children.Add(new TextBlock{Text=sender!=null?GroupMemberLabel(sender):Str(message,"senderId"),Foreground=Brush("#8CB3FF"),FontSize=11,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,5),TextTrimming=TextTrimming.CharacterEllipsis});}
           if(content.Reply!=null)inner.Children.Add(new Border{BorderBrush=Brush("#9ABCF2"),BorderThickness=new Thickness(2,0,0,0),Padding=new Thickness(9,2,0,2),Margin=new Thickness(0,0,0,8),Child=new TextBlock{Text=Convert.ToString(content.Reply["name"])+"\n"+Convert.ToString(content.Reply["text"]),Foreground=Brush("#D0E0FC"),FontSize=11,TextWrapping=TextWrapping.Wrap,MaxHeight=58}});
-          bool once=Once(message);var capturedMessage=message;var capturedUser=peer;
+          bool once=Once(message);var capturedMessage=message;var capturedUser=group!=null?GroupSender(message):peer;
           inner.Children.Add(new TextBlock{Text=content.Text,TextWrapping=TextWrapping.Wrap,FontFamily=new FontFamily(Setting("chatFont","Segoe UI")),FontSize=int.Parse(Setting("font","14")),Foreground=content.Valid?Readable(Setting("textColor","#F1F5FF"),own?Setting("bubbleColor",Setting("accent","#467AFF")):"#192334"):Brush("#FF9DA7")});
           if(once && !own && !queued){var open=new Button{Content=T("Open once"),Margin=new Thickness(0,8,0,0)};open.Click+=async(s,e)=>await Guard(()=>OpenOnce(capturedMessage));inner.Children.Add(open);}
           if(content.Media!=null && !once){inner.Children.Add(BuildMediaPreview(capturedMessage,content,capturedUser));}
@@ -422,7 +467,7 @@ namespace Illusion {
           var menu=new ContextMenu();var copy=new MenuItem{Header=T("Copy message")};string copied=content.Text;copy.Click+=(s,e)=>Clipboard.SetText(copied);menu.Items.Add(copy);
           if(once)menu.Items.Clear();
           if(content.Valid && !once){var replyItem=new MenuItem{Header=T("Reply")};var capturedView=view;var capturedContent=content;replyItem.Click+=(s,e)=>BeginReply(capturedView.Message,capturedContent);menu.Items.Add(replyItem);}
-          if(!queued && !own){var report=new MenuItem{Header=T("Report message")};report.Click+=(s,e)=>ReportDialog(capturedUser,capturedMessage,once?null:content);menu.Items.Add(report);}
+          if(!queued && !own && group==null){var report=new MenuItem{Header=T("Report message")};report.Click+=(s,e)=>ReportDialog(capturedUser,capturedMessage,once?null:content);menu.Items.Add(report);}
           if(queued){var stop=new MenuItem{Header=T("Stop retrying this message"),ToolTip=T("Stops future attempts; it does not remove a message already delivered.")};var captured=message;stop.Click+=(s,e)=>{if(activeSend==clientId){ShowNotice("This message is currently sending. Wait for the current attempt before stopping retries.",false);return;}outbox.Remove(captured);SaveLocalState();UpdateMessageViews(false,false);};menu.Items.Add(stop);}
           view.Bubble.ContextMenu=menu;view.Root.Children.Add(view.Bubble);views[id]=view;
           if(!force && Setting("motion","true")=="true" && SystemParameters.ClientAreaAnimation)view.Bubble.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(150)));
@@ -430,7 +475,7 @@ namespace Illusion {
         view.Message=message;
         if(!queued)foreach(var item in view.Bubble.ContextMenu.Items.Cast<MenuItem>().Where(i=>Convert.ToString(i.Header)=="Stop retrying this message").ToArray())view.Bubble.ContextMenu.Items.Remove(item);
         view.Date.Text=when.Date==DateTime.Today?T("Today"):when.ToString("dddd, MMMM d");view.Date.Visibility=date!=when.Date?Visibility.Visible:Visibility.Collapsed;date=when.Date;
-        view.Time.Text=when.ToString("HH:mm")+(queued?"  ◷ "+T("Queued"):!content.Valid?"  !":own && (string)peer["id"]!=(string)me["id"]?(Convert.ToInt64(message["id"])<=readThrough?"  ✓✓ "+T("Read"):"  ✓ "+T("Sent")):"  ◇");
+        view.Time.Text=when.ToString("HH:mm")+(queued?"  ◷ "+T("Queued"):!content.Valid?"  !":group!=null?"  ◇":own && (string)peer["id"]!=(string)me["id"]?(Convert.ToInt64(message["id"])<=readThrough?"  ✓✓ "+T("Read"):"  ✓ "+T("Sent")):"  ◇");
         int old=list.Children.IndexOf(view.Root);if(old!=index){if(old>=0)list.Children.RemoveAt(old);list.Children.Insert(index,view.Root);}index++;
       }
       foreach(string id in views.Keys.Where(k=>!wanted.Contains(k)).ToArray()){list.Children.Remove(views[id].Root);views.Remove(id);}
@@ -494,7 +539,7 @@ namespace Illusion {
       }catch{return null;}
       finally{try{player.Close();}catch{}try{System.IO.File.Delete(file);}catch{}}
     }
-    void OpenSearch(){if(peer==null)return;Get<Border>("ChatSearchBar").Visibility=Visibility.Visible;Get<TextBox>("ChatSearchInput").Focus();SearchMessages(false);}
+    void OpenSearch(){if(peer==null&&group==null)return;Get<Border>("ChatSearchBar").Visibility=Visibility.Visible;Get<TextBox>("ChatSearchInput").Focus();SearchMessages(false);}
     void CloseSearch(){Get<Border>("ChatSearchBar").Visibility=Visibility.Collapsed;Get<TextBox>("ChatSearchInput").Clear();}
     void SearchMessages(bool jump) {
       string query=Get<TextBox>("ChatSearchInput").Text.Trim();searchMatches.Clear();

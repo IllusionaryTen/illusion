@@ -31,7 +31,7 @@ namespace Illusion {
     Dictionary<string,object> UserProfile(Dictionary<string,object> user){return user!=null && user.ContainsKey("profile")?user["profile"] as Dictionary<string,object>:new Dictionary<string,object>();}
     void InitializePrivacy(){
       Get<Button>("AvatarButton").Click+=(s,e)=>{if(me!=null)ShowProfile(me,true);};
-      Get<Button>("ChatOptionsButton").Click+=async(s,e)=>await Guard(ChatOptions);
+      Get<Button>("ChatOptionsButton").Click+=async(s,e)=>{if(group!=null)ShowGroupSettings();else await Guard(ChatOptions);};
       Get<Button>("AttachButton").Click+=async(s,e)=>await Guard(AttachMedia);
       Get<Button>("ClearAttachmentButton").Click+=(s,e)=>{pendingMedia=null;UpdateAttachment();};
       Window.Closed+=(s,e)=>ClosePrivateContent();
@@ -56,12 +56,12 @@ namespace Illusion {
     }
     void RemoveContactWallpaper(string peerId){string path=WallpaperPath(peerId);if(File.Exists(path))File.Delete(path);ClearContactWallpaper();}
     void PruneWallpapers(){try{string dir=Path.Combine(ProfileDir,"wallpapers");if(!Directory.Exists(dir))return;var files=new DirectoryInfo(dir).GetFiles("wallpaper-*.jpg").OrderByDescending(f=>f.LastWriteTimeUtc).ToArray();for(int i=24;i<files.Length;i++)files[i].Delete();}catch{}}
-    void UpdateAttachment(){Get<Border>("AttachmentBar").Visibility=pendingMedia==null?Visibility.Collapsed:Visibility.Visible;Get<TextBlock>("AttachmentLabel").Text=pendingMedia==null?"":T("Encrypted attachment");}
+    void UpdateAttachment(){if(group!=null){Get<Border>("AttachmentBar").Visibility=Visibility.Collapsed;return;}Get<Border>("AttachmentBar").Visibility=pendingMedia==null?Visibility.Collapsed:Visibility.Visible;Get<TextBlock>("AttachmentLabel").Text=pendingMedia==null?"":T("Encrypted attachment");}
     string VerifiedPath(string id){return System.IO.Path.Combine(ProfileDir,"verified-"+Crypto.Fingerprint(id)+".txt");}
     bool IsVerified(Dictionary<string,object> user){try{string id=Convert.ToString(user["id"]);if(me!=null&&id==Convert.ToString(me["id"]))return false;string path=VerifiedPath(id);return File.Exists(path)&&File.ReadAllText(path)==Crypto.Fingerprint(Convert.ToString(user["publicKey"]));}catch{return false;}}
     string ChatSubtitleText(Dictionary<string,object> user){string text="@"+user["username"]+"  ·  "+T("encrypted conversation");if(IsVerified(user))text+="  ·  ✓ "+T("Verified");return text;}
     async Task AttachMedia(){
-      if(me==null || peer==null)return;var open=new OpenFileDialog{Filter="Supported files|*.png;*.jpg;*.jpeg;*.mp4;*.wav;*.mp3;*.txt;*.md|All files|*.*"};if(open.ShowDialog(Window)!=true)return;
+      if(me==null || peer==null || group!=null)return;var open=new OpenFileDialog{Filter="Supported files|*.png;*.jpg;*.jpeg;*.mp4;*.wav;*.mp3;*.txt;*.md|All files|*.*"};if(open.ShowDialog(Window)!=true)return;
       if(new FileInfo(open.FileName).Length>4*1024*1024)throw new Exception("Choose a file up to 4 MB.");
       int version=conversationVersion;string file=open.FileName;
       var media=await Task.Run(()=>{
@@ -152,7 +152,10 @@ namespace Illusion {
       save.Click+=async(s,e)=>{save.IsEnabled=false;try{if(gen!=generation){dialog.Close();return;}await Api("PUT","/v1/chat-settings",new{peer=id,ttlSeconds=ChatTimers[timerChoice.SelectedIndex]});chatTimers[id]=ChatTimers[timerChoice.SelectedIndex];UpdateTimerHint();dialog.Close();}catch(Exception error){status.Text=error.Message;}finally{save.IsEnabled=true;}};
       block.Click+=async(s,e)=>{block.IsEnabled=false;try{if(gen!=generation){dialog.Close();return;}await Api("PUT","/v1/block",new{peer=id,blocked=!(bool)response["blocked"]});dialog.Close();}catch(Exception error){status.Text=error.Message;block.IsEnabled=true;}};dialog.ShowDialog();
     }
-    void UpdateTimerHint(){if(peer==null)return;int ttl;chatTimers.TryGetValue((string)peer["id"],out ttl);Get<TextBlock>("ComposerHint").Text="◇ "+T("Encrypted · Auto-delete: ")+T(TimerNames[Array.IndexOf(ChatTimers,ttl)]);}
+    void UpdateTimerHint(){
+      if(group!=null){int groupTtl=GroupTtl(group);Get<TextBlock>("ComposerHint").Text="◇ "+T("Group")+" · "+T("Encrypted · Auto-delete: ")+T(TimerNames[Math.Max(0,Array.IndexOf(ChatTimers,groupTtl))]);return;}
+      if(peer==null)return;int ttl;chatTimers.TryGetValue((string)peer["id"],out ttl);Get<TextBlock>("ComposerHint").Text="◇ "+T("Encrypted · Auto-delete: ")+T(TimerNames[Array.IndexOf(ChatTimers,ttl)]);
+    }
     void RemoveFromCache(IEnumerable<long> ids){
       var gone=new HashSet<long>(ids);if(gone.Count==0)return;
       foreach(var bucket in history.Values)foreach(var m in bucket.Where(m=>gone.Contains(Convert.ToInt64(m["id"]))).ToArray()){decoded.Remove(ContentKey(m));bucket.Remove(m);}

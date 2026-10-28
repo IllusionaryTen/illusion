@@ -36,7 +36,7 @@ namespace Illusion {
               if((string)message["type"]=="ready" || (string)message["type"]=="changed") {
                 ready=true;cloudLiveActive=true;await Refresh();if(gen!=generation || cancellation.IsCancellationRequested)return true;
                 Connection(true);delay=1000;
-                if(peer==null && lastPeer!="" && contacts.ContainsKey(lastPeer))await SelectPeer(contacts[lastPeer]);
+                if(peer==null && group==null && lastPeer!="" && contacts.ContainsKey(lastPeer))await SelectPeer(contacts[lastPeer]);
                 await FlushOutbox();
               }
             }

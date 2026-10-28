@@ -1,10 +1,16 @@
-# ◈ Illusion 1.6.0
+# ◈ Illusion 1.6.1
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
 
+## What's new in 1.6.1
+
+**Groups reach Windows.** Create a group from the new sidebar button, add members by exact username, and chat with sender names, replies, unread badges, mute, notifications, group activity and a per-group disappearing timer. Settings can rename the group, add members, change its timer or leave it. Windows sends one sealed envelope per member just like web and Android, keeps a local encrypted history, and queues group messages in the outbox while offline. Attachments, view-once and reactions remain unavailable in groups. Group names, membership and system events remain visible to the relay.
+
+**No wire changes.** The relay and web app are unchanged; 1.6.1 is the Windows client catching up.
+
 ## What's new in 1.6.0
 
-**Pairwise group chats on web and Android.** Create a group, add members by exact username, rename it, leave it, and set a per-group disappearing timer. Every message is encrypted separately for each current member and stored as per-recipient copies in separate group tables, so the relay never sees plaintext and the existing 1:1 client and Windows conversations stay untouched. Groups hold up to 20 people; joins, leaves and renames appear as system events. Attachments, view-once and reactions are disabled in this first group cut. Windows does not show group chats yet.
+**Pairwise group chats on web and Android.** Create a group, add members by exact username, rename it, leave it, and set a per-group disappearing timer. Every message is encrypted separately for each current member and stored as per-recipient copies in separate group tables, so the relay never sees plaintext and the existing 1:1 client and Windows conversations stay untouched. Groups hold up to 20 people; joins, leaves and renames appear as system events. Attachments, view-once and reactions are disabled in this first group cut. Windows group support arrived in 1.6.1.
 
 **Five more languages.** Croatian, Serbian, Bosnian, Bulgarian and Slovak join the catalog, taking Illusion to **39 languages**. The complete group UI is translated into every locale.
 

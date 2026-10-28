@@ -91,6 +91,64 @@ namespace Illusion {
       var settings=(Dictionary<string,string>)Field(bob,"settings");settings["chatFont"]="Consolas";settings["textColor"]="#C5E8FF";settings["bubbleColor"]="#264766";Call(bob,"ApplyTheme");Call(bob,"UpdateMessageViews",false,true,true);Check(Controls<TextBlock>(bob.Get<StackPanel>("MessageList")).Any(x=>x.FontFamily.Source=="Consolas"),"Native chat font customization applies to message content");
       bob.Capture(System.IO.Path.GetFullPath("artifacts/illusion-privacy.png"));
     }
+    static ListBoxItem GroupItem(Messenger m,string id){return m.Get<ListBox>("ChatList").Items.Cast<ListBoxItem>().FirstOrDefault(i=>i.Tag is Dictionary<string,object> && !((Dictionary<string,object>)i.Tag).ContainsKey("username") && (string)((Dictionary<string,object>)i.Tag)["id"]==id);}
+    static async Task GroupChecks(Messenger alice,Messenger bob){
+      var a=(Dictionary<string,object>)Field(alice,"me");var b=(Dictionary<string,object>)Field(bob,"me");
+      var created=await NativeApi(alice,"POST","/v1/groups",new{name="Native QA group",memberIds=new[]{(string)b["id"]}});
+      var summary=(Dictionary<string,object>)created["group"];string gid=(string)summary["id"];
+      await alice.SelectGroup(summary);
+      Check(alice.Get<TextBlock>("ChatTitle").Text=="Native QA group","Native group opens with its name");
+      Check(alice.Get<TextBlock>("ChatSubtitle").Text.Contains("2")&&alice.Get<TextBlock>("ChatSubtitle").Text.Contains("members"),"Native group subtitle shows member count");
+      Check(alice.Get<Button>("ChatOptionsButton").Content.ToString()=="Group settings","Native group opens group settings instead of profile controls");
+      Check(alice.Get<StackPanel>("AttachmentControls").Visibility==Visibility.Collapsed,"Native group hides attachments");
+      Check(alice.Get<Button>("VerifyButton").Visibility==Visibility.Collapsed,"Native group hides key verification");
+      Check(alice.Get<TextBlock>("GroupEventsText").Text.Contains("created the group"),"Native group shows the creation event");
+      await Send(alice,"hello native group");
+      await Wait(()=>AllText(alice.Get<StackPanel>("MessageList")).Contains("hello native group"),"Native group echoes the sender's own message");
+      await bob.Refresh();
+      var row=GroupItem(bob,gid);
+      Check(row!=null,"Native group appears in the recipient's conversation list");
+      Check(row!=null && Convert.ToInt64(((Dictionary<string,object>)row.Tag)["unread"])==1,"Native group exposes unread messages");
+      bob.Get<ListBox>("ChatList").SelectedItem=row;
+      await Wait(()=>bob.Get<TextBlock>("ChatTitle").Text=="Native QA group","Native group opens from the conversation list");
+      await Wait(()=>AllText(bob.Get<StackPanel>("MessageList")).Contains("hello native group"),"Native recipient decrypts a group message");
+      Check(AllText(bob.Get<StackPanel>("MessageList")).Contains("Alice"),"Native group messages show the sender's name");
+      var openedRow=GroupItem(bob,gid);Check(openedRow!=null && Convert.ToInt64(((Dictionary<string,object>)openedRow.Tag)["unread"])==0,"Opening a native group clears its unread badge");
+      var bubble=Bubble(bob.Get<StackPanel>("MessageList"),"hello native group");
+      Check(bubble!=null && bubble.ContextMenu.Items.Count==2,"Native group message offers copy and reply");
+      ((MenuItem)bubble.ContextMenu.Items[1]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+      Check(bob.Get<Border>("ReplyBar").Visibility==Visibility.Visible,"Native group reply composer opens");
+      await Send(bob,"a quoted group answer");
+      await Wait(()=>AllText(alice.Get<StackPanel>("MessageList")).Contains("a quoted group answer"),"Native group reply arrives live");
+      Check(AllText(alice.Get<StackPanel>("MessageList")).Contains("hello native group"),"Native group reply carries its quote");
+      var renamed=await NativeApi(alice,"PUT","/v1/groups/"+gid,new{name="Native renamed"});
+      summary=(Dictionary<string,object>)renamed["group"];await alice.Refresh();
+      await Wait(()=>alice.Get<TextBlock>("ChatTitle").Text=="Native renamed","Native group rename updates the title");
+      await NativeApi(alice,"PUT","/v1/groups/"+gid,new{ttlSeconds=60});await alice.Refresh();
+      Check(alice.Get<TextBlock>("ComposerHint").Text.Contains("1 minute"),"Native group timer hint matches the shared timer");
+      Modal(()=>Call(alice,"ShowGroupSettings"),"Group settings",w=>{Check(AllText(w).Contains("Members"),"Native group settings lists members");Check(Controls<Button>(w).Any(button=>Convert.ToString(button.Content)=="Leave group"),"Native group settings exposes leaving the group");});
+      alice.Get<ScrollViewer>("MessageScroll").ScrollToEnd();await Task.Delay(150);alice.Capture(System.IO.Path.GetFullPath("artifacts/illusion-groups.png"));
+      await NativeApi(bob,"DELETE","/v1/groups/"+gid+"/members");await bob.Refresh();
+      await Wait(()=>GroupItem(bob,gid)==null,"Leaving a group removes it from the native list");
+      Check(bob.Get<ScrollViewer>("MessageScroll").Visibility==Visibility.Collapsed,"Leaving a group closes its conversation");
+      await Wait(()=>alice.Get<TextBlock>("GroupEventsText").Text.Contains("left the group"),"Native group activity records a member leaving");
+      await NativeApi(alice,"DELETE","/v1/groups/"+gid+"/members");await alice.Refresh();
+      Check(GroupItem(alice,gid)==null,"Last member can leave the native group");
+      await GroupCreateUiCheck(alice,(string)b["username"]);
+    }
+    static async Task GroupCreateUiCheck(Messenger alice,string bobUsername){
+      Check(alice.Get<Button>("NewGroupButton")!=null,"Native sidebar exposes a new-group control");
+      bool clicked=false;var timer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(120)};
+      timer.Tick+=(s,e)=>{var dialog=Application.Current.Windows.Cast<Window>().FirstOrDefault(w=>w.Title=="New group");if(dialog==null)return;var boxes=Controls<TextBox>(dialog).ToArray();if(boxes.Length<2)return;boxes[0].Text="Windows UI group";boxes[1].Text=bobUsername;var create=Controls<Button>(dialog).FirstOrDefault(b=>Convert.ToString(b.Content)=="Create group");if(create==null)return;clicked=true;timer.Stop();create.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));};
+      var watchdog=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromSeconds(12)};
+      watchdog.Tick+=(s,e)=>{watchdog.Stop();var dialog=Application.Current.Windows.Cast<Window>().FirstOrDefault(w=>w.Title=="New group");if(dialog!=null)dialog.Close();};
+      timer.Start();watchdog.Start();var creation=(Task)Call(alice,"NewGroupDialog");
+      try{await creation;}finally{timer.Stop();watchdog.Stop();}
+      Check(clicked,"Native new-group dialog accepts members and submits");
+      await Wait(()=>alice.Get<TextBlock>("ChatTitle").Text=="Windows UI group","Native group creation dialog opens the new group");
+      var active=(Dictionary<string,object>)Field(alice,"group");Check(active!=null&&GroupItem(alice,(string)active["id"])!=null,"Newly created native group appears in the list");
+      string gid=(string)active["id"];await NativeApi(alice,"DELETE","/v1/groups/"+gid+"/members");await alice.Refresh();
+    }
     static async Task Network(string control,bool online) {using(var client=new HttpClient(new HttpClientHandler{UseProxy=false}))using(var response=await client.GetAsync(control+(online?"/online":"/offline")))response.EnsureSuccessStatusCode();}
     static void UpdateChecks() {
       Check(Messenger.CompareVersions("1.4.0","1.5.0")<0,"Update versions compare numerically");
@@ -266,7 +324,7 @@ namespace Illusion {
       Check(((SolidColorBrush)alice.Window.Resources["Accent"]).Color==(Color)ColorConverter.ConvertFromString("#297C91"),"Accent customization applies");
       Click(alice,"SavedButton");await Wait(()=>alice.Get<TextBlock>("ChatTitle").Text=="Saved messages","Saved messages opens");await Task.Delay(250);await Send(alice,"Remember to back up the encryption key.");
       Check(AllText(alice.Get<StackPanel>("MessageList")).Contains("Remember to back up"),"Saved message is encrypted and readable");
-      await PrivacyChecks(alice,bob);AppearanceChecks(alice);
+      await PrivacyChecks(alice,bob);await GroupChecks(alice,bob);AppearanceChecks(alice);
       string aliceProfile=alice.ProfileDir;alice.Window.Close();bob.Window.Close();
       var resumed=new Messenger(aliceProfile);resumed.Window.Show();
       await Wait(()=>resumed.Get<Border>("AuthOverlay").Visibility==Visibility.Collapsed,"Session resumes after native app restart");
