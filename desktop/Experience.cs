@@ -491,16 +491,19 @@ namespace Illusion {
 
       if(mediaKind=="audio"||mediaKind=="file"){var row=new StackPanel{Orientation=Orientation.Horizontal};row.Children.Add(new TextBlock{Text=mediaKind=="audio"?"♪":"📄",FontSize=20,Foreground=Brush("#8CB3FF"),Margin=new Thickness(0,0,10,0),VerticalAlignment=VerticalAlignment.Center});row.Children.Add(new TextBlock{Text=mediaKind=="audio"?T("Play"):T("Attachment"),FontSize=13,Foreground=Brushes.White,VerticalAlignment=VerticalAlignment.Center});card.Padding=new Thickness(12,10,12,10);card.Child=row;card.MouseLeftButtonUp+=(s,e)=>ShowMessageContent(message,content,user,false);return card;}
       System.Windows.Media.Imaging.BitmapSource photo=null;
-      try{if(mediaKind=="photo")photo=ImageFromBytes(MediaPlain(content.Media));}catch{}
-      if(photo!=null){panel.Children.Add(ScalePreview(photo));}
-      else{
+      if(mediaKind=="photo"){
+        try{byte[] plain=MediaPlain(content.Media);MediaSafety.ValidateViewerMedia("photo",plain);photo=ImageFromBytes(plain);}catch{photo=null;}
+        if(photo==null){panel.Children.Add(new TextBlock{Text=T("Unable to verify or decrypt this message. Restore the correct key or verify with your contact."),Foreground=Brush("#FF9DA7"),FontSize=11,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(6)});card.Child=panel;return card;}
+        panel.Children.Add(ScalePreview(photo));
+      }else{
         var key=message.ContainsKey("id")?Convert.ToString(message["id"]):"q:"+Convert.ToString(message["clientId"]);
         System.Windows.Media.ImageSource cached;videoThumbCache.TryGetValue(key,out cached);
         if(cached!=null){panel.Children.Add(new System.Windows.Controls.Image{Source=cached,MaxWidth=240,MaxHeight=200,Stretch=Stretch.UniformToFill});}
         else{
           var pending=new TextBlock{Text="▶",FontSize=22,Foreground=Brush("#8CB3FF"),HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Width=120,Height=80};
           panel.Children.Add(pending);
-          var bytes=MediaPlain(content.Media);
+          byte[] bytes;
+          try{bytes=MediaPlain(content.Media);MediaSafety.ValidateViewerMedia("video",bytes);}catch{panel.Children.Clear();panel.Children.Add(new TextBlock{Text=T("Unable to verify or decrypt this message. Restore the correct key or verify with your contact."),Foreground=Brush("#FF9DA7"),FontSize=11,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(6)});card.Child=panel;return card;}
           var gen=generation;
           System.Threading.Tasks.Task.Run(async()=>{
             var thumb=await RenderVideoFirstFrame(bytes);
@@ -517,6 +520,7 @@ namespace Illusion {
       return card;
     }
     async System.Threading.Tasks.Task<System.Windows.Media.ImageSource> RenderVideoFirstFrame(byte[] bytes){
+      MediaSafety.ValidateViewerMedia("video",bytes);
       // Same short-lived decrypted file pattern as playback: written, read once for a
       // single scrubbed frame, then deleted immediately even on failure.
       string dir=System.IO.Path.Combine(ProfileDir,"playback");System.IO.Directory.CreateDirectory(dir);

@@ -166,6 +166,9 @@ namespace Illusion {
       byte[] payload={1,2,3,4};string hash=Messenger.Sha256(payload);
       bool hashOk=false;try{Messenger.VerifyUpdateBytes(payload,payload.Length,hash);hashOk=true;}catch{}Check(hashOk,"Update hash and size verification accepts exact bytes");
       bool wrongSize=false;try{Messenger.VerifyUpdateBytes(payload,payload.Length+1,hash);}catch{wrongSize=true;}Check(wrongSize,"Update size mismatch is rejected");
+      Check(Messenger.IsSecureUpdateOrigin("https://relay.example"),"HTTPS update origins are accepted");
+      Check(!Messenger.IsSecureUpdateOrigin("http://127.0.0.1:3789"),"LAN HTTP update origins are rejected");
+      Check(!Messenger.IsSecureUpdateOrigin("file:///tmp/relay"),"Non-network update origins are rejected");
       bool wrongHash=false;try{Messenger.VerifyUpdateBytes(payload,payload.Length,new string('0',64));}catch{wrongHash=true;}Check(wrongHash,"Update hash mismatch is rejected");
     }
     static async Task Run(string server,string redirectServer) {
@@ -309,6 +312,9 @@ namespace Illusion {
       bool wrong=false;try{Crypto.Restore(backup,"incorrect backup passphrase");}catch(System.Security.Cryptography.CryptographicException){wrong=true;}Check(wrong,"Wrong key-backup password fails closed");
       Check(Crypto.Unprotect(Crypto.Protect(key))==key,"Windows DPAPI key protection round trip");
       byte[] bomb=new byte[33];byte[] pngHeader=new byte[]{137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82};Array.Copy(pngHeader,bomb,pngHeader.Length);bomb[19]=1;bomb[20]=0;bomb[21]=15;bomb[22]=66;bomb[23]=64;int imageWidth,imageHeight;bool rejectedImage=false;try{ImageSafety.Dimensions(bomb,out imageWidth,out imageHeight);}catch{rejectedImage=true;}Check(rejectedImage,"Native image dimension guard rejects a tiny oversized-image header before decoding");
+      bool rejectedBomb=false;try{MediaSafety.ValidateViewerMedia("photo",bomb);}catch{rejectedBomb=true;}Check(rejectedBomb,"Decrypted photo guard rejects oversized images before WPF decoding");
+      bool rejectedVideo=false;try{MediaSafety.ValidateViewerMedia("video",new byte[16]);}catch{rejectedVideo=true;}Check(rejectedVideo,"Decrypted video guard rejects non-MP4 bytes before playback");
+      bool rejectedAudio=false;try{MediaSafety.ValidateViewerMedia("audio",new byte[]{1,2,3,4});}catch{rejectedAudio=true;}Check(rejectedAudio,"Decrypted audio guard rejects non-WAV/MP3 bytes");
       bool rejectedXml=false;try{Crypto.Public("<!DOCTYPE RSAKeyValue>"+pub);}catch(System.Security.Cryptography.CryptographicException){rejectedXml=true;}Check(rejectedXml,"Native RSA parser rejects active XML declarations");
       var me=(Dictionary<string,object>)Field(alice,"me");var peer=(Dictionary<string,object>)Field(alice,"peer");
       string mid=Guid.NewGuid().ToString();

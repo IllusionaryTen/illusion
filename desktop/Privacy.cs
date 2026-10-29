@@ -188,14 +188,14 @@ namespace Illusion {
       panel.Children.Add(new TextBlock{Text=content.Text,TextWrapping=TextWrapping.Wrap,FontSize=16,Foreground=Brushes.White,Margin=new Thickness(0,10,0,15)});
       string videoFile=null,audioFile=null;MediaElement player=null;
       if(content.Media!=null){string kind=MediaType(content.Media),data=Str(content.Media,"data");if(data.Length>5600008)throw new Exception("Attachment is too large.");
-        if(kind=="photo")panel.Children.Add(new Image{Source=ImageFromBytes(MediaPlain(content.Media)),MaxHeight=430,Stretch=Stretch.Uniform});
+        if(kind=="photo"){byte[] photoBytes=MediaPlain(content.Media);MediaSafety.ValidateViewerMedia("photo",photoBytes);panel.Children.Add(new Image{Source=ImageFromBytes(photoBytes),MaxHeight=430,Stretch=Stretch.Uniform});}
         else if(kind=="video"){
-          byte[] bytes=MediaPlain(content.Media);if(bytes.Length<12 || Encoding.ASCII.GetString(bytes,4,4)!="ftyp")throw new Exception("Invalid MP4 attachment.");
+          byte[] bytes=MediaPlain(content.Media);MediaSafety.ValidateViewerMedia("video",bytes);
           string dir=System.IO.Path.Combine(ProfileDir,"playback");Directory.CreateDirectory(dir);videoFile=System.IO.Path.Combine(dir,"illusion-"+Guid.NewGuid().ToString("N")+".mp4");File.WriteAllBytes(videoFile,bytes);Array.Clear(bytes,0,bytes.Length);mediaFiles.Add(videoFile);
           player=new MediaElement{Source=new Uri(videoFile),LoadedBehavior=MediaState.Manual,UnloadedBehavior=MediaState.Close,MaxHeight=400,Stretch=Stretch.Uniform};panel.Children.Add(player);var controls=new StackPanel{Orientation=Orientation.Horizontal};var play=new Button{Content=T("Play")};var pause=new Button{Content=T("Pause"),Margin=new Thickness(10,0,0,0)};controls.Children.Add(play);controls.Children.Add(pause);panel.Children.Add(controls);var captured=player;play.Click+=(s,e)=>captured.Play();pause.Click+=(s,e)=>captured.Pause();
           player.MediaFailed+=(s,e)=>MessageBox.Show("Windows could not play this video. Try an MP4 encoded with H.264/AAC.","Illusion");
         }else if(kind=="audio"){
-          byte[] bytes=MediaPlain(content.Media);bool wav=Str(content.Media,"mime").Contains("wav");
+          byte[] bytes=MediaPlain(content.Media);MediaSafety.ValidateViewerMedia("audio",bytes);bool wav=Str(content.Media,"mime").Contains("wav");
           string dir=System.IO.Path.Combine(ProfileDir,"playback");Directory.CreateDirectory(dir);audioFile=System.IO.Path.Combine(dir,"illusion-"+Guid.NewGuid().ToString("N")+(wav?".wav":".mp3"));File.WriteAllBytes(audioFile,bytes);Array.Clear(bytes,0,bytes.Length);mediaFiles.Add(audioFile);
           player=new MediaElement{Source=new Uri(audioFile),LoadedBehavior=MediaState.Manual,UnloadedBehavior=MediaState.Close,MaxHeight=120,Stretch=Stretch.Uniform};panel.Children.Add(player);var audioControls=new StackPanel{Orientation=Orientation.Horizontal};var audioPlay=new Button{Content=T("Play")};var audioPause=new Button{Content=T("Pause")};audioPlay.Click+=(s,e)=>{player.Play();};audioPause.Click+=(s,e)=>{player.Pause();};audioControls.Children.Add(audioPlay);audioControls.Children.Add(audioPause);panel.Children.Add(audioControls);
         }else if(kind=="file"){

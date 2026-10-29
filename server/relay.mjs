@@ -11,6 +11,7 @@ const fail = (status, message) => { throw Object.assign(new Error(message), { st
 const cleanName = value => typeof value === 'string' ? value.trim().toLowerCase() : '';
 const validUsername = value => typeof value === 'string' && /^[A-Za-z0-9_-]{2,24}$/.test(value.trim());
 const usernameHint = 'Usernames must be 2–24 characters: Latin letters (A–Z), numbers, _ or -.';
+const unsafeControls = value => /[\u0000-\u001f\u007f]/.test(value);
 function publicKey(xml) {
   if (typeof xml !== 'string' || xml.length > 1800) fail(400, 'A valid encryption key is required.');
   const n = xml.match(/^<RSAKeyValue><Modulus>([A-Za-z0-9+/]{512})<\/Modulus><Exponent>AQAB<\/Exponent><\/RSAKeyValue>$/)?.[1];
@@ -66,6 +67,13 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     try { onNotify(user, cursorFor(user)); } catch { console.error('Live notification failed.'); }
     for (const finish of [...(watchers.get(user) || [])]) finish(true);
   }
+  function sweepGroupMessages() {
+    const changed=new Set();
+    for(const row of db.prepare('SELECT id,senderId,recipientId FROM group_messages WHERE expiresAt>0 AND expiresAt<=? ORDER BY expiresAt LIMIT 100').all(now())){
+      db.prepare('DELETE FROM group_messages WHERE id=?').run(row.id);changed.add(row.senderId);changed.add(row.recipientId);
+    }
+    for(const userId of changed)notify(userId);
+  }
   function publishNotice(version, text) {
     if (!/^\d+\.\d+\.\d+$/.test(version)) fail(400, 'Use a release version like 0.8.4.');
     if (typeof text !== 'string' || !text.trim() || text.length > 500) fail(400, 'Notice text must be 1–500 characters.');
@@ -100,7 +108,7 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     if (++entry.count > max) fail(429, 'Too many attempts. Please wait a minute.');
   }
   function maintain() {
-    legal.sweep();
+    legal.sweep();sweepGroupMessages();
     durable?.sweep(Date.now());
     db.prepare('DELETE FROM email_codes WHERE expiresAt<?').run(Date.now());
     db.prepare('DELETE FROM account_recovery_challenges WHERE expiresAt<?').run(Date.now());
@@ -110,11 +118,12 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
   const cleanup = timers ? setInterval(maintain, 60_000) : null;
   cleanup?.unref();
   const safeUser = row => ({ id: row.id, username: row.username, displayName: row.displayName, publicKey: row.publicKey, profile: extra.profile(row.id) });
+  const safeUserLite = row => row ? ({ id: row.id, username: row.username, displayName: row.displayName, publicKey: row.publicKey }) : null;
   const getUser = id => db.prepare('SELECT * FROM users WHERE id=?').get(id);
   const extra = features({ db, notify, getUser, safeUser, body, now, limit, reserveStorage:bytes=>storage.require(bytes) });
   const legal = legalRoutes(db,notify);legal.sweep();
   const storage=storageBudget(db);
-  const expiry = timers ? setInterval(() => extra.sweep(), 1000) : null; expiry?.unref();
+  const expiry = timers ? setInterval(() => {extra.sweep();sweepGroupMessages();}, 1000) : null; expiry?.unref();
   function session(user) {
     const token = randomBytes(32).toString('hex');
     db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(token), user.id, Date.now() + 30 * 86400_000);
@@ -173,11 +182,12 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     return row;
   }
   const messageRow = row => extra.serialize(row);
-  const groupMessageRow = row => ({ id: row.id, senderId: row.senderId, recipientId: row.recipientId, clientId: row.clientId, envelope: typeof row.envelope === 'string' ? JSON.parse(row.envelope) : row.envelope, createdAt: row.createdAt, expiresAt: row.expiresAt, viewOnce: false, media: null, sender: safeUser(getUser(row.senderId)) });
-  const groupMembers = groupId => db.prepare('SELECT u.* FROM group_members gm JOIN users u ON u.id=gm.userId WHERE gm.groupId=? ORDER BY gm.joinedAt,u.username').all(groupId).map(safeUser);
+  const groupMessageRow = row => ({ id: row.id, senderId: row.senderId, recipientId: row.recipientId, clientId: row.clientId, envelope: typeof row.envelope === 'string' ? JSON.parse(row.envelope) : row.envelope, createdAt: row.createdAt, expiresAt: row.expiresAt, viewOnce: false, media: null, sender: safeUserLite(getUser(row.senderId)) });
+  const groupMembers = groupId => db.prepare('SELECT u.* FROM group_members gm JOIN users u ON u.id=gm.userId WHERE gm.groupId=? ORDER BY gm.joinedAt,u.username').all(groupId).map(safeUserLite);
   const groupFor = (groupId,userId) => { const group=db.prepare('SELECT * FROM groups WHERE id=?').get(groupId); if(!group)fail(404,'Group not found.'); if(!db.prepare('SELECT 1 FROM group_members WHERE groupId=? AND userId=?').get(groupId,userId))fail(403,'You are not a member of this group.'); return group; };
+  const blockedPair = (a,b) => !!db.prepare('SELECT 1 FROM blocks WHERE (userId=? AND peerId=?) OR (userId=? AND peerId=?)').get(a,b,b,a);
   const groupEvents = groupId => db.prepare('SELECT * FROM group_events WHERE groupId=? ORDER BY id DESC LIMIT 100').all(groupId).reverse().map(row=>({id:row.id,type:row.type,actorId:row.actorId,actor:(getUser(row.actorId)||{}).displayName||'Illusion',targetId:row.targetId||'',target:row.targetId?((getUser(row.targetId)||{}).displayName||''):'',createdAt:row.createdAt}));
-  const insertGroupEvent = (groupId,type,actorId,targetId=null) => db.prepare('INSERT INTO group_events(groupId,type,actorId,targetId,createdAt) VALUES(?,?,?,?,?)').run(groupId,type,actorId,targetId,now());
+  const insertGroupEvent = (groupId,type,actorId,targetId=null) => {const result=db.prepare('INSERT INTO group_events(groupId,type,actorId,targetId,createdAt) VALUES(?,?,?,?,?)').run(groupId,type,actorId,targetId,now());db.prepare('DELETE FROM group_events WHERE groupId=? AND id NOT IN (SELECT id FROM group_events WHERE groupId=? ORDER BY id DESC LIMIT 200)').run(groupId,groupId);return result;};
   const groupSummary = (group,userId) => {
     const last=db.prepare('SELECT id,senderId,clientId,createdAt,expiresAt FROM group_messages WHERE groupId=? AND recipientId=? ORDER BY id DESC LIMIT 1').get(group.id,userId);
     const lastRead=db.prepare('SELECT lastId FROM group_reads WHERE groupId=? AND userId=?').get(group.id,userId)?.lastId||0;
@@ -201,7 +211,7 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
         legal.validate(b);
         if (registrationCode && b.registrationCode !== registrationCode) fail(403, 'An invitation code is required.');
         publicKey(b.publicKey);
-        if (typeof b.displayName !== 'string' || !b.displayName.trim() || b.displayName.trim().length > 40) fail(400, 'Display name must be 1–40 characters.');
+        if (typeof b.displayName !== 'string' || !b.displayName.trim() || b.displayName.trim().length > 40 || unsafeControls(b.displayName)) fail(400, 'Display name must be 1–40 characters.');
         limit('register-ip:'+ip,10,86400000,true);
         if(db.prepare('SELECT COUNT(*) AS n FROM users').get().n>=1000)fail(503,'This preview has reached its account capacity.');
         storage.require(5000);
@@ -382,16 +392,17 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
       notify(me.id);if (b.recipientId !== me.id) notify(b.recipientId);
       return { message: messageRow(db.prepare('SELECT * FROM messages WHERE id=?').get(Number(result.lastInsertRowid))) };
     }
-    if (req.method === 'GET' && path === '/v1/groups') return { groups: db.prepare('SELECT g.* FROM groups g JOIN group_members gm ON gm.groupId=g.id WHERE gm.userId=? ORDER BY g.createdAt DESC').all(me.id).map(g=>groupSummary(g,me.id)) };
+    if (req.method === 'GET' && path === '/v1/groups') return { groups: db.prepare('SELECT g.* FROM groups g JOIN group_members gm ON gm.groupId=g.id WHERE gm.userId=? ORDER BY g.createdAt DESC LIMIT 100').all(me.id).map(g=>groupSummary(g,me.id)) };
     if (req.method === 'POST' && path === '/v1/groups') {
       limit('group-create:'+me.id, 10, 60000, true);
       const b=await body(req,30000);
       const name=typeof b.name==='string'?b.name.trim():'';
-      if(name.length<1||name.length>60)fail(400,'Group name must be 1–60 characters.');
+      if(name.length<1||name.length>60||unsafeControls(name))fail(400,'Group name must be 1–60 characters.');
       if(!Array.isArray(b.memberIds)||b.memberIds.length<1||b.memberIds.length>19)fail(400,'Choose 1–19 members.');
       const ids=[...new Set([me.id,...b.memberIds.filter(id=>typeof id==='string')])];
       if(ids.length<2||ids.length>20)fail(400,'Groups need 2–20 members.');
-      for(const id of ids)if(!getUser(id))fail(404,'A selected member no longer exists.');
+      for(const id of ids){if(!getUser(id))fail(404,'A selected member no longer exists.');if(id!==me.id&&blockedPair(me.id,id))fail(403,'Blocked accounts cannot be added to a group.');}
+      storage.require(8192);
       const id=randomUUID(),at=now();
       transaction(db,()=>{db.prepare('INSERT INTO groups(id,name,createdBy,createdAt,ttlSeconds) VALUES(?,?,?,?,0)').run(id,name,me.id,at);const insert=db.prepare('INSERT INTO group_members(groupId,userId,joinedAt) VALUES(?,?,?)');for(const uid of ids)insert.run(id,uid,at);insertGroupEvent(id,'create',me.id);});
       for(const uid of ids)notify(uid);
@@ -401,11 +412,13 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     if(groupMessagesMatch){
       const gid=groupMessagesMatch[1],group=groupFor(gid,me.id);
       if(req.method==='GET'){
-        const url=new URL(req.url,'http://local'),before=Number(url.searchParams.get('before')),after=Number(url.searchParams.get('after'));
-        const source=after>0?db.prepare('SELECT * FROM group_messages WHERE groupId=? AND recipientId=? AND id>? AND (expiresAt=0 OR expiresAt>?) ORDER BY id ASC LIMIT 100').all(gid,me.id,after,now()):db.prepare('SELECT * FROM group_messages WHERE groupId=? AND recipientId=? AND id<? AND (expiresAt=0 OR expiresAt>?) ORDER BY id DESC LIMIT 100').all(gid,me.id,before>0?before:Number.MAX_SAFE_INTEGER,now());
-        const rows=(after>0?source:source.reverse()).map(groupMessageRow);
+        const url=new URL(req.url,'http://local'),beforeRaw=url.searchParams.get('before'),afterRaw=url.searchParams.get('after'),before=beforeRaw===null?Number.MAX_SAFE_INTEGER:Number(beforeRaw),after=afterRaw===null?0:Number(afterRaw);
+        if(!Number.isSafeInteger(before)||!Number.isSafeInteger(after)||before<=0||after<0)fail(400,'Invalid message cursor.');
+        const source=after>0?db.prepare('SELECT id,senderId,recipientId,clientId,createdAt,expiresAt,envelopeBytes FROM group_messages WHERE groupId=? AND recipientId=? AND id>? AND (expiresAt=0 OR expiresAt>?) ORDER BY id ASC LIMIT 100').all(gid,me.id,after,now()):db.prepare('SELECT id,senderId,recipientId,clientId,createdAt,expiresAt,envelopeBytes FROM group_messages WHERE groupId=? AND recipientId=? AND id<? AND (expiresAt=0 OR expiresAt>?) ORDER BY id DESC LIMIT 100').all(gid,me.id,before>0?before:Number.MAX_SAFE_INTEGER,now());
+        const page=[];let pageBytes=0;for(const row of source){const size=(row.envelopeBytes||0)+500;if(page.length&&pageBytes+size>8000000)break;page.push(row);pageBytes+=size;}
+        const rows=(after>0?page:page.reverse()).map(row=>groupMessageRow(db.prepare('SELECT * FROM group_messages WHERE id=?').get(row.id)));
         const read=db.prepare('SELECT lastId FROM group_reads WHERE groupId=? AND userId=?').get(gid,me.id)?.lastId||0;
-        return {group:groupSummary(group,me.id),messages:rows,events:groupEvents(gid),hasMore:source.length===100,readThrough:read};
+        return {group:groupSummary(group,me.id),messages:rows,events:groupEvents(gid),hasMore:source.length===100||page.length<source.length,readThrough:read};
       }
       if(req.method==='POST'){
         limit('group-send:'+me.id,90,60000,true);
@@ -420,12 +433,13 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
         const createdAt=now(),expiresAt=group.ttlSeconds?createdAt+group.ttlSeconds*1000:0;
         const existing=db.prepare('SELECT recipientId,envelopeHash FROM group_messages WHERE senderId=? AND clientId=?').all(me.id,b.clientId);
         for(const item of existing){const match=validated.find(v=>v.recipientId===item.recipientId);if(!match||match.hash!==item.envelopeHash)fail(409,'Message identifier already used.');}
-        if(existing.length<validated.length){
-          let used=db.prepare('SELECT COALESCE(SUM(envelopeBytes),0) AS n FROM group_messages WHERE senderId=?').get(me.id).n;
-          for(const item of validated)used+=Buffer.byteLength(item.encoded);
-          if(used>64*1024*1024)fail(507,'Relay storage limit reached.');
-          transaction(db,()=>{const insert=db.prepare('INSERT OR IGNORE INTO group_messages(groupId,senderId,recipientId,clientId,envelope,createdAt,expiresAt,envelopeHash,envelopeBytes) VALUES(?,?,?,?,?,?,?,?,?)');for(const item of validated)insert.run(gid,me.id,item.recipientId,b.clientId,item.encoded,createdAt,expiresAt,item.hash,Buffer.byteLength(item.encoded));});
-          for(const uid of members.map(m=>m.id))notify(uid);
+        const existingIds=new Set(existing.map(item=>item.recipientId));
+        const insertItems=validated.filter(v=>(v.recipientId===me.id||!blockedPair(me.id,v.recipientId))&&!existingIds.has(v.recipientId));
+        let insertBytes=0;for(const item of insertItems)insertBytes+=1024+Buffer.byteLength(item.encoded);
+        if(insertItems.length){storage.require(insertBytes);let used=db.prepare('SELECT COALESCE(SUM(envelopeBytes),0) AS n FROM group_messages WHERE senderId=?').get(me.id).n;for(const item of insertItems)used+=Buffer.byteLength(item.encoded);if(used>64*1024*1024)fail(507,'Relay storage limit reached.');}
+        if(insertItems.length){
+          transaction(db,()=>{const insert=db.prepare('INSERT OR IGNORE INTO group_messages(groupId,senderId,recipientId,clientId,envelope,createdAt,expiresAt,envelopeHash,envelopeBytes) VALUES(?,?,?,?,?,?,?,?,?)');for(const item of insertItems)insert.run(gid,me.id,item.recipientId,b.clientId,item.encoded,createdAt,expiresAt,item.hash,Buffer.byteLength(item.encoded));});
+          for(const item of insertItems)notify(item.recipientId);
         }
         return {message:groupMessageRow(db.prepare('SELECT * FROM group_messages WHERE senderId=? AND clientId=? AND recipientId=?').get(me.id,b.clientId,me.id)),group:groupSummary(group,me.id)};
       }
@@ -434,24 +448,33 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     if(groupMemberMatch){
       const gid=groupMemberMatch[1],group=groupFor(gid,me.id);
       if(req.method==='POST'){
+        limit('group-add:'+me.id,30,60000,true);
         const b=await body(req,30000);const uid=typeof b.userId==='string'?b.userId:'';
         if(!getUser(uid))fail(404,'Account not found.');
         if(db.prepare('SELECT 1 FROM group_members WHERE groupId=? AND userId=?').get(gid,uid))return {group:groupSummary(group,me.id)};
+        if(blockedPair(me.id,uid))fail(403,'Blocked accounts cannot be added to a group.');
         if(groupMembers(gid).length>=20)fail(409,'Groups are limited to 20 members.');
+        storage.require(1024);
         transaction(db,()=>{db.prepare('INSERT INTO group_members(groupId,userId,joinedAt) VALUES(?,?,?)').run(gid,uid,now());const last=db.prepare('SELECT MAX(id) AS id FROM group_messages WHERE groupId=?').get(gid)?.id||0;db.prepare('INSERT OR REPLACE INTO group_reads(groupId,userId,lastId) VALUES(?,?,?)').run(gid,uid,last);insertGroupEvent(gid,'join',me.id,uid);});
         for(const member of groupMembers(gid))notify(member.id);
         return {group:groupSummary(group,me.id)};
       }
       if(req.method==='DELETE'){
-        db.prepare('DELETE FROM group_members WHERE groupId=? AND userId=?').run(gid,me.id);
-        const remaining=db.prepare('SELECT userId FROM group_members WHERE groupId=?').all(gid).map(row=>row.userId);
-        if(remaining.length){insertGroupEvent(gid,'leave',me.id);for(const uid of remaining)notify(uid);}
-        else{db.prepare('DELETE FROM group_messages WHERE groupId=?').run(gid);db.prepare('DELETE FROM group_events WHERE groupId=?').run(gid);db.prepare('DELETE FROM group_reads WHERE groupId=?').run(gid);db.prepare('DELETE FROM groups WHERE id=?').run(gid);}
+        transaction(db,()=>{
+          db.prepare('DELETE FROM group_members WHERE groupId=? AND userId=?').run(gid,me.id);
+          db.prepare('DELETE FROM group_messages WHERE groupId=? AND recipientId=?').run(gid,me.id);
+          db.prepare('DELETE FROM group_reads WHERE groupId=? AND userId=?').run(gid,me.id);
+          const remaining=db.prepare('SELECT userId FROM group_members WHERE groupId=?').all(gid).map(row=>row.userId);
+          if(remaining.length)insertGroupEvent(gid,'leave',me.id);
+          else{db.prepare('DELETE FROM group_messages WHERE groupId=?').run(gid);db.prepare('DELETE FROM group_events WHERE groupId=?').run(gid);db.prepare('DELETE FROM group_reads WHERE groupId=?').run(gid);db.prepare('DELETE FROM groups WHERE id=?').run(gid);}
+        });
+        for(const uid of db.prepare('SELECT userId FROM group_members WHERE groupId=?').all(gid).map(row=>row.userId))notify(uid);
         return {ok:true};
       }
     }
     const groupReadMatch=path.match(/^\/v1\/groups\/([A-Za-z0-9-]{6,64})\/read$/);
     if(groupReadMatch&&req.method==='POST'){
+      limit('group-read:'+me.id,120,60000,true);
       const gid=groupReadMatch[1];groupFor(gid,me.id);const b=await body(req,30000);
       const max=db.prepare('SELECT MAX(id) AS id FROM group_messages WHERE groupId=? AND recipientId=?').get(gid,me.id)?.id||0;
       const last=Math.max(0,Math.min(Number.isSafeInteger(b.lastId)?b.lastId:0,max));
@@ -460,10 +483,11 @@ export function createRelay({ db, registrationCode = '', now = Date.now, timers 
     }
     const groupSettingsMatch=path.match(/^\/v1\/groups\/([A-Za-z0-9-]{6,64})$/);
     if(groupSettingsMatch&&req.method==='PUT'){
+      limit('group-settings:'+me.id,30,60000,true);
       const gid=groupSettingsMatch[1],group=groupFor(gid,me.id),b=await body(req,30000);let changed=false;
-      if('name' in b){const name=typeof b.name==='string'?b.name.trim():'';if(name.length<1||name.length>60)fail(400,'Group name must be 1–60 characters.');db.prepare('UPDATE groups SET name=? WHERE id=?').run(name,gid);if(name!==group.name){insertGroupEvent(gid,'rename',me.id);changed=true;}}
+      if('name' in b){const name=typeof b.name==='string'?b.name.trim():'';if(name.length<1||name.length>60||unsafeControls(name))fail(400,'Group name must be 1–60 characters.');db.prepare('UPDATE groups SET name=? WHERE id=?').run(name,gid);if(name!==group.name){insertGroupEvent(gid,'rename',me.id);changed=true;}}
       if('ttlSeconds' in b){const ttl=Number(b.ttlSeconds);if(![0,60,3600,86400,604800,2592000].includes(ttl))fail(400,'Invalid group timer.');db.prepare('UPDATE groups SET ttlSeconds=? WHERE id=?').run(ttl,gid);changed=true;}
-      if(changed)for(const member of groupMembers(gid))notify(member.id);
+      if(changed){storage.require(1024);for(const member of groupMembers(gid))notify(member.id);}
       return {group:groupSummary(db.prepare('SELECT * FROM groups WHERE id=?').get(gid),me.id)};
     }
     fail(404, 'Endpoint not found.');

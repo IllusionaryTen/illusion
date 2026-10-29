@@ -92,7 +92,7 @@ export function features({ db, notify, getUser, safeUser, body, now = Date.now, 
     if (req.method === 'PUT' && path === '/v1/profile') {
       limit('profile:'+me.id,10,60000,true);
       const b = await body(req, 750000), p = cleanProfile(b.profile);
-      if (typeof b.displayName !== 'string' || !b.displayName.trim() || b.displayName.trim().length > 40) fail(400, 'Display name must be 1–40 characters.');
+      if (typeof b.displayName !== 'string' || !b.displayName.trim() || b.displayName.trim().length > 40 || /[\u0000-\u001f\u007f]/.test(b.displayName)) fail(400, 'Display name must be 1–40 characters.');
       const oldProfile=db.prepare('SELECT value FROM profiles WHERE userId=?').get(me.id);reserveStorage(Buffer.byteLength(JSON.stringify(p))-(oldProfile?Buffer.byteLength(oldProfile.value):0)+(oldProfile?0:1024));
       db.prepare('INSERT INTO profiles VALUES(?,?) ON CONFLICT(userId) DO UPDATE SET value=excluded.value').run(me.id, JSON.stringify(p));
       db.prepare('UPDATE users SET displayName=? WHERE id=?').run(b.displayName.trim(), me.id);
@@ -100,26 +100,27 @@ export function features({ db, notify, getUser, safeUser, body, now = Date.now, 
       notify(me.id); return { user: safeUser(getUser(me.id)) };
     }
     if (req.method === 'GET' && path === '/v1/chat-settings') {
-      const peer = url.searchParams.get('peer'); if (!getUser(peer)) fail(404, 'Account not found.');
+      const peer = url.searchParams.get('peer'); if (typeof peer!=='string'||!getUser(peer)) fail(404, 'Account not found.');
       return { ttlSeconds: ttl(me.id, peer), blocked: !!db.prepare('SELECT 1 FROM blocks WHERE userId=? AND peerId=?').get(me.id, peer) };
     }
     if (req.method === 'PUT' && path === '/v1/chat-settings') {
       limit('settings:'+me.id,30,60000,true);
-      const b = await body(req); if (!getUser(b.peer) || !timers.includes(b.ttlSeconds)) fail(400, 'Choose an available chat timer.');
+      const b = await body(req); if (typeof b.peer!=='string'||!getUser(b.peer) || !timers.includes(b.ttlSeconds)) fail(400, 'Choose an available chat timer.');
       if(!db.prepare('SELECT 1 FROM chat_settings WHERE a=? AND b=?').get(...pair(me.id,b.peer)))reserveStorage(256);
       db.prepare('INSERT INTO chat_settings VALUES(?,?,?,?) ON CONFLICT(a,b) DO UPDATE SET ttlSeconds=excluded.ttlSeconds,changedBy=excluded.changedBy').run(...pair(me.id, b.peer), b.ttlSeconds, me.id);
       notify(me.id); if (b.peer !== me.id) notify(b.peer); return { ok: true, ttlSeconds: b.ttlSeconds };
     }
     if (req.method === 'PUT' && path === '/v1/block') {
       limit('block:'+me.id,30,60000,true);
-      const b = await body(req); if (!getUser(b.peer) || b.peer === me.id || typeof b.blocked !== 'boolean') fail(400, 'Choose another account.');
+      const b = await body(req); if (typeof b.peer!=='string'||!getUser(b.peer) || b.peer === me.id || typeof b.blocked !== 'boolean') fail(400, 'Choose another account.');
       if(b.blocked&&!db.prepare('SELECT 1 FROM blocks WHERE userId=? AND peerId=?').get(me.id,b.peer))reserveStorage(256);
       if (b.blocked) db.prepare('INSERT OR IGNORE INTO blocks VALUES(?,?)').run(me.id, b.peer); else db.prepare('DELETE FROM blocks WHERE userId=? AND peerId=?').run(me.id, b.peer);
       notify(me.id); return { ok: true };
     }
     if (req.method === 'POST' && path === '/v1/open') {
       limit('open:'+me.id,60,60000,true);
-      const b = await body(req), row = db.prepare('SELECT * FROM messages WHERE id=? AND recipientId=? AND viewOnce=1').get(b.id, me.id);
+      const b = await body(req);if(!Number.isSafeInteger(b.id)||b.id<=0)fail(400,'Choose a message.');
+      const row = db.prepare('SELECT * FROM messages WHERE id=? AND recipientId=? AND viewOnce=1').get(b.id, me.id);
       if (!row || row.removed) fail(410, 'This message is no longer available.');
       if(row.expiresAt>0&&row.expiresAt<=now()){erase(row,'expired');fail(410,'This message is no longer available.');}
       // Synchronous read + erase: competing opens cannot obtain a second copy.
@@ -132,7 +133,8 @@ export function features({ db, notify, getUser, safeUser, body, now = Date.now, 
       reserveStorage(1024);
       const b = await body(req, 8000000);
       if (!['spam', 'harassment', 'threats', 'sexual-content', 'other'].includes(b.reason) || typeof b.note !== 'string' || b.note.length > 1000) fail(400, 'Choose a reason and keep the note under 1,000 characters.');
-      if (!getUser(b.targetId) || b.targetId === me.id) fail(400, 'Choose another account to report.');
+      if (typeof b.targetId!=='string'||!getUser(b.targetId) || b.targetId === me.id) fail(400, 'Choose another account to report.');
+      if (b.messageId !== undefined && (!Number.isSafeInteger(b.messageId) || b.messageId <= 0)) fail(400, 'Choose a message to report.');
       let evidence = null;
       if (b.messageId !== undefined) {
         const row = db.prepare('SELECT * FROM messages WHERE id=? AND senderId=? AND recipientId=?').get(b.messageId, b.targetId, me.id);

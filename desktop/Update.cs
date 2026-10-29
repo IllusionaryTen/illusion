@@ -51,8 +51,13 @@ namespace Illusion {
       if (Sha256(bytes) != expectedSha.ToLowerInvariant()) throw new Exception("The update hash does not match the manifest.");
     }
 
+    internal static bool IsSecureUpdateOrigin(string address) {
+      Uri uri;
+      return Uri.TryCreate(address, UriKind.Absolute, out uri) && uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+    }
+
     void CheckForUpdates() {
-      if (string.IsNullOrEmpty(server)) return;
+      if (string.IsNullOrEmpty(server) || !IsSecureUpdateOrigin(server)) return;
       long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), last = 0;
       long.TryParse(Setting("updateCheckedAt", "0"), out last);
       if (now - last < 24 * 3600 * 1000) return;

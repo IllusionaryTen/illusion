@@ -159,12 +159,12 @@ public final class MainActivity extends Activity {
     private void handleIncomingIntent(Intent intent) {
         if (intent == null) return;
         String chat = intent.getStringExtra("illusion_chat");
-        if (chat != null && !chat.isEmpty()) { pendingChat = chat; deliverPendingChat(); }
+        if (chat != null && chat.length() <= 96 && chat.matches("[A-Za-z0-9:_-]+")) { pendingChat = chat; deliverPendingChat(); }
         if (!Intent.ACTION_SEND.equals(intent.getAction())) return;
         String text = intent.getStringExtra(Intent.EXTRA_TEXT);
         Uri stream = intent.getParcelableExtra(Intent.EXTRA_STREAM);
         String type = intent.getType();
-        final String sharedText = text == null ? "" : text;
+        final String sharedText = text == null ? "" : text.length() > 2000 ? text.substring(0, 2000) : text;
         if (type != null && type.startsWith("image/") && stream != null) {
             new Thread(() -> {
                 String image = shareImage(stream, type);
@@ -331,6 +331,7 @@ public final class MainActivity extends Activity {
 
         private String safeNotificationText(String value, String fallback) {
             if (value == null) return fallback;
+            if (value.length() > 1000) value = value.substring(0, 1000);
             String clean = value.replaceAll("[\\p{Cntrl}]", " ").trim();
             return clean.isEmpty() ? fallback : clean.substring(0, Math.min(80, clean.length()));
         }

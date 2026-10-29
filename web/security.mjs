@@ -10,6 +10,21 @@ export function imageDimensions(bytes){
   if(!width||!height||width>8192||height>8192||width*height>16777216)throw Error('Use a PNG/JPEG with sides up to 8192 pixels and at most 16 megapixels.');
   return {width,height};
 }
+export function validateViewerMedia(kind,bytes,mime=''){
+  const b=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+  if(!b.length||b.length>4*1024*1024)throw Error('Attachment is too large.');
+  if(kind==='photo'){
+    const png=b.length>=8&&b[0]===137&&b[1]===80&&b[2]===78&&b[3]===71&&b[4]===13&&b[5]===10&&b[6]===26&&b[7]===10,jpeg=b.length>=3&&b[0]===255&&b[1]===216&&b[2]===255;
+    if(!png&&!jpeg)throw Error('Invalid photo attachment.');
+    imageDimensions(b);
+  }else if(kind==='video'){
+    if(b.length<12||String.fromCharCode(...b.slice(4,8))!=='ftyp')throw Error('Invalid MP4 attachment.');
+  }else if(kind==='audio'){
+    const wav=b.length>=12&&String.fromCharCode(...b.slice(0,4))==='RIFF'&&String.fromCharCode(...b.slice(8,12))==='WAVE',mp3=(b.length>=3&&String.fromCharCode(...b.slice(0,3))==='ID3')||(b.length>=2&&b[0]===0xff&&(b[1]&0xe0)===0xe0);
+    if(!wav&&!mp3)throw Error('Invalid audio attachment.');
+  }
+  return b;
+}
 export function messageContent(text){
   let c;try{c=JSON.parse(text);}catch{}
   if(!['illusion.message.v1','illusion.message.v2'].includes(c?.format)){if(text.length>12000)throw Error('Message text is too large.');return {text};}

@@ -6,12 +6,18 @@ import { join } from 'node:path';
 import { generateKeyPairSync } from 'node:crypto';
 import { createMessenger } from '../server/index.mjs';
 import { fulfillDeletion,legalVersion,fonts } from '../server/legal.mjs';
+import { securityHeaders } from '../cloudflare/public.mjs';
 const dir=mkdtempSync(join(tmpdir(),'illusion-legal-'));let app,base,account;
 const key=generateKeyPairSync('rsa',{modulusLength:3072}).publicKey.export({format:'jwk'});
 const registration={username:'legal_user',displayName:'Legal test',password:'a strong legal testing password',publicKey:'<RSAKeyValue><Modulus>'+Buffer.from(key.n,'base64url').toString('base64')+'</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>',ageBand:'18+',acceptTerms:true,acknowledgePrivacy:true,policyVersion:legalVersion};
 async function api(path,method='GET',body,token){const r=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:body&&JSON.stringify(body)});return {r,body:await r.json()};}
 before(async()=>{app=createMessenger({dataDir:dir});await new Promise(r=>app.server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+app.server.address().port;});
 after(async()=>{await app.close();assert.ok(dir.startsWith(join(tmpdir(),'illusion-legal-')));rmSync(dir,{recursive:true,force:true});});
+test('hosted security headers require HTTPS for a year including subdomains',()=>{
+  assert.match(securityHeaders['Strict-Transport-Security'],/max-age=31536000/);
+  assert.match(securityHeaders['Strict-Transport-Security'],/includeSubDomains/);
+  assert.match(securityHeaders['Content-Security-Policy'],/default-src 'none'/);
+});
 test('Mini App and policies are public, same-origin and cookie/SDK-free',async()=>{
   const r=await fetch(base+'/app/');const html=await r.text();assert.equal(r.status,200);assert.equal(r.headers.get('set-cookie'),null);assert.match(r.headers.get('content-security-policy'),/script-src 'self'/);assert.match(html,/aria-live="polite"/);assert.ok(!html.includes('https://'));assert.match(html,/Continue with essentials/);
   const info=(await api('/v1/public')).body;assert.equal(info.minimumAge,18);assert.equal(info.optionalTracking,false);assert.equal(info.price,0);assert.ok(info.fonts.length>=25);assert.equal(info.operator.configured,false);

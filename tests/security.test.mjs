@@ -10,7 +10,7 @@ import {createMessenger} from '../server/index.mjs';
 import {passwordMatches,passwordHash} from '../server/passwords.mjs';
 import {durableLimiter} from '../server/limits.mjs';
 import {storageBudget,storageLimit} from '../server/storage-budget.mjs';
-import {imageDimensions,messageContent} from '../web/security.mjs';
+import {imageDimensions,messageContent,validateViewerMedia} from '../web/security.mjs';
 const jwk=generateKeyPairSync('rsa',{modulusLength:3072}).publicKey.export({format:'jwk'}),publicKey='<RSAKeyValue><Modulus>'+Buffer.from(jwk.n,'base64url').toString('base64')+'</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>';
 const password='synthetic security test password',registration={username:'security_a',displayName:'Security A',password,publicKey,ageBand:'18+',acceptTerms:true,acknowledgePrivacy:true,policyVersion:'2026-10-19.1'};let app,origin,dir;
 beforeEach(async()=>{dir=mkdtempSync(join(tmpdir(),'illusion-security-'));app=createMessenger({dataDir:dir});await new Promise(r=>app.server.listen(0,'127.0.0.1',r));origin='http://127.0.0.1:'+app.server.address().port;});
@@ -41,6 +41,15 @@ function png(w,h){const b=Buffer.alloc(33);Buffer.from('89504e470d0a1a0a','hex')
 test('images with tiny compressed headers but extreme pixel dimensions are rejected before decoding',async()=>{
   assert.deepEqual(imageDimensions(png(1,8192)),{width:1,height:8192});for(const [w,h]of [[0,10],[1,1000000],[8192,8192],[4294967295,1]])assert.throws(()=>imageDimensions(png(w,h)),/pixels/);
   const user=(await api('/v1/register',registration)).body,r=await fetch(origin+'/v1/profile',{method:'PUT',headers:{Authorization:'Bearer '+user.token,'Content-Type':'application/json'},body:JSON.stringify({displayName:'Security',profile:{avatar:'data:image/png;base64,'+png(1,1000000).toString('base64')}})});assert.equal(r.status,400);
+});
+test('decrypted attachments are checked before client decoders see them',()=>{
+  assert.throws(()=>validateViewerMedia('photo',png(1,1000000)));
+  assert.throws(()=>validateViewerMedia('photo',Buffer.from('not an image')));
+  assert.ok(validateViewerMedia('photo',png(1,1)));
+  assert.throws(()=>validateViewerMedia('video',Buffer.alloc(16)));
+  const mp4=Buffer.alloc(12);mp4.write('ftyp',4);assert.ok(validateViewerMedia('video',mp4));
+  assert.throws(()=>validateViewerMedia('audio',Buffer.from('not audio')));
+  const wav=Buffer.alloc(12);wav.write('RIFF',0);wav.write('WAVE',8);assert.ok(validateViewerMedia('audio',wav));
 });
 test('decrypted content cannot bypass text, quote or media bounds using valid JSON',()=>{
   for(const c of [{text:'x'.repeat(2001)},{text:{script:'bad'}},{text:'ok',reply:{name:'a',text:'x'.repeat(321)}},{text:'ok',media:{kind:'html',mime:'text/html',data:'AAAA'}}])assert.throws(()=>messageContent(JSON.stringify({format:'illusion.message.v2',...c})));

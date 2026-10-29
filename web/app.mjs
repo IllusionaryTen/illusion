@@ -1,5 +1,5 @@
 import * as crypt from './crypto.mjs';
-import {imageDimensions} from './security.mjs';
+import {imageDimensions,validateViewerMedia} from './security.mjs';
 import {validateLookFile} from './theme-file.mjs';
 import {REACTION_EMOJI,collectReactions,summarizeReactions} from './reactions.mjs';
 import {applyStaticLanguage,languageCode,languageOptions,translate,getPreference,setPreference} from './i18n.mjs';
@@ -29,14 +29,14 @@ let notices=[],lastNoticeId=0,noticeView=false,queuedShare=null,pendingChatOpen=
 let groups=[],group=null,groupEvents=[],groupUnread=new Map(),groupsPrimed=false;
 const notificationSound=new Audio('/app/sounds/illusionsfx.mp3');notificationSound.preload='auto';
 const mediaThumbs=new Map();
-async function videoFirstFrame(data){const url=URL.createObjectURL(new Blob([data],{type:'video/mp4'}));try{const video=document.createElement('video');video.muted=true;video.preload='auto';video.src=url;await new Promise((resolve,reject)=>{video.onloadeddata=resolve;video.onerror=()=>reject(Error('load'));setTimeout(()=>reject(Error('timeout')),8000);});video.currentTime=Math.min(0.1,(video.duration||1)/10);await new Promise((resolve,reject)=>{video.onseeked=resolve;video.onerror=()=>reject(Error('seek'));setTimeout(()=>reject(Error('timeout')),8000);});const canvas=document.createElement('canvas');const width=Math.min(320,video.videoWidth||320);canvas.width=width;canvas.height=Math.max(1,Math.round(width*(video.videoHeight||180)/(video.videoWidth||320)));canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',.7);}finally{URL.revokeObjectURL(url);}}
+async function videoFirstFrame(data){validateViewerMedia('video',data);const url=URL.createObjectURL(new Blob([data],{type:'video/mp4'}));try{const video=document.createElement('video');video.muted=true;video.preload='auto';video.src=url;await new Promise((resolve,reject)=>{video.onloadeddata=resolve;video.onerror=()=>reject(Error('load'));setTimeout(()=>reject(Error('timeout')),8000);});video.currentTime=Math.min(0.1,(video.duration||1)/10);await new Promise((resolve,reject)=>{video.onseeked=resolve;video.onerror=()=>reject(Error('seek'));setTimeout(()=>reject(Error('timeout')),8000);});const canvas=document.createElement('canvas');const width=Math.min(320,video.videoWidth||320);canvas.width=width;canvas.height=Math.max(1,Math.round(width*(video.videoHeight||180)/(video.videoWidth||320)));canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',.7);}finally{URL.revokeObjectURL(url);}}
 function mediaType(media){if(media.kind!=='sealed')return media.kind;const mime=media.mime||'';return mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file';}
 async function mediaBytes(media){return media.kind==='sealed'?crypt.openMedia(crypt.un64(media.data||''),media):crypt.un64(media.data);}
 function mediaPreview(row,media,open){
   const wrap=node('span',undefined,'media-preview'),type=mediaType(media);
   const failed=()=>{wrap.replaceChildren(node('span',translate('Attachment',language)));};
-  if(type==='photo'){const image=node('img',undefined,'inline-media');image.alt=translate('Open photo',language);wrap.addEventListener('click',open);wrap.append(image);void mediaBytes(media).then(bytes=>{const url=URL.createObjectURL(new Blob([bytes],{type:media.mime||'image/jpeg'}));mediaUrls.push(url);image.src=url;}).catch(failed);return wrap;}
-  if(type==='audio'){const audio=node('audio');audio.controls=true;audio.preload='none';audio.className='inline-audio';audio.setAttribute('aria-label',translate('Encrypted attachment',language));wrap.append(audio);void mediaBytes(media).then(bytes=>{const url=URL.createObjectURL(new Blob([bytes],{type:media.mime||'audio/mpeg'}));mediaUrls.push(url);audio.src=url;}).catch(failed);return wrap;}
+  if(type==='photo'){const image=node('img',undefined,'inline-media');image.alt=translate('Open photo',language);wrap.addEventListener('click',open);wrap.append(image);void mediaBytes(media).then(bytes=>{validateViewerMedia('photo',bytes,media.mime);const url=URL.createObjectURL(new Blob([bytes],{type:media.mime||'image/jpeg'}));mediaUrls.push(url);image.src=url;}).catch(failed);return wrap;}
+  if(type==='audio'){const audio=node('audio');audio.controls=true;audio.preload='none';audio.className='inline-audio';audio.setAttribute('aria-label',translate('Encrypted attachment',language));wrap.append(audio);void mediaBytes(media).then(bytes=>{validateViewerMedia('audio',bytes,media.mime);const url=URL.createObjectURL(new Blob([bytes],{type:media.mime||'audio/mpeg'}));mediaUrls.push(url);audio.src=url;}).catch(failed);return wrap;}
   if(type==='file'){wrap.className='media-preview file-preview';wrap.append(node('span','📄','media-icon'),node('span',translate('Attachment',language)));wrap.addEventListener('click',open);return wrap;}
   if(mediaThumbs.has(row.id)){const image=node('img',undefined,'inline-media video');image.src=mediaThumbs.get(row.id);image.alt=translate('Open video',language);wrap.addEventListener('click',open);wrap.append(image,node('span','▶','media-play'));return wrap;}
   wrap.addEventListener('click',open);wrap.append(node('span','▶','media-pending'));
@@ -58,6 +58,7 @@ $('close-modal').onclick=closeModal;$('modal').addEventListener('cancel',e=>{e.p
 function logout(){void crypt.storage('delete','session').catch(()=>{});version++;viewVersion++;sessionController.abort();sessionController=new AbortController();if(liveSocket){liveSocket.close(1000,'Signed out');liveSocket=null;}token='';me=null;key=null;peer=null;pinnedChats.clear();mutedChats.clear();wallpaperIds.clear();applyWallpaper('');groups=[];group=null;groupEvents=[];groupUnread=new Map();groupsPrimed=false;$('send-form').classList.remove('group-mode');unreadCounts.clear();notificationsPrimed=false;rows.clear();decoded.clear();pendingSend=null;loading=false;cursor='';ttl=0;highestSeen=0;notices=[];lastNoticeId=0;noticeView=false;mediaThumbs.clear();closeModal();for(const id of ['messages','chats','favorites-row','my-profile'])$(id).replaceChildren();for(const id of ['composer','attachment','password','invitation','find-name'])$(id).value='';findHint=false;$('once').checked=false;$('workspace').dataset.view='list';$('chat-title').textContent=translate('Make a connection.',language);$('timer-hint').textContent='';for(const id of ['chat-settings','verify','send-form','older'])$(id).hidden=true;replyTo=null;searchQuery='';searchCursor=0;if($('chat-search-bar'))$('chat-search-bar').hidden=true;if($('reply-bar'))$('reply-bar').hidden=true;$('workspace').hidden=true;$('auth').hidden=false;$('my-profile').hidden=true;$('chat-verified').hidden=true;$('auth-form').reset();register=false;$('registration').hidden=true;$('sign-in').textContent=translate('Sign in',language);$('switch-auth').textContent=translate('Create an account',language);status('Signed out. Device keys remain here until you explicitly clear them.');}
 async function userSignOut(){const previous=token;logout();const gen=version;if(!previous)return;const scope=requestSignal(sessionController.signal,10000);try{const response=await fetch('/v1/logout',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+previous},body:'{}',credentials:'omit',redirect:'error',signal:scope.signal});if(!response.ok&&response.status!==401)throw Error();}catch{if(gen===version&&!me)status('Signed out on this device. The server could not be reached to revoke the session.');}finally{scope.dispose();}}
 async function pin(user){const fp=await crypt.fingerprint(user.publicKey),id='pin:'+user.id,old=await crypt.storage('get',id);if(old&&old!==fp)throw Error('Encryption key changed. Verify with this person before continuing.');if(!old)await crypt.storage('put',id,fp);}
+async function pinGroupMembers(groupSummary){for(const member of groupSummary?.members||[]){if(member.id!==me?.id)await pin(member);}}
 $('storage-notice').hidden=getPreference('illusion-essential-notice')==='seen';$('storage-ok').onclick=()=>{setPreference('illusion-essential-notice','seen');$('storage-notice').hidden=true;};
 $('switch-auth').onclick=()=>{register=!register;$('registration').hidden=!register;$('sign-in').textContent=translate(register?'Create an account':'Sign in',language);$('switch-auth').textContent=translate(register?'Sign in':'Create an account',language);$('password').autocomplete=register?'new-password':'current-password';};
 $('auth-form').onsubmit=e=>{e.preventDefault();guard(async()=>{
@@ -83,7 +84,7 @@ async function loadWallpaperIndex(){wallpaperIds=new Set();if(!me)return;const s
 async function saveWallpaperIndex(){if(me)await crypt.storage('put','wallpapers:'+me.id,[...wallpaperIds]);}
 function wallpaperLayer(){const conversation=document.querySelector('.conversation');if(!conversation)return null;let layer=document.getElementById('chat-wallpaper');if(!layer){layer=document.createElement('div');layer.id='chat-wallpaper';layer.setAttribute('aria-hidden','true');conversation.prepend(layer);}return layer;}
 function applyWallpaper(data){const layer=wallpaperLayer();if(!layer)return;if(!data){layer.style.backgroundImage='';layer.hidden=true;return;}layer.style.backgroundImage='linear-gradient(rgba(3,6,12,.78),rgba(3,6,12,.86)),url("'+data+'")';layer.hidden=false;}
-async function loadWallpaper(peerId){if(!me||!peerId||peerId===me.id||!wallpaperIds.has(peerId)){applyWallpaper('');return;}const data=await crypt.storage('get','wallpaper:'+me.id+':'+peerId).catch(()=>null);applyWallpaper(typeof data==='string'&&/^data:image\/(jpeg|png);base64,/.test(data)?data:'');}
+async function loadWallpaper(peerId){if(!me||!peerId||peerId===me.id||!wallpaperIds.has(peerId)){applyWallpaper('');return;}const data=await crypt.storage('get','wallpaper:'+me.id+':'+peerId).catch(()=>null);applyWallpaper(typeof data==='string'&&/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/.test(data)?data:'');}
 async function storeWallpaper(peerId,data){if(!me)return;if(!wallpaperIds.has(peerId)&&wallpaperIds.size>=24){const oldest=[...wallpaperIds][0];wallpaperIds.delete(oldest);await crypt.storage('delete','wallpaper:'+me.id+':'+oldest);}wallpaperIds.add(peerId);await crypt.storage('put','wallpaper:'+me.id+':'+peerId,data);await saveWallpaperIndex();}
 async function removeWallpaper(peerId){if(!me)return;wallpaperIds.delete(peerId);await crypt.storage('delete','wallpaper:'+me.id+':'+peerId);await saveWallpaperIndex();applyWallpaper('');}
 async function wallpaperFromFile(file){if(!file||file.size>4*1024*1024)throw Error('Choose a smaller image.');imageDimensions(new Uint8Array(await file.arrayBuffer()));let bitmap;try{bitmap=await createImageBitmap(file);}catch{throw Error('Choose a PNG/JPEG photo or MP4 video.');}try{const scale=Math.min(1,1080/bitmap.width,1080/bitmap.height),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);for(const quality of [.82,.7,.55,.4]){const data=canvas.toDataURL('image/jpeg',quality);if(crypt.un64(data.split(',')[1]).length<=200000)return data;}throw Error('Choose a smaller image.');}finally{bitmap.close();}}
@@ -139,7 +140,7 @@ async function refreshGroups(){
   updateChatFilter();
 }
 async function chooseGroup(summary){
-  if(!me||!summary)return;group=summary;groupEvents=[];peer=null;noticeView=false;rows.clear();decoded.clear();pendingSend=null;highestSeen=0;loading=false;replyTo=null;searchQuery='';searchCursor=0;
+  if(!me||!summary)return;await pinGroupMembers(summary);group=summary;groupEvents=[];peer=null;noticeView=false;rows.clear();decoded.clear();pendingSend=null;highestSeen=0;loading=false;replyTo=null;searchQuery='';searchCursor=0;
   $('workspace').dataset.view='chat';$('messages').replaceChildren();$('composer').value='';$('attachment').value='';$('once').checked=false;
   $('chat-title').textContent=summary.name;$('chat-settings').hidden=false;$('chat-settings').textContent=translate('Group settings',language);$('verify').hidden=true;$('chat-verified').hidden=true;$('send-form').hidden=false;$('send-form').classList.add('group-mode');$('chat-search').hidden=true;$('chat-search-bar').hidden=true;$('reply-bar').hidden=true;
   applyWallpaper('');ttl=summary.ttlSeconds||0;$('timer-hint').textContent=translate('Encrypted · Auto-delete: ',language)+(ttl?timerLabel(ttl):translate('Off (default)',language));
@@ -149,6 +150,7 @@ async function refreshGroupMessages(){
   if(!group||loading)return;const active=group,gen=version,view=viewVersion,valid=()=>gen===version&&view===viewVersion&&group?.id===active.id;loading=true;
   try{
     const result=await api('GET','/v1/groups/'+active.id+'/messages');if(!valid())return;
+    await pinGroupMembers(result.group);if(!valid())return;
     group=result.group;groupEvents=Array.isArray(result.events)?result.events:[];ttl=result.group.ttlSeconds||0;rows.clear();decoded.clear();
     const members=new Map(result.group.members.map(m=>[m.id,m]));
     for(const row of result.messages){rows.set(row.id,row);let content;try{const sender=row.senderId===me.id?me:(row.sender||members.get(row.senderId));if(!sender)throw Error('Sender key unavailable.');content=await crypt.decrypt(row,me,key,sender);}catch(error){content={text:error.message,invalid:true};}if(!valid())return;decoded.set(row.id,content);}
@@ -183,7 +185,7 @@ function newGroupDialog(){
   body.append(button('Create group',async()=>{const memberIds=[];for(const raw of users.value.split(/[,\s]+/).filter(Boolean)){const result=await api('GET','/v1/users?username='+encodeURIComponent(raw.replace(/^@/,'')));if(!memberIds.includes(result.user.id))memberIds.push(result.user.id);}const created=await api('POST','/v1/groups',{name:name.value.trim(),memberIds});closeModal();await refreshChats();await chooseGroup(created.group);}));
 }
 async function sendGroupMessage(text){
-  if(!group||!me)return;const active=group,content={format:'illusion.message.v2',text,media:null,reply:replyTo?{id:replyTo.id,name:replyTo.name,text:replyTo.text}:null};const id=crypto.randomUUID(),envelopes=[];
+  if(!group||!me)return;const active=group;await pinGroupMembers(active);const content={format:'illusion.message.v2',text,media:null,reply:replyTo?{id:replyTo.id,name:replyTo.name,text:replyTo.text}:null};const id=crypto.randomUUID(),envelopes=[];
   for(const member of active.members)envelopes.push({recipientId:member.id,envelope:await crypt.encrypt(JSON.stringify(content),me,member,id,key,{viewOnce:false,ttlSeconds:ttl})});
   await api('POST','/v1/groups/'+active.id+'/messages',{clientId:id,envelopes});
   if(group?.id!==active.id)return;$('composer').value='';replyTo=null;renderReplyBar();await refreshGroupMessages();
@@ -339,13 +341,11 @@ async function openOnce(row){if(!confirm(translate('Open once now? It is consume
 async function showContent(row,content,once,user=peer){
   const body=modal(once?'View once':'Attachment');viewerDeadline=row.expiresAt||0;body.append(node('p',content.text||''));
   if(content.media){
-    const bytes=await mediaBytes(content.media);if(bytes.length>4*1024*1024)throw Error('Attachment too large.');
-    const mediaKind=mediaType(content.media);if(mediaKind==='file'){
+    const bytes=await mediaBytes(content.media);const mediaKind=mediaType(content.media);validateViewerMedia(mediaKind,bytes,content.media.mime);
+    if(mediaKind==='file'){
       const text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
       body.append(node('pre',text,'document'));
     }else{
-      if(mediaKind==='photo')imageDimensions(bytes);
-      else if(mediaKind==='video'&&new TextDecoder().decode(bytes.slice(4,8))!=='ftyp')throw Error('Invalid MP4 attachment.');
       const mime=mediaKind==='video'?'video/mp4':mediaKind==='audio'?(content.media.mime||'audio/mpeg'):'image/jpeg';
       const url=URL.createObjectURL(new Blob([bytes],{type:mime}));mediaUrls.push(url);
       if(mediaKind==='video'){const v=node('video');v.controls=true;v.src=url;v.setAttribute('aria-label',content.text||translate('Video attachment',language));body.append(v);}

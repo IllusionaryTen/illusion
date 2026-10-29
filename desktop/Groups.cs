@@ -27,6 +27,7 @@ namespace Illusion {
       return result;
     }
     static string GroupMemberLabel(Dictionary<string,object> user){string name=Str(user,"displayName","");string username=Str(user,"username");return name==""?"@"+username:name;}
+    void PinGroupMembers(Dictionary<string,object> summary){if(me==null||summary==null)return;foreach(var member in GroupMembers(summary))if(Str(member,"id")!=(string)me["id"])Pin(member);}
     Border GroupAvatar(int size){
       var border=new Border{Width=size,Height=size,CornerRadius=new CornerRadius(size/2.0),Background=Brush("#233859"),BorderBrush=Brush("#8CB3FF"),BorderThickness=new Thickness(2),ClipToBounds=true};
       border.Child=new TextBlock{Text="◈",Foreground=Brushes.White,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,FontWeight=FontWeights.Bold,FontSize=size/2.2};return border;
@@ -101,6 +102,7 @@ namespace Illusion {
     public async Task SelectGroup(Dictionary<string,object> summary){
       if(me==null||summary==null)return;
       if(group!=null && GroupId(group)==GroupId(summary)){await FetchGroupConversation(false);return;}
+      PinGroupMembers(summary);
       CaptureDraft();SaveLocalState();
       peer=null;group=summary;groupEvents.Clear();lastGroup=GroupId(summary);lastPeer="";conversationVersion++;lastReadSent=0;readThrough=0;
       pendingMedia=null;UpdateAttachment();Get<CheckBox>("ViewOnceCheck").IsChecked=false;Get<CheckBox>("ViewOnceCheck").IsEnabled=false;Get<Button>("AttachButton").IsEnabled=false;
@@ -176,6 +178,7 @@ namespace Illusion {
       if(group==null||me==null||sending)return;string raw=Get<TextBox>("Composer").Text,text=raw.Trim();if(text=="")return;
       if(text.Length>2000)throw new Exception("Keep each message under 2,000 characters.");
       if(outbox.Count>=100)throw new Exception("Your outbox has 100 messages. Reconnect to deliver them before adding more.");
+      PinGroupMembers(group);
       var active=group;string gid=GroupId(active),sender=(string)me["id"],key=privateKey,clientId=Guid.NewGuid().ToString();var quoted=reply;int ttl=GroupTtl(active);
       var members=GroupMembers(active);
       sending=true;Get<Button>("SendButton").IsEnabled=false;int gen=generation;

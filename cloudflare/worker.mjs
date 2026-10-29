@@ -18,7 +18,7 @@ export default {
     const visible = await publicResponse(request,env); if(visible)return visible;
     const ip=request.headers.get('CF-Connecting-IP')||'unknown';
     if(url.pathname.startsWith('/admin/')){
-      if(!env.ADMIN_TOKEN||env.ADMIN_TOKEN.length<24)return Response.json({error:'Admin access is disabled until a strong token is configured.'},{status:503,headers:securityHeaders});
+      if(!env.ADMIN_TOKEN||env.ADMIN_TOKEN.length<32)return Response.json({error:'Admin access is disabled until a strong token is configured.'},{status:503,headers:securityHeaders});
       if(env.ADMIN_LIMIT&&!(await env.ADMIN_LIMIT.limit({key:'admin:'+ip})).success)return Response.json({error:'Too many admin attempts. Try again later.'},{status:429,headers:securityHeaders});
       if(!secretMatches(request.headers.get('Authorization')?.replace(/^Bearer /,''),env.ADMIN_TOKEN))return Response.json({error:'Not authorized'},{status:401,headers:securityHeaders});
     }
@@ -87,7 +87,7 @@ export class IllusionRelay extends DurableObject {
   webSocketClose(socket,code,reason){try{socket.close(code===1005?1000:code,reason);}catch{}}
   webSocketError(socket){try{socket.close(1011,'Live connection failed');}catch{}}
   async scheduleAlarm() {
-    const next=this.db.prepare("SELECT MIN(expiresAt) AS time FROM messages WHERE removed='' AND expiresAt>0").get()?.time;
+    const next=this.db.prepare("SELECT MIN(time) AS time FROM (SELECT MIN(expiresAt) AS time FROM messages WHERE removed='' AND expiresAt>0 UNION ALL SELECT MIN(expiresAt) FROM group_messages WHERE expiresAt>0)").get()?.time;
     const when=Math.max(Date.now()+1000,Math.min(next||Infinity,Date.now()+3600000));
     const current=await this.ctx.storage.getAlarm();if(current===null || current>when)await this.ctx.storage.setAlarm(when);
   }
