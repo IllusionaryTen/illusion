@@ -5,6 +5,7 @@ import {mkdirSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createRelay} from './relay.mjs';
+import {version} from '../shared/version.mjs';
 import {publicWeb} from './web.mjs';
 export {signatureText} from './relay.mjs';
 export function createMessenger({dataDir=process.env.DATA_DIR||'./data',registrationCode=process.env.REGISTRATION_CODE||'',cert,key,now=Date.now,sendEmail=null,emailCodeKey=''}={}) {
@@ -19,6 +20,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const app = createMessenger({ cert: process.env.TLS_CERT && readFileSync(process.env.TLS_CERT), key: process.env.TLS_KEY && readFileSync(process.env.TLS_KEY) });
   const host = process.env.HOST || '127.0.0.1';
   const port = Number(process.env.PORT || 3789);
-  app.server.listen(port, host, () => console.log(`Illusion 0.6.1 listening on ${process.env.TLS_CERT ? 'https' : 'http'}://${host}:${port}\nMessage bodies are encrypted on the desktop. Keep this process running to relay messages.`));
+  app.server.listen(port, host, () => console.log(`Illusion ${version} listening on ${process.env.TLS_CERT ? 'https' : 'http'}://${host}:${port}\nMessage bodies are encrypted on the desktop. Keep this process running to relay messages.`));
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => app.close().then(() => process.exit(0)));
 }

@@ -93,13 +93,13 @@ namespace Illusion {
     int NormalizedIndex(string core){if(normalizedIndex==null){normalizedIndex=new Dictionary<string,int>();for(int i=0;i<translationEnglish.Count;i++){string key=System.Text.RegularExpressions.Regex.Replace(Convert.ToString(translationEnglish[i]),"\\s+"," ").Trim().Replace('’','\'');if(!normalizedIndex.ContainsKey(key))normalizedIndex[key]=i;}}int index;return normalizedIndex.TryGetValue(core.Replace('’','\''),out index)?index:-1;}
     void BindLanguage(string source,Action<string> setter){languageBindings.Add(()=>setter(T(source)));}
     void CaptureLocalizedElements(DependencyObject root,bool excluded){
-      if(root==null)return;var element=root as FrameworkElement;if(element!=null){bool skip=excluded || new[]{"ChatList","MessageList","ChatTitle","ChatSubtitle","IdentityLabel","ConnectionLabel","StatusLabel","AuthError","AuthHeading","AuthButton","SwitchAuthButton","TermsLink","PrivacyLink","ComposerHint","CharacterCount","AttachmentLabel","ReplyText","NoticeText","SearchCount","NetworkDescription","Avatar","Composer","UsernameInput","PasswordInput","InviteInput","ServerInput","SearchInput","ChatSearchInput"}.Contains(element.Name);if(!skip){var text=element as TextBlock;if(text!=null && !string.IsNullOrEmpty(text.Text)){string original=text.Text;BindLanguage(original,value=>text.Text=value);}var button=element as Button;if(button!=null && button.Content is string){string original=(string)button.Content;BindLanguage(original,value=>button.Content=value);}var check=element as CheckBox;if(check!=null && check.Content is string){string original=(string)check.Content;BindLanguage(original,value=>check.Content=value);}var expander=element as Expander;if(expander!=null && expander.Header is string){string original=(string)expander.Header;BindLanguage(original,value=>expander.Header=value);}if(element.ToolTip is string){string original=(string)element.ToolTip;BindLanguage(original,value=>element.ToolTip=value);}}
+      if(root==null)return;var element=root as FrameworkElement;if(element!=null){bool skip=excluded || new[]{"ChatList","MessageList","ChatTitle","ChatSubtitle","IdentityLabel","ConnectionLabel","StatusLabel","AuthError","AuthHeading","AuthButton","SwitchAuthButton","TermsLink","PrivacyLink","ComposerHint","CharacterCount","AttachmentLabel","ReplyText","NoticeText","SearchCount","NetworkDescription","VersionLabel","Avatar","Composer","UsernameInput","PasswordInput","InviteInput","ServerInput","SearchInput","ChatSearchInput"}.Contains(element.Name);if(!skip){var text=element as TextBlock;if(text!=null && !string.IsNullOrEmpty(text.Text)){string original=text.Text;BindLanguage(original,value=>text.Text=value);}var button=element as Button;if(button!=null && button.Content is string){string original=(string)button.Content;BindLanguage(original,value=>button.Content=value);}var check=element as CheckBox;if(check!=null && check.Content is string){string original=(string)check.Content;BindLanguage(original,value=>check.Content=value);}var expander=element as Expander;if(expander!=null && expander.Header is string){string original=(string)expander.Header;BindLanguage(original,value=>expander.Header=value);}if(element.ToolTip is string){string original=(string)element.ToolTip;BindLanguage(original,value=>element.ToolTip=value);}}
       }
       foreach(object child in LogicalTreeHelper.GetChildren(root))if(child is DependencyObject)CaptureLocalizedElements((DependencyObject)child,excluded || (element!=null && (element.Name=="ChatList" || element.Name=="MessageList")));
     }
     void RelocalizeEverything(){ApplyWindowLanguage();Get<Button>("FindButton").Content="+  "+T("Start a conversation");Get<Button>("AuthButton").Content=T("Sign in");Get<Button>("SwitchAuthButton").Content=T("Create an account");UpdateAttachment();if(me==null)return;UpdateChats(latestChats);if(group!=null){Get<TextBlock>("ChatTitle").Text=GroupName(group);Get<TextBlock>("ChatSubtitle").Text=GroupSubtitle(group);Get<Button>("ChatOptionsButton").Content=T("Group settings");UpdateTimerHint();UpdateGroupEventsPanel();}else if(peer!=null){Get<TextBlock>("ChatTitle").Text=(string)peer["id"]==(string)me["id"]?T("Saved messages"):Convert.ToString(peer["displayName"]);Get<TextBlock>("ChatSubtitle").Text=ChatSubtitleText(peer);Get<Button>("ChatOptionsButton").Content=T("Profile / Timer");UpdateTimerHint();}UpdateMessageViews(false,true);Connection(sessionConnected);}
-    void ApplyWindowLanguage(){Window.FlowDirection=Array.IndexOf(new[]{"ar","he","fa"},currentLanguage)>=0?FlowDirection.RightToLeft:FlowDirection.LeftToRight;foreach(var apply in languageBindings)apply();Get<Button>("OlderButton").Content=T("Load earlier messages");Get<Button>("FindButton").Content="+  "+T("Start a conversation");}
-    sealed class LanguageChoice{public string Code{get;set;}public string Name{get;set;}}
+    void ApplyWindowLanguage(){Window.FlowDirection=Array.IndexOf(new[]{"ar","he","fa"},currentLanguage)>=0?FlowDirection.RightToLeft:FlowDirection.LeftToRight;foreach(var apply in languageBindings)apply();Get<Button>("OlderButton").Content=T("Load earlier messages");Get<Button>("FindButton").Content="+  "+T("Start a conversation");Get<TextBlock>("VersionLabel").Text=BuildInfo.Version;}
+    sealed class LanguageChoice{public string Code{get;set;}public string Name{get;set;}public override string ToString(){return Name;}}
     List<LanguageChoice> GetLanguageChoices(){var result=new List<LanguageChoice>();if(translationLanguages!=null)foreach(ArrayList item in translationLanguages)if(item.Count>=2)result.Add(new LanguageChoice{Code=Convert.ToString(item[0]),Name=Convert.ToString(item[1])});return result;}
     void SaveSettings() { File.WriteAllText(ConfigPath+".tmp",json.Serialize(settings)); if(File.Exists(ConfigPath))File.Replace(ConfigPath+".tmp",ConfigPath,null);else File.Move(ConfigPath+".tmp",ConfigPath); }
     string KeyPath(string username) { return System.IO.Path.Combine(ProfileDir,"key-"+Crypto.Fingerprint(server+"/"+username.ToLowerInvariant())+".dat"); }
@@ -237,26 +237,110 @@ namespace Illusion {
     public Task Send() { return group!=null?QueueGroupMessage():QueueMessage(); }
     static SolidColorBrush Brush(string color) { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); }
     void RenderMessages(bool bottom) { UpdateMessageViews(bottom,false); }
-    void ApplyTheme() {ApplyPalette();string saved=Setting("accent","#467AFF");if(string.IsNullOrEmpty(Setting("theme",""))&&(saved=="#297C91"||saved=="#56657C"))saved="#467AFF";Window.Resources["Accent"]=Brush(saved);Window.FontFamily=new FontFamily(Setting("chatFont","Segoe UI"));}
+    void ApplyTheme() {ApplyPalette();ApplyUiStyle();string[] palette;if(!ThemeColors.TryGetValue(CurrentThemeId(),out palette))palette=ThemeColors["blue"];string saved=Setting("accent",palette[4]);if(string.IsNullOrEmpty(Setting("theme",""))&&(saved=="#297C91"||saved=="#56657C"))saved=palette[4];Window.Resources["Accent"]=Brush(saved);Window.FontFamily=new FontFamily(Setting("chatFont","Segoe UI"));}
     static readonly Dictionary<string,string> AuraCaptions=new Dictionary<string,string>{{"blue","ドリームステート / DREAM STATE"},{"astraios","アストライオス / ASTRAIOS"},{"crimson-moon","クリムゾンムーン / CRIMSON MOON"},{"dreammetric","ドリームメトリック / DREAMMETRIC"},{"eden","エデン / EDEN"},{"hellborn","ヘルボーン / HELLBORN"},{"monarch","モナーク / MONARCH"},{"oblivion","オブリヴィオン / OBLIVION"},{"oppression","オプレッション / OPPRESSION"},{"tomorrow","トゥモロー / TOMORROW"}};
-    static string MotifFor(string theme){switch(theme){case "astraios":return "stars";case "crimson-moon":return "moon";case "dreammetric":return "swirl";case "eden":return "void";case "hellborn":return "flames";case "monarch":return "crown";case "oblivion":return "void";case "oppression":return "cracks";case "tomorrow":return "dawn";default:return "orbit";}}
+    static string MotifFor(string theme){switch(theme){case "astraios":return "constellation";case "crimson-moon":return "bloodmoon";case "dreammetric":return "dreamspiral";case "eden":return "halo";case "hellborn":return "inferno";case "monarch":return "throne";case "oblivion":return "blackhole";case "oppression":return "cage";case "tomorrow":return "horizon";default:return "orbit";}}
     void AuraLine(Canvas c,double x1,double y1,double x2,double y2,double opacity,string color,double thickness=1.5){c.Children.Add(new Line{X1=x1,Y1=y1,X2=x2,Y2=y2,Stroke=Brush(color),StrokeThickness=thickness,Opacity=opacity,IsHitTestVisible=false});}
     void AuraEllipse(Canvas c,double cx,double cy,double w,double h,double angle,double opacity,string color,double thickness=1.5){var e=new Ellipse{Width=w,Height=h,Stroke=Brush(color),StrokeThickness=thickness,Opacity=opacity,RenderTransform=new RotateTransform(angle,w/2,h/2),IsHitTestVisible=false};Canvas.SetLeft(e,cx-w/2);Canvas.SetTop(e,cy-h/2);c.Children.Add(e);}
     void AuraDot(Canvas c,double x,double y,double r,double opacity,string color){var d=new Ellipse{Width=r*2,Height=r*2,Fill=Brush(color),Opacity=opacity,IsHitTestVisible=false};Canvas.SetLeft(d,x-r);Canvas.SetTop(d,y-r);c.Children.Add(d);}
     void AuraCaption(Canvas c,string text,double x,double y,double size,double opacity){var t=new TextBlock{Text=text,FontFamily=new FontFamily("Consolas"),FontSize=size,Foreground=Brush("#8CA5D6"),Opacity=opacity,IsHitTestVisible=false};Canvas.SetLeft(t,x);Canvas.SetTop(t,y);c.Children.Add(t);}
     string AuraAccent(){return Setting("accent","#467AFF");}
+    void AuraPath(Canvas c,string data,double ox,double oy,double scale,double opacity,string color,double thickness=1.5,bool fill=false){
+      var shape=new System.Windows.Shapes.Path{Data=Geometry.Parse(data),Stroke=Brush(color),StrokeThickness=thickness,Opacity=opacity,Fill=fill?Brush(color):Brushes.Transparent,IsHitTestVisible=false,StrokeStartLineCap=PenLineCap.Round,StrokeEndLineCap=PenLineCap.Round};
+      var transform=new TransformGroup();transform.Children.Add(new ScaleTransform(scale,scale));transform.Children.Add(new TranslateTransform(ox,oy));shape.RenderTransform=transform;c.Children.Add(shape);
+    }
+    void AuraPoly(Canvas c,Point[] points,double ox,double oy,double scale,double opacity,string color,double thickness=1.5,bool fill=true){
+      var poly=new Polygon{Fill=fill?Brush(color):Brushes.Transparent,Stroke=Brush(color),StrokeThickness=fill?0:thickness,Opacity=opacity,IsHitTestVisible=false};
+      foreach(var point in points)poly.Points.Add(new Point(ox+point.X*scale,oy+point.Y*scale));c.Children.Add(poly);
+    }
+    void AuraDisc(Canvas c,double cx,double cy,double r,double opacity,Brush fill,Brush stroke=null,double thickness=1.5){
+      var dot=new Ellipse{Width=r*2,Height=r*2,Fill=fill,Stroke=stroke??Brushes.Transparent,StrokeThickness=thickness,Opacity=opacity,IsHitTestVisible=false};Canvas.SetLeft(dot,cx-r);Canvas.SetTop(dot,cy-r);c.Children.Add(dot);
+    }
     void DrawAuraMotif(Canvas c,string motif,double ox,double oy,double scale,double opacity){
-      string a=AuraAccent(),m="#8CA5D6";
+      string a=AuraAccent(),m="#8CA5D6",s;ThemeSecondary.TryGetValue(CurrentThemeId(),out s);if(string.IsNullOrEmpty(s))s="#79E6FF";
       switch(motif){
-        case "stars":{foreach(var p in new[]{new Point(40,30),new Point(95,70),new Point(170,40),new Point(230,90),new Point(120,130),new Point(205,150),new Point(60,165),new Point(150,20),new Point(250,40)})AuraDot(c,ox+p.X*scale,oy+p.Y*scale,2.4*scale,opacity,a);AuraLine(c,ox+40*scale,oy+30*scale,ox+170*scale,oy+40*scale,opacity*.5,a);AuraLine(c,ox+170*scale,oy+40*scale,ox+120*scale,oy+130*scale,opacity*.5,a);AuraLine(c,ox+230*scale,oy+90*scale,ox+205*scale,oy+150*scale,opacity*.5,a);break;}
-        case "moon":AuraEllipse(c,ox+180*scale,oy+100*scale,190*scale,190*scale,0,opacity,a,2.5);AuraEllipse(c,ox+215*scale,oy+85*scale,190*scale,190*scale,0,opacity*.6,a,2.5);AuraDot(c,ox+180*scale,oy+100*scale,40*scale,opacity*.15,a);break;
-        case "swirl":for(int i=0;i<5;i++)AuraEllipse(c,ox+150*scale,oy+90*scale,(300-i*44)*scale,(120-i*16)*scale,-24,opacity*(.9-i*.15),a,1.5);break;
-        case "void":AuraEllipse(c,ox+160*scale,oy+100*scale,260*scale,260*scale,0,opacity*.9,a,2);AuraEllipse(c,ox+160*scale,oy+100*scale,190*scale,190*scale,0,opacity*.6,a,1.5);AuraEllipse(c,ox+160*scale,oy+100*scale,120*scale,120*scale,0,opacity*.4,a,1);AuraDot(c,ox+160*scale,oy+100*scale,34*scale,Math.Min(1,opacity),AuraAccent());break;
-        case "flames":for(int i=0;i<5;i++){double bx=ox+(30+i*58)*scale;var poly=new PointCollection{new Point(bx,oy+170*scale),new Point(bx+22*scale,oy+(60-(i%3)*14)*scale),new Point(bx+44*scale,oy+170*scale)};c.Children.Add(new Polygon{Points=poly,Fill=Brush(a),Opacity=opacity*(.55+(i%3)*.12),IsHitTestVisible=false});}break;
-        case "crown":{var line=new Polyline{Stroke=Brush(a),StrokeThickness=3*scale,Opacity=opacity,IsHitTestVisible=false};foreach(var p in new[]{new Point(30,110),new Point(70,60),new Point(110,110),new Point(150,50),new Point(190,110),new Point(230,60),new Point(270,110)})line.Points.Add(new Point(ox+p.X*scale,oy+p.Y*scale));c.Children.Add(line);AuraDot(c,ox+70*scale,oy+60*scale,5*scale,opacity,a);AuraDot(c,ox+150*scale,oy+50*scale,6*scale,opacity,a);AuraDot(c,ox+230*scale,oy+60*scale,5*scale,opacity,a);break;}
-        case "cracks":AuraLine(c,ox+150*scale,oy+90*scale,ox+110*scale,oy+160*scale,opacity,a,2);AuraLine(c,ox+110*scale,oy+160*scale,ox+100*scale,oy+210*scale,opacity,a,2);AuraLine(c,ox+150*scale,oy+90*scale,ox+210*scale,oy+140*scale,opacity,a,2);AuraLine(c,ox+210*scale,oy+140*scale,ox+265*scale,oy+170*scale,opacity,a,2);AuraLine(c,ox+150*scale,oy+90*scale,ox+175*scale,oy+30*scale,opacity,a,2);AuraLine(c,ox+150*scale,oy+90*scale,ox+90*scale,oy+65*scale,opacity,a,2);AuraDot(c,ox+150*scale,oy+90*scale,6*scale,opacity,a);break;
-        case "dawn":{var arc=new Polyline{Stroke=Brush(a),StrokeThickness=2*scale,Opacity=opacity,IsHitTestVisible=false};for(int i=0;i<=20;i++){double t=Math.PI-(Math.PI*i/20.0);arc.Points.Add(new Point(ox+(150+Math.Cos(t)*110)*scale,oy+(200+Math.Sin(t)*-80)*scale));}c.Children.Add(arc);AuraLine(c,ox+20*scale,oy+200*scale,ox+280*scale,oy+200*scale,opacity*.7,a,1.5);for(int i=0;i<6;i++){double ang=(i*30-90)*Math.PI/180;AuraLine(c,ox+(150+Math.Cos(ang)*60)*scale,oy+(200+Math.Sin(ang)*45)*scale,ox+(150+Math.Cos(ang)*95)*scale,oy+(200+Math.Sin(ang)*72)*scale,opacity*.4,a);}AuraDot(c,ox+150*scale,oy+200*scale,22*scale,opacity*.35,a);break;}
-        default:for(int i=0;i<3;i++)AuraEllipse(c,ox+110*scale,oy+70*scale,(240-i*56)*scale,(90-i*20)*scale,-25,opacity*(.85-i*.15),a,1.5);for(int y=0;y<3;y++)for(int x=0;x<5;x++){var sq=new Rectangle{Width=24*scale,Height=13*scale,Fill=Brush((x+y)%2==0?a:m),Opacity=opacity*(.45+((x+y)%2)*.25),IsHitTestVisible=false};Canvas.SetLeft(sq,ox+(30+x*30)*scale);Canvas.SetTop(sq,oy+(120+y*17)*scale);c.Children.Add(sq);}AuraEllipse(c,ox+140*scale,oy+70*scale,50*scale,50*scale,45,opacity*.8,m,2);break;
+        case "constellation":{
+          var nodes=new[]{new Point(300,64),new Point(382,128),new Point(474,92),new Point(512,196),new Point(430,252),new Point(326,300),new Point(220,248),new Point(132,188),new Point(170,106)};
+          foreach(var p in nodes)AuraDot(c,ox+p.X*scale,oy+p.Y*scale,2.6*scale,opacity*.9,a);
+          foreach(var pair in new[]{new[]{0,1},new[]{1,2},new[]{1,4},new[]{4,3},new[]{4,5},new[]{5,6},new[]{6,7},new[]{7,0},new[]{6,1},new[]{5,1}})
+            AuraLine(c,ox+nodes[pair[0]].X*scale,oy+nodes[pair[0]].Y*scale,ox+nodes[pair[1]].X*scale,oy+nodes[pair[1]].Y*scale,opacity*.42,a);
+          AuraPoly(c,new[]{new Point(300,92),new Point(309,171),new Point(388,180),new Point(309,189),new Point(300,268),new Point(291,189),new Point(212,180),new Point(291,171)},ox,oy,scale,opacity*.28,s);
+          AuraPoly(c,new[]{new Point(300,112),new Point(306,174),new Point(368,180),new Point(306,186),new Point(300,248),new Point(294,186),new Point(232,180),new Point(294,174)},ox,oy,scale,opacity*.85,s);
+          foreach(var p in new[]{new Point(80,90),new Point(120,240),new Point(470,300),new Point(520,60),new Point(210,40),new Point(520,300),new Point(70,300),new Point(410,60)})AuraDot(c,ox+p.X*scale,oy+p.Y*scale,1.8*scale,opacity*.8,s);
+          break;}
+        case "bloodmoon":{
+          var moon=new RadialGradientBrush{GradientOrigin=new Point(.38,.34),Center=new Point(.5,.5),RadiusX=.62,RadiusY=.62};
+          moon.GradientStops.Add(new GradientStop(Mix(ColorOf(a),Colors.White,.25),0));moon.GradientStops.Add(new GradientStop(ColorOf(a),.58));moon.GradientStops.Add(new GradientStop(ColorOf("#250208"),1));
+          AuraDisc(c,ox+342*scale,oy+150*scale,112*scale,opacity*.9,moon);
+          AuraEllipse(c,ox+300*scale,oy+108*scale,240*scale,240*scale,0,opacity*.28,a,2);
+          foreach(var crater in new[]{new[]{390,118,13},new[]{352,196,20},new[]{300,142,10},new[]{415,196,9},new[]{330,96,7}})AuraDisc(c,ox+crater[0]*scale,oy+crater[1]*scale,crater[2]*scale,opacity*.2,Brush("#120208"));
+          AuraPath(c,"M300 66 C246 92 250 146 292 174 M430 120 C448 168 414 218 366 234 M334 40 L318 96 L344 132 M368 262 L390 300 M250 262 L222 300",ox,oy,scale,opacity*.55,a,2);
+          AuraPath(c,"M116 286 Q180 250 244 272 Q300 290 356 262 Q430 228 500 258",ox,oy,scale,opacity*.35,a,1.5);
+          AuraPath(c,"M120 96 Q160 120 150 170 M492 74 Q462 116 480 156",ox,oy,scale,opacity*.3,s,1.5);
+          foreach(var ember in new[]{new[]{470,120,6},new[]{486,170,4},new[]{150,80,4},new[]{190,300,5},new[]{470,286,3}})AuraDot(c,ox+ember[0]*scale,oy+ember[1]*scale,ember[2]*scale,opacity*.7,a);
+          break;}
+        case "dreamspiral":{
+          AuraEllipse(c,ox+300*scale,oy+178*scale,340*scale,192*scale,-18,opacity*.18,a,1);
+          for(int arm=0;arm<3;arm++){var poly=new Polyline{Stroke=Brush(arm==0?s:a),StrokeThickness=arm==0?2.2:1.2,Opacity=opacity*(arm==0?.9:.45),IsHitTestVisible=false};
+            for(double t=0;t<=13;t+=.28){double r=6+t*6.8,angle=t+arm*2.1;poly.Points.Add(new Point(ox+(300+Math.Cos(angle)*r*1.18)*scale,oy+(178+Math.Sin(angle)*r*.68)*scale));}c.Children.Add(poly);}
+          foreach(var spark in new[]{new[]{170,100,3},new[]{410,90,4},new[]{470,210,2},new[]{150,250,3},new[]{360,290,2},new[]{240,60,2},new[]{500,140,2},new[]{90,170,2}})AuraDot(c,ox+spark[0]*scale,oy+spark[1]*scale,spark[2]*scale,opacity*.8,s);
+          AuraDot(c,ox+300*scale,oy+178*scale,13*scale,opacity*.35,s);AuraDot(c,ox+300*scale,oy+178*scale,4*scale,opacity*.9,s);
+          break;}
+        case "halo":{
+          AuraEllipse(c,ox+300*scale,oy+104*scale,128*scale,128*scale,0,opacity*.9,s,3);
+          AuraEllipse(c,ox+300*scale,oy+104*scale,160*scale,160*scale,0,opacity*.35,a,1);
+          for(int i=0;i<14;i++){double angle=i*Math.PI/7-Math.PI/2;AuraLine(c,ox+(300+Math.Cos(angle)*92)*scale,oy+(104+Math.Sin(angle)*92)*scale,ox+(300+Math.Cos(angle)*124)*scale,oy+(104+Math.Sin(angle)*124)*scale,opacity*.45,s,1.6);}
+          AuraPoly(c,new[]{new Point(300,136),new Point(310,166),new Point(342,176),new Point(310,186),new Point(300,220),new Point(290,186),new Point(258,176),new Point(290,166)},ox,oy,scale,opacity*.72,s);
+          AuraPath(c,"M300 226 C242 170 176 164 116 210 C168 218 210 246 250 286 C266 256 282 236 300 226 Z",ox,oy,scale,opacity*.14,a,1.2,true);
+          AuraPath(c,"M300 226 C358 170 424 164 484 210 C432 218 390 246 350 286 C334 256 318 236 300 226 Z",ox,oy,scale,opacity*.14,a,1.2,true);
+          AuraDot(c,ox+452*scale,oy+110*scale,5*scale,opacity*.4,s);AuraDot(c,ox+148*scale,oy+294*scale,4*scale,opacity*.35,s);
+          break;}
+        case "inferno":{
+          AuraEllipse(c,ox+300*scale,oy+306*scale,420*scale,52*scale,0,opacity*.12,a,1);
+          foreach(var p in new[]{new Point(188,206),new Point(206,120),new Point(262,84),new Point(300,72),new Point(338,84),new Point(394,120),new Point(412,206),new Point(382,172),new Point(344,150),new Point(300,146),new Point(256,150),new Point(218,172)})AuraDot(c,ox+p.X*scale,oy+p.Y*scale,2*scale,opacity*.35,a);
+          for(int i=0;i<5;i++){double x=170+i*66;AuraPoly(c,new[]{new Point(x,302),new Point(x-26,262),new Point(x+16,228),new Point(x-4,182),new Point(x+34,216),new Point(x+48,256),new Point(x+30,302)},ox,oy,scale,opacity*.55,s);}
+          AuraPath(c,"M236 132 C238 96 266 72 282 58 C286 92 272 114 258 134 M364 132 C362 96 334 72 318 58 C314 92 328 114 342 134",ox,oy,scale,opacity*.85,s,3);
+          foreach(var ember in new[]{new[]{140,120,4},new[]{460,100,3},new[]{500,220,5},new[]{110,240,3},new[]{380,60,2},new[]{250,60,2}})AuraDot(c,ox+ember[0]*scale,oy+ember[1]*scale,ember[2]*scale,opacity*.75,s);
+          break;}
+        case "throne":{
+          for(int i=0;i<7;i++)AuraLine(c,ox+300*scale,oy+170*scale,ox+(150+i*50)*scale,oy+40*scale,opacity*.22,s,1);
+          AuraPoly(c,new[]{new Point(300,78),new Point(266,126),new Point(246,82),new Point(244,154),new Point(356,154),new Point(354,82),new Point(334,126)},ox,oy,scale,opacity*.8,s);
+          AuraPoly(c,new[]{new Point(254,154),new Point(346,154),new Point(360,296),new Point(240,296)},ox,oy,scale,opacity*.18,a,1.5);
+          AuraLine(c,ox+232*scale,oy+296*scale,ox+368*scale,oy+296*scale,opacity*.8,s,3);
+          AuraLine(c,ox+246*scale,oy+296*scale,ox+238*scale,oy+320*scale,opacity*.8,s,3);AuraLine(c,ox+354*scale,oy+296*scale,ox+362*scale,oy+320*scale,opacity*.8,s,3);
+          AuraPoly(c,new[]{new Point(300,166),new Point(312,186),new Point(334,192),new Point(312,198),new Point(300,220),new Point(288,198),new Point(266,192),new Point(288,186)},ox,oy,scale,opacity*.65,s);
+          AuraDot(c,ox+276*scale,oy+132*scale,4*scale,opacity,s);AuraDot(c,ox+324*scale,oy+132*scale,4*scale,opacity,s);AuraDot(c,ox+300*scale,oy+110*scale,5*scale,opacity,s);
+          break;}
+        case "blackhole":{
+          AuraEllipse(c,ox+300*scale,oy+182*scale,392*scale,108*scale,-14,opacity*.5,a,2);
+          AuraEllipse(c,ox+300*scale,oy+182*scale,332*scale,76*scale,-14,opacity*.45,s,1.2);
+          AuraDisc(c,ox+300*scale,oy+180*scale,70*scale,opacity,Brush("#000000"),Brush(a),2.2);
+          AuraEllipse(c,ox+300*scale,oy+180*scale,152*scale,152*scale,0,opacity*.55,s,1);
+          AuraPath(c,"M208 180 Q300 120 392 180 M204 188 Q300 244 396 188",ox,oy,scale,opacity*.38,s,1.5);
+          foreach(var line in new[]{new[]{90,100,180,70},new[]{470,280,560,320},new[]{120,300,70,330},new[]{520,70,560,30},new[]{180,60,130,30}})AuraLine(c,ox+line[0]*scale,oy+line[1]*scale,ox+line[2]*scale,oy+line[3]*scale,opacity*.35,s,1.2);
+          break;}
+        case "cage":{
+          for(int i=0;i<9;i++)AuraLine(c,ox+(150+i*38)*scale,oy+72*scale,ox+(150+i*38)*scale,oy+300*scale,opacity*.35,m,3);
+          AuraLine(c,ox+132*scale,oy+72*scale,ox+468*scale,oy+72*scale,opacity*.28,a,2);AuraLine(c,ox+128*scale,oy+300*scale,ox+472*scale,oy+300*scale,opacity*.28,a,2);
+          AuraLine(c,ox+120*scale,oy+54*scale,ox+480*scale,oy+318*scale,opacity*.28,a,2);AuraLine(c,ox+480*scale,oy+54*scale,ox+120*scale,oy+318*scale,opacity*.28,a,2);
+          for(int i=0;i<6;i++)AuraEllipse(c,ox+(188+i*46)*scale,oy+(96+(i%2)*14)*scale,18*scale,18*scale,0,opacity*.35,a,2);
+          AuraPath(c,"M250 120 L282 166 L266 214 L300 252 M350 120 L318 166 L334 214 L300 252",ox,oy,scale,opacity*.55,s,1.5);
+          AuraDot(c,ox+300*scale,oy+252*scale,5*scale,opacity*.8,s);
+          break;}
+        case "horizon":{
+          AuraEllipse(c,ox+300*scale,oy+260*scale,296*scale,296*scale,0,opacity*.2,a,1);
+          for(int i=0;i<12;i++){double angle=Math.PI+Math.PI*i/11;AuraLine(c,ox+(300+Math.Cos(angle)*150)*scale,oy+(260+Math.Sin(angle)*150)*scale,ox+(300+Math.Cos(angle)*164)*scale,oy+(260+Math.Sin(angle)*164)*scale,opacity*.45,s,1.5);}
+          AuraPath(c,"M152 260 A148 148 0 0 1 448 260",ox,oy,scale,opacity*.75,s,2.5);
+          AuraPath(c,"M208 260 A92 92 0 0 1 392 260 Z",ox,oy,scale,opacity*.32,s,1,true);
+          AuraLine(c,ox+110*scale,oy+260*scale,ox+490*scale,oy+260*scale,opacity*.7,a,1.8);
+          AuraLine(c,ox+132*scale,oy+288*scale,ox+468*scale,oy+288*scale,opacity*.25,a,1);AuraLine(c,ox+164*scale,oy+314*scale,ox+436*scale,oy+314*scale,opacity*.2,a,1);
+          for(int i=0;i<9;i++)AuraLine(c,ox+(170+i*32)*scale,oy+260*scale,ox+(188+i*32)*scale,oy+330*scale,opacity*.16,a,.8);
+          AuraDot(c,ox+300*scale,oy+260*scale,10*scale,opacity*.75,s);
+          break;}
+        default:for(int i=0;i<3;i++)AuraEllipse(c,ox+210*scale,oy+140*scale,(240-i*56)*scale,(88-i*20)*scale,-25,opacity*(.85-i*.15),a,1.5);
+          AuraDot(c,ox+210*scale,oy+140*scale,5*scale,opacity,a);AuraEllipse(c,ox+210*scale,oy+140*scale,48*scale,48*scale,0,opacity*.85,m,2);
+          for(int y=0;y<3;y++)for(int x=0;x<5;x++){var sq=new Rectangle{Width=26*scale,Height=14*scale,Fill=Brush((x+y)%2==0?a:m),Opacity=opacity*(.35+((x+y)%2)*.25),IsHitTestVisible=false};Canvas.SetLeft(sq,ox+(120+x*34)*scale);Canvas.SetTop(sq,oy+(200+y*16)*scale);c.Children.Add(sq);}
+          break;
       }
     }
     void DrawAura() {
@@ -264,14 +348,14 @@ namespace Illusion {
       string theme=CurrentThemeId();string caption;AuraCaptions.TryGetValue(theme,out caption);if(caption==null)caption=AuraCaptions["blue"];
       var stamp=Window.FindName("AuraStamp") as TextBlock;if(stamp!=null)stamp.Text=caption;
       if(Setting("aura","true")=="false")return;
-      DrawAuraMotif(canvas,MotifFor(theme),10,10,0.95,0.9);
+      DrawAuraMotif(canvas,MotifFor(theme),10,10,theme=="blue"?0.95:0.52,0.9);
       AuraCaption(canvas,caption,18,232,10,0.95);
     }
     void DrawWallpaper() {
       var canvas=Get<Canvas>("ChatWallpaper");canvas.Children.Clear();if(Setting("aura","true")=="false")return;
       double width=canvas.ActualWidth,height=canvas.ActualHeight;
       string theme=CurrentThemeId();string caption;AuraCaptions.TryGetValue(theme,out caption);if(caption==null)caption=AuraCaptions["blue"];
-      DrawAuraMotif(canvas,MotifFor(theme),width-330,height-300,1.35,0.5);
+      DrawAuraMotif(canvas,MotifFor(theme),width-330,height-300,theme=="blue"?1.35:0.82,0.5);
       AuraCaption(canvas,caption,width-300,height-38,10,0.55);
     }
     Window Dialog(string title,StackPanel panel) {
@@ -292,7 +376,12 @@ namespace Illusion {
     void ShowSettings() {
       var panel=new StackPanel();panel.Children.Add(Label("Make it yours.",25));panel.Children.Add(Label("ILLUSIONARY / APPEARANCE",11));
       var language=new ComboBox{ItemsSource=GetLanguageChoices(),DisplayMemberPath="Name",SelectedValuePath="Code",SelectedValue=currentLanguage,Margin=new Thickness(0,0,0,14)};panel.Children.Add(Label(T("Language")));panel.Children.Add(language);
-      var themeIds=new[]{"blue","astraios","crimson-moon","dreammetric","eden","hellborn","monarch","oblivion","oppression","tomorrow"};var themeLabels=new[]{"Illusionary","Astraios","Calamity of the Crimson Moon","Dreammetric","Eden","Hellborn","Monarch","Oblivion","Oppression","Tomorrow"};var themes=new ComboBox{ItemsSource=Array.ConvertAll(themeLabels,label=>T(label)),SelectedIndex=Math.Max(0,Array.IndexOf(themeIds,CurrentThemeId())),Margin=new Thickness(0,0,0,16)};panel.Children.Add(themes);
+      var themeIds=new[]{"blue","astraios","crimson-moon","dreammetric","eden","hellborn","monarch","oblivion","oppression","tomorrow"};var themeLabels=new[]{"Illusionary","Astraios","Calamity of the Crimson Moon","Dreammetric","Eden","Hellborn","Monarch","Oblivion","Oppression","Tomorrow"};var themes=new ComboBox{ItemsSource=Array.ConvertAll(themeLabels,label=>T(label)),SelectedIndex=Math.Max(0,Array.IndexOf(themeIds,CurrentThemeId())),Margin=new Thickness(0,0,0,12)};
+      var themeStrip=new WrapPanel{Margin=new Thickness(0,0,0,14)};var themeButtons=new List<Button>();
+      Action markThemes=()=>{for(int i=0;i<themeButtons.Count;i++){themeButtons[i].BorderThickness=new Thickness(i==themes.SelectedIndex?2:1);themeButtons[i].BorderBrush=i==themes.SelectedIndex?Brush("#FFFFFF"):(Brush)Window.Resources["PanelBorder"];}};
+      for(int i=0;i<themeIds.Length;i++){int index=i;var chip=new Button{Content=T(themeLabels[i]),Background=Brush(ThemeColors[themeIds[i]][2]),Foreground=Brush(ThemeColors[themeIds[i]][7]),Padding=new Thickness(10,7,10,7),Margin=new Thickness(0,0,6,6),FontSize=11,ToolTip=T(themeLabels[i])};chip.Click+=(s,e)=>themes.SelectedIndex=index;themeButtons.Add(chip);themeStrip.Children.Add(chip);}
+      themes.SelectionChanged+=(s,e)=>markThemes();markThemes();panel.Children.Add(themeStrip);
+      panel.Children.Add(Label("Interface style"));var ui=new ComboBox{ItemsSource=new[]{T("Detailed"),T("Minimalistic")},SelectedIndex=Setting("ui","detailed")=="minimalistic"?1:0,Margin=new Thickness(0,0,0,16)};panel.Children.Add(ui);
       panel.Children.Add(Label("Message text size"));var font=new Slider {Minimum=12,Maximum=20,TickFrequency=1,IsSnapToTickEnabled=true,Value=int.Parse(Setting("font","14")),Margin=new Thickness(0,0,0,16)};panel.Children.Add(font);
       panel.Children.Add(Label("Chat font"));var family=new ComboBox{ItemsSource=ProfileFonts,SelectedItem=Setting("chatFont","Segoe UI"),Margin=new Thickness(0,0,0,12)};panel.Children.Add(family);
       var lookRow=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,14)};
@@ -334,7 +423,7 @@ namespace Illusion {
       var logout=new Button {Content=T("Sign out"),IsEnabled=me!=null};panel.Children.Add(logout);
       panel.Children.Add(Label("Illusion "+BuildInfo.Version+" · "+T("Private. Customizable. Free.")+"\n"+T("A connection beyond the noise.")+"\n"+T("Your space, uninterrupted."),11));
       var dialog=Dialog("Customize Illusion",panel);
-      apply.Click+=(s,e)=>{settings["language"]=Convert.ToString(language.SelectedValue??"en");currentLanguage=settings["language"];settings["theme"]=themeIds[themes.SelectedIndex];settings["chatFont"]=Convert.ToString(family.SelectedItem);settings["textColor"]=textColor.Hex;if(bubbleColor.Hex=="")settings.Remove("bubbleColor");else settings["bubbleColor"]=bubbleColor.Hex;settings["accent"]=ThemeColors[themeIds[themes.SelectedIndex]][4];settings["font"]=((int)font.Value).ToString();settings["compact"]=compact.IsChecked==true?"true":"false";settings["aura"]=aura.IsChecked==true?"true":"false";settings["motion"]=motion.IsChecked==true?"true":"false";settings["receipts"]=receipts.IsChecked==true?"true":"false";lastReadSent=0;SaveSettings();ApplyTheme();DrawAura();RelocalizeEverything();dialog.Close();};
+      apply.Click+=(s,e)=>{settings["language"]=Convert.ToString(language.SelectedValue??"en");currentLanguage=settings["language"];settings["theme"]=themeIds[themes.SelectedIndex];settings["ui"]=ui.SelectedIndex==1?"minimalistic":"detailed";settings["chatFont"]=Convert.ToString(family.SelectedItem);settings["textColor"]=textColor.Hex;if(bubbleColor.Hex=="")settings.Remove("bubbleColor");else settings["bubbleColor"]=bubbleColor.Hex;settings["accent"]=ThemeColors[themeIds[themes.SelectedIndex]][4];settings["font"]=((int)font.Value).ToString();settings["compact"]=compact.IsChecked==true?"true":"false";settings["aura"]=aura.IsChecked==true?"true":"false";settings["motion"]=motion.IsChecked==true?"true":"false";settings["receipts"]=receipts.IsChecked==true?"true":"false";lastReadSent=0;SaveSettings();ApplyTheme();DrawAura();RelocalizeEverything();dialog.Close();};
       backup.Click+=async(s,e)=>await Guard(ExportKey);
       logout.Click+=async(s,e)=>{if(sending)return;dialog.Close();await Guard(async()=>{try{await Api("POST","/v1/logout",new{});}finally{SignOutLocal();}});};dialog.ShowDialog();
     }

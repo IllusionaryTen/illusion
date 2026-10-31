@@ -1,6 +1,16 @@
-# ◈ Illusion 1.6.2
+# ◈ Illusion 1.7.0
 
-**Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with an original blue, white, black, checkerboard and orbital interface inspired by illusionary from Sol's RNG. Telegram delivers the Windows and Android apps.
+**Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with a detailed blue, white, black, checkerboard and orbital interface inspired by the Challenged+ auras of Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.7.0
+
+**A detailed interface, with the original one kept.** The default layout now has a layered aura backdrop, glass panels, rounded conversation cards, aura-tinted chat bubbles, a floating composer and a full-height chat. Appearance adds a Detailed / Minimalistic switch: Minimalistic restores the original flat, compact layout without removing any feature. The same switch is available in the Windows client.
+
+**Themes become aura galleries.** Appearance now shows all ten themes as colour cards instead of a plain list. Palettes were retuned to each aura's actual mood — Illusionary ice-blue, Astraios starlight teal, Calamity of the Crimson Moon blood red, Dreammetric magenta, Eden silver-gold, Hellborn ember, Monarch violet-gold, Oblivion deep violet, Oppression steel and Tomorrow dawn — with a secondary accent used for glows, gradients and aura artwork. The same palettes drive Windows.
+
+**Chat header and settings.** Conversations show their @username and encrypted state under the title, the active chat is highlighted in the sidebar, and settings are grouped into appearance, conversations and privacy sections.
+
+**No wire changes.** Messages, envelopes, groups and relay routes are untouched; 1.7 is a client-only appearance release. Tests: the full web/relay suite and 213 native Windows checks.
 
 ## What's new in 1.6.2
 

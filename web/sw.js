@@ -1,4 +1,4 @@
-const CACHE = 'illusion-app-shell-v5';
+const CACHE = 'illusion-app-shell-v6';
 const SHELL = [
   '/app/',
   '/app/style.css',

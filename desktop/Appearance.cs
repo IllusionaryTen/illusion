@@ -44,10 +44,51 @@ namespace Illusion {
     static double Luminance(Color c){Func<byte,double> f=b=>b/255.0<=.04045?b/255.0/12.92:Math.Pow((b/255.0+.055)/1.055,2.4);return .2126*f(c.R)+.7152*f(c.G)+.0722*f(c.B);}
     static double Contrast(Color a,Color b){double x=Luminance(a),y=Luminance(b);return (Math.Max(x,y)+.05)/(Math.Min(x,y)+.05);}
     Brush Readable(string requested,string background){var a=(Color)ColorConverter.ConvertFromString(requested);var b=(Color)ColorConverter.ConvertFromString(background);if(Contrast(a,b)>=4.5)return new SolidColorBrush(a);return new SolidColorBrush(Contrast(Colors.White,b)>=Contrast(Colors.Black,b)?Colors.White:Colors.Black);}
-    static readonly Dictionary<string,string[]> ThemeColors=new Dictionary<string,string[]>{{"blue",new[]{"#090C13","#101622","#192334","#526989","#467AFF","#080E19","#B4C6E0","#8CB3FF"}},{"astraios",new[]{"#03121A","#071E24","#0C2A2E","#2A5A58","#7FE0C8","#04130F","#C9DCD2","#A6F0DC"}},{"crimson-moon",new[]{"#0B0207","#19040C","#26070F","#5A1620","#D8202B","#FFFFFF","#E7B0AC","#FF7A72"}},{"dreammetric",new[]{"#120320","#1E072C","#2B0C3B","#5A2268","#C93BD9","#150320","#EBC9EE","#EE86F5"}},{"eden",new[]{"#04050C","#0C0F18","#151A24","#39414F","#AEB4C2","#07080D","#C2C6CE","#DDE1E8"}},{"hellborn",new[]{"#0A050F","#150B17","#20101C","#4A2431","#E8823F","#140805","#D9B6AE","#FFA768"}},{"monarch",new[]{"#05030F","#0B0720","#140C30","#34205E","#9B6BFF","#090614","#D2C8E8","#B98CFF"}},{"oblivion",new[]{"#02020E","#08061C","#100B2A","#2E2058","#B060F0","#0A0414","#D8C4EC","#D79BFF"}},{"oppression",new[]{"#04060E","#0B1019","#141A25","#333D4C","#AEB6C4","#05070C","#C4C9D2","#D7DCE4"}},{"tomorrow",new[]{"#03051A","#080C28","#10163A","#2E3A6E","#8FA3E8","#050716","#C9D4F2","#C3D2FF"}}};
+    static readonly Dictionary<string,string[]> ThemeColors=new Dictionary<string,string[]>{{"blue",new[]{"#070B16","#0D1424","#16203A","#33466E","#5B7CFF","#060912","#B9C3E0","#8FB4FF"}},{"astraios",new[]{"#030F16","#071C23","#0B2A31","#265A5B","#6FE3D2","#04130F","#C6E3D0","#A9F5E2"}},{"crimson-moon",new[]{"#090206","#180409","#250810","#5A1620","#E02434","#FFFFFF","#E7B0AC","#FF8A7A"}},{"dreammetric",new[]{"#10031C","#1A0629","#270B38","#5A2268","#D445E6","#14021B","#EBC9EE","#F08CFF"}},{"eden",new[]{"#04050A","#0B0E16","#141923","#3A4352","#C7D3E3","#070A10","#C2C6CE","#EAF2FF"}},{"hellborn",new[]{"#0B0304","#180709","#250B0D","#552025","#F2713A","#140604","#E3B6A6","#FFA768"}},{"monarch",new[]{"#05030E","#0C0720","#150D31","#382663","#A97BFF","#0A0514","#D6C9F0","#C39BFF"}},{"oblivion",new[]{"#020108","#070514","#0F0A26","#2E2058","#B96BFF","#06020C","#D8C4EC","#D79BFF"}},{"oppression",new[]{"#04060B","#0A0F17","#121A25","#39485C","#B9C6D8","#05070C","#C4CBD6","#DCE6F4"}},{"tomorrow",new[]{"#03041A","#080C26","#101638","#33406F","#9FB4FF","#050716","#C9D4F2","#CBD9FF"}}};
+    static readonly Dictionary<string,string> ThemeSecondary=new Dictionary<string,string>{{"blue","#79E6FF"},{"astraios","#F2D98E"},{"crimson-moon","#FF9A5C"},{"dreammetric","#7FE0FF"},{"eden","#F1DCA7"},{"hellborn","#FF4B36"},{"monarch","#FFD36E"},{"oblivion","#6C4DFF"},{"oppression","#6C8BB5"},{"tomorrow","#FFC98A"}};
     static bool IsLookHex(string value){if(string.IsNullOrEmpty(value)||value.Length!=7||value[0]!='#')return false;for(int i=1;i<7;i++)if("0123456789abcdefABCDEF".IndexOf(value[i])<0)return false;return true;}
     string CurrentThemeId(){string theme=Setting("theme","");return !string.IsNullOrEmpty(theme)&&ThemeColors.ContainsKey(theme)?theme:"blue";}
-    void ApplyPalette(){string theme=CurrentThemeId();string[] p;if(!ThemeColors.TryGetValue(theme,out p))p=ThemeColors["blue"];Window.Resources["AppBackground"]=Brush(p[0]);Window.Resources["PanelBackground"]=Brush(p[1]);Window.Resources["ControlBackground"]=Brush(p[2]);Window.Resources["PanelBorder"]=Brush(p[3]);Window.Resources["ThemeHighlight"]=Brush(p[7]);Window.Resources["MutedText"]=Brush(p[6]);}
+    static Color ColorOf(string value){return (Color)ColorConverter.ConvertFromString(value);}
+    static Color Mix(Color a,Color b,double amount){return Color.FromRgb((byte)Math.Round(a.R+(b.R-a.R)*amount),(byte)Math.Round(a.G+(b.G-a.G)*amount),(byte)Math.Round(a.B+(b.B-a.B)*amount));}
+    static string Hex(Color value){return string.Format("#{0:X2}{1:X2}{2:X2}",value.R,value.G,value.B);}
+    string SecondaryFor(string theme){string value;return ThemeSecondary.TryGetValue(theme,out value)?value:"#79E6FF";}
+    string PeerBubbleHex(){var brush=Window.Resources["BubblePeer"] as SolidColorBrush;return brush!=null?Hex(brush.Color):"#16203A";}
+    void ApplyPalette(){
+      string theme=CurrentThemeId();string[] p;if(!ThemeColors.TryGetValue(theme,out p))p=ThemeColors["blue"];
+      Window.Resources["AppBackground"]=Brush(p[0]);Window.Resources["PanelBackground"]=Brush(p[1]);Window.Resources["ControlBackground"]=Brush(p[2]);Window.Resources["PanelBorder"]=Brush(p[3]);Window.Resources["ThemeHighlight"]=Brush(p[7]);Window.Resources["MutedText"]=Brush(p[6]);
+      Window.Resources["AccentSecondary"]=Brush(SecondaryFor(theme));
+    }
+    void ApplyUiStyle(){
+      bool detailed=Setting("ui","detailed")!="minimalistic";
+      string theme=CurrentThemeId();string[] p;if(!ThemeColors.TryGetValue(theme,out p))p=ThemeColors["blue"];
+      Color bg=ColorOf(p[0]),panel=ColorOf(p[1]),control=ColorOf(p[2]),line=ColorOf(p[3]),accent=ColorOf(p[4]),secondary=ColorOf(SecondaryFor(theme));
+      Window.Resources["UiRadius"]=new CornerRadius(detailed?12:7);
+      Window.Resources["RowRadius"]=new CornerRadius(detailed?14:9);
+      Window.Resources["SidebarBackground"]=Brush(detailed?Hex(Mix(panel,bg,.24)):p[1]);
+      Window.Resources["HeaderBackground"]=detailed?Brush(Hex(Mix(panel,bg,.38))):Brushes.Transparent;
+      Window.Resources["ComposerBackground"]=detailed?Brush(Hex(Mix(panel,bg,.18))):Brushes.Transparent;
+      Window.Resources["InputBackground"]=Brush(detailed?Hex(Mix(control,bg,.34)):p[2]);
+      Window.Resources["RowHover"]=Brush(detailed?Hex(Mix(control,accent,.14)):Hex(Mix(control,Colors.White,.06)));
+      Window.Resources["RowSelected"]=Brush(detailed?Hex(Mix(control,accent,.26)):p[2]);
+      Window.Resources["BubblePeer"]=Brush(detailed?Hex(Mix(control,accent,.08)):p[2]);
+      Window.Resources["BubblePeerBorder"]=Brush(detailed?Hex(Mix(line,bg,.35)):p[2]);
+      var backdrop=Get<Border>("UiBackdrop");
+      if(backdrop!=null){
+        backdrop.Visibility=detailed?Visibility.Visible:Visibility.Collapsed;
+        if(detailed){var g=new LinearGradientBrush(Colors.Transparent,Colors.Transparent,new Point(0,0),new Point(1,1));g.GradientStops.Clear();g.GradientStops.Add(new GradientStop(Mix(bg,accent,.16),0));g.GradientStops.Add(new GradientStop(bg,.5));g.GradientStops.Add(new GradientStop(Mix(bg,secondary,.12),1));backdrop.Background=g;}
+      }
+      var rail=Get<Border>("RailPanel");
+      if(rail!=null){rail.Margin=detailed?new Thickness(8,10,0,10):new Thickness(0);rail.CornerRadius=detailed?new CornerRadius(16):new CornerRadius(0);rail.BorderThickness=detailed?new Thickness(1):new Thickness(0,0,1,0);rail.Background=detailed?Brush(Hex(Mix(panel,bg,.4))):Brush(p[0]);}
+      var sidebar=Get<Border>("SidebarPanel");
+      if(sidebar!=null){sidebar.Margin=detailed?new Thickness(8,10,8,10):new Thickness(0);sidebar.CornerRadius=detailed?new CornerRadius(16):new CornerRadius(0);sidebar.BorderThickness=detailed?new Thickness(1):new Thickness(0,0,1,0);}
+      var auth=Get<Border>("AuthOverlay");
+      if(auth!=null)auth.Background=detailed?new SolidColorBrush(Color.FromArgb(250,bg.R,bg.G,bg.B)):Brush(p[0]);
+      var surface=Get<Border>("ConversationSurface");
+      if(surface!=null){
+        surface.Visibility=detailed?Visibility.Visible:Visibility.Collapsed;
+        if(detailed){var g=new LinearGradientBrush(Colors.Transparent,Colors.Transparent,new Point(0,0),new Point(1,1));g.GradientStops.Clear();g.GradientStops.Add(new GradientStop(Mix(panel,bg,.3),0));g.GradientStops.Add(new GradientStop(Mix(bg,panel,.18),1));surface.Background=g;surface.BorderBrush=Brush(Hex(Mix(line,bg,.4)));surface.BorderThickness=new Thickness(1);}
+      }
+    }
     void ShowProfileEditor(Dictionary<string,object> user){
       int gen=generation;var p=new Dictionary<string,object>(UserProfile(user));var panel=new StackPanel{Margin=new Thickness(22)};var preview=new StackPanel{Margin=new Thickness(22)};
       panel.Children.Add(Label("Make your profile yours",25));panel.Children.Add(Label("Display name"));var name=new TextBox{Text=Str(user,"displayName"),MaxLength=40};panel.Children.Add(name);AutomationProperties.SetName(name,"Profile display name");

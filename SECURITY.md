@@ -1,4 +1,4 @@
-# Illusion 1.6.2 preview security boundaries
+# Illusion 1.7.0 preview security boundaries
 
 Illusion is an early Cloudflare-hosted or local messenger, not an independently audited security product. This document describes the implemented design and its limits.
 
@@ -119,3 +119,7 @@ This release closes issues found in a targeted audit. Group storage and disappea
 Decrypted media is treated as untrusted even after successful envelope decryption. Web and Windows clients now check size, PNG/JPEG headers and dimensions, MP4 `ftyp` layout, and WAV/MP3 magic before handing bytes to image/video/audio decoders. Windows update checks are disabled unless the configured relay is HTTPS, so a LAN HTTP relay cannot serve an unauthenticated update. Hosted responses send HSTS; Android bounds share text, notification text and notification chat extras. Published privacy text was corrected to describe encrypted attachments and the web session token stored in origin-scoped IndexedDB.
 
 Residual risks remain: the relay still sees group names, membership, event names, sizes and timing; a malicious host can serve malicious JavaScript and use available keys; the web session token is readable by same-origin script and is not encrypted at rest; the protocol has not had an independent audit. A malicious group member can still send different plaintexts to different members under one client identifier, and blocking cannot recall copies already delivered.
+
+## Appearance (1.7)
+
+The Detailed / Minimalistic switch and all ten theme palettes are local preferences: they change CSS variables on web/Android and WPF resources on Windows, and never send a theme, accent or wallpaper to the relay. Imported look files still pass the existing version, theme-id, font and six-digit-colour whitelist. Aura artwork is drawn from inline SVG or WPF shapes, with no remote images, fonts or scripts. Minimalistic keeps the original flat layout but uses the same refreshed palette; the switch itself does not alter encryption, storage or message formats.
