@@ -2,7 +2,7 @@ plugins {
     id("com.android.application")
 }
 
-val illusionOrigin = providers.gradleProperty("illusionOrigin").orElse("https://illusion-messenger.illusion-messenger.workers.dev").get().trimEnd('/')
+val illusionOrigin = providers.gradleProperty("illusionOrigin").orElse("https://illusionary.my.id").get().trimEnd('/')
 val illusionVersion = providers.gradleProperty("illusionVersion").orElse("0.8.2").get()
 val illusionVersionCode = providers.gradleProperty("illusionVersionCode").orElse("802").get().toInt()
 
