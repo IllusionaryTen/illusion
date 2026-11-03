@@ -16,3 +16,14 @@
   body[data-ui=aura] .theme-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}
   body[data-ui=aura] .settings-section{padding:12px}
 }
+
+
+/* The top bar glides out of the way while scrolling, and returns on the way up.
+   The margin collapses with it so no empty band is left behind. */
+@media(max-width:720px){
+  header{transition:transform .3s cubic-bezier(.4,0,.2,1),margin-top .3s cubic-bezier(.4,0,.2,1),opacity .22s ease;will-change:transform,margin-top}
+  body.header-away header{transform:translateY(-105%);margin-top:calc(-1 * var(--header-h,0px));opacity:0;pointer-events:none}
+}
+@media(max-width:720px) and (prefers-reduced-motion:reduce){
+  header{transition:none}
+}

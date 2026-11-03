@@ -338,3 +338,24 @@ body[data-ui=aura] .media-preview.file-preview{
 body[data-ui=aura] .search-hit{outline-color:color-mix(in srgb,var(--accent) 75%,#fff);box-shadow:0 0 22px color-mix(in srgb,var(--accent) 20%,transparent)}
 @keyframes aura-rise{from{opacity:0;transform:translateY(7px) scale(.995)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){body[data-ui=aura] .message{animation:none}}
+
+
+/* Detailed UI: pin controls wait until asked for, then glide in. Browsers
+   without :has() keep the plain always-visible control rather than losing it. */
+@supports selector(:has(*)){
+  body[data-ui=aura] .chat-row .pin-chat{
+    opacity:0;transform:translateX(10px) scale(.86);pointer-events:none;
+    transition:opacity .16s ease,transform .24s cubic-bezier(.22,.9,.24,1);
+  }
+  body[data-ui=aura] .chat-row.pin-open .pin-chat,
+  body[data-ui=aura] .chat-row:has(:focus-visible) .pin-chat,
+  body[data-ui=aura] .chat-row:has(.pin-chat[aria-pressed=true]) .pin-chat{
+    opacity:1;transform:none;pointer-events:auto;
+  }
+  @media (hover:hover) and (pointer:fine){
+    body[data-ui=aura] .chat-row:hover .pin-chat{opacity:1;transform:none;pointer-events:auto}
+  }
+  @media (prefers-reduced-motion:reduce){
+    body[data-ui=aura] .chat-row .pin-chat{transition:none}
+  }
+}

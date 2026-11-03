@@ -532,3 +532,57 @@ $('settings').onclick=()=>{
   for(const id of ['privacy','terms','refunds','cookies','licenses','accessibility']){const a=node('a',translate(policyLabels[id],language));a.href='/policies/'+id;a.target='_blank';a.rel='noopener';const p=node('p');p.append(a);privacy.append(p);}
   body.append(privacy);
 };
+
+
+// Detailed UI: the per-chat pin control is revealed on demand instead of
+// sitting on every conversation card. Double-click latches it on desktop,
+// long-press on touch, keyboard focus reveals it, and a pinned chat keeps
+// its control visible so it can be unpinned again.
+(function pinOnDemand(){
+  const rowOf=event=>event.target instanceof Element?event.target.closest('.chat-row'):null;
+  let pressTimer=0,pressOrigin=null,suppressClick=false;
+  function clear(){for(const row of document.querySelectorAll('.chat-row.pin-open'))row.classList.remove('pin-open');}
+  function show(row){clear();row.classList.add('pin-open');}
+  document.addEventListener('dblclick',event=>{
+    if(document.body.dataset.ui!=='aura')return;
+    const row=rowOf(event);if(!row||event.target.closest('.pin-chat'))return;
+    if(row.classList.contains('pin-open'))row.classList.remove('pin-open');else show(row);
+  });
+  document.addEventListener('pointerdown',event=>{
+    if(document.body.dataset.ui!=='aura'||event.pointerType==='mouse')return;
+    const row=rowOf(event);if(!row||event.target.closest('.pin-chat'))return;
+    pressOrigin={x:event.clientX,y:event.clientY};
+    clearTimeout(pressTimer);
+    pressTimer=setTimeout(()=>{show(row);pressOrigin=null;suppressClick=true;},450);
+  });
+  function cancelPress(){clearTimeout(pressTimer);pressOrigin=null;}
+  document.addEventListener('pointermove',event=>{if(pressOrigin&&(Math.abs(event.clientX-pressOrigin.x)>10||Math.abs(event.clientY-pressOrigin.y)>10))cancelPress();});
+  for(const type of ['pointerup','pointercancel'])document.addEventListener(type,cancelPress,{passive:true});
+  document.addEventListener('click',event=>{
+    if(suppressClick){suppressClick=false;event.preventDefault();event.stopPropagation();return;}
+    if(!event.target.closest?.('.chat-row'))clear();
+  },true);
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')clear();});
+  document.addEventListener('contextmenu',event=>{if(suppressClick&&event.target instanceof Element&&event.target.closest('.chat-row'))event.preventDefault();});
+})();
+
+
+// Phone layout: the top bar slides off screen while the list or conversation
+// scrolls down, and slides back as soon as the user scrolls up or reaches the top.
+(function headerSlide(){
+  const header=document.querySelector('header');
+  let last=0,away=false;
+  function measure(){if(header&&!away)document.body.style.setProperty('--header-h',header.offsetHeight+'px');}
+  measure();
+  window.addEventListener('resize',measure,{passive:true});
+  document.addEventListener('scroll',event=>{
+    const target=event.target;
+    if(!(target instanceof Element)||!target.classList)return;
+    if(target.id!=='chats'&&target.id!=='messages'&&!target.classList.contains('chat-sidebar'))return;
+    if(window.innerWidth>720){if(away){away=false;document.body.classList.remove('header-away');}last=0;return;}
+    const y=target.scrollTop||0,leaving=y>last+6&&y>48,returning=y<last-6||y<48;
+    last=y;
+    if(leaving&&!away){away=true;document.body.classList.add('header-away');}
+    else if(returning&&away){away=false;document.body.classList.remove('header-away');}
+  },{capture:true,passive:true});
+})();
