@@ -340,22 +340,21 @@ body[data-ui=aura] .search-hit{outline-color:color-mix(in srgb,var(--accent) 75%
 @media(prefers-reduced-motion:reduce){body[data-ui=aura] .message{animation:none}}
 
 
-/* Detailed UI: pin controls wait until asked for, then glide in. Browsers
-   without :has() keep the plain always-visible control rather than losing it. */
+/* Detailed UI: pin controls stay out of the layout entirely until asked for.
+   Hidden with display:none so no empty column is left behind; revealed with a
+   short fade. Browsers without :has() keep the plain always-visible control. */
 @supports selector(:has(*)){
-  body[data-ui=aura] .chat-row .pin-chat{
-    opacity:0;transform:translateX(10px) scale(.86);pointer-events:none;
-    transition:opacity .16s ease,transform .24s cubic-bezier(.22,.9,.24,1);
-  }
+  body[data-ui=aura] .chat-row .pin-chat{display:none}
   body[data-ui=aura] .chat-row.pin-open .pin-chat,
   body[data-ui=aura] .chat-row:has(:focus-visible) .pin-chat,
   body[data-ui=aura] .chat-row:has(.pin-chat[aria-pressed=true]) .pin-chat{
-    opacity:1;transform:none;pointer-events:auto;
+    display:inline-flex;animation:pin-reveal .18s ease both;
   }
   @media (hover:hover) and (pointer:fine){
-    body[data-ui=aura] .chat-row:hover .pin-chat{opacity:1;transform:none;pointer-events:auto}
+    body[data-ui=aura] .chat-row:hover .pin-chat{display:inline-flex;animation:pin-reveal .18s ease both}
   }
   @media (prefers-reduced-motion:reduce){
-    body[data-ui=aura] .chat-row .pin-chat{transition:none}
+    body[data-ui=aura] .chat-row .pin-chat{animation:none}
   }
+  @keyframes pin-reveal{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
 }
