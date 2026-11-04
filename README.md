@@ -1,6 +1,18 @@
-# ◈ Illusion 1.7.0
+# ◈ Illusion 1.7.1
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with a detailed blue, white, black, checkerboard and orbital interface inspired by the Challenged+ auras of Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.7.1
+
+**Aura artwork now follows the originals.** All ten background motifs were redrawn from the real Challenged+ collection artwork instead of invented abstractions: Dreammetric is five glowing pink stars rather than a spiral, Eden is the faceted Void Contractor monolith over black ripples, Oblivion is a violet hourglass sealed in a glass dome, Oppression is a spiked silver sphere, Tomorrow is a celestial clock inside a beam-lit portal, Monarch is a swirling orb under a tilted crown-brim, Calamity of the Crimson Moon is twin scythe crescents, and Astraios, Hellborn and Illusionary gained their star-headed figure, flame horns and HUD glitches respectively. The same silhouettes ship on web, Android and Windows.
+
+**Eden is monochrome again.** Its gold secondary accent was not present in the source aura and has been replaced with cool steel; the rest of the palettes are unchanged. No pink-to-blue colour flicker was added to Dreammetric.
+
+**Scrollbars match the theme.** Browser, Mini App and Android WebView scrollbars now use a slim accent-coloured thumb on a translucent track, and the Windows client replaces the light system scrollbar chrome with the same accent thumb. On Android the native status and navigation bars follow the selected theme's background.
+
+**Chat pin reveals on double-click.** The per-chat pin control no longer appears on mouse hover; double-click a conversation to reveal it, double-click again (or press Escape) to hide. The reveal now survives chat-list refreshes.
+
+**No wire changes.** Envelopes, relay routes, groups and message formats are untouched; 1.7.1 is a client-only appearance release.
 
 ## What's new in 1.7.0
 

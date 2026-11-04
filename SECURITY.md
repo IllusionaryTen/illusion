@@ -1,4 +1,4 @@
-# Illusion 1.7.0 preview security boundaries
+# Illusion 1.7.1 preview security boundaries
 
 Illusion is an early Cloudflare-hosted or local messenger, not an independently audited security product. This document describes the implemented design and its limits.
 

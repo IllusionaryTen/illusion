@@ -7,22 +7,33 @@ pre.document{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--contro
 body[data-theme=astraios]{--bg:#030F16;--panel:#071C23;--control:#0B2A31;--line:#265A5B;--accent:#6FE3D2;--on-accent:#04130F;--muted:#C6E3D0;--accent-2:#F2D98E}
 body[data-theme=crimson-moon]{--bg:#090206;--panel:#180409;--control:#250810;--line:#5A1620;--accent:#E02434;--on-accent:#FFFFFF;--muted:#E7B0AC;--accent-2:#FF9A5C}
 body[data-theme=dreammetric]{--bg:#10031C;--panel:#1A0629;--control:#270B38;--line:#5A2268;--accent:#D445E6;--on-accent:#14021B;--muted:#EBC9EE;--accent-2:#7FE0FF}
-body[data-theme=eden]{--bg:#04050A;--panel:#0B0E16;--control:#141923;--line:#3A4352;--accent:#C7D3E3;--on-accent:#070A10;--muted:#C2C6CE;--accent-2:#F1DCA7}
+body[data-theme=eden]{--bg:#05060C;--panel:#0C0F17;--control:#171C27;--line:#3B4353;--accent:#B9C2CE;--on-accent:#0A0C12;--muted:#AEB6C2;--accent-2:#7D8899}
 body[data-theme=hellborn]{--bg:#0B0304;--panel:#180709;--control:#250B0D;--line:#552025;--accent:#F2713A;--on-accent:#140604;--muted:#E3B6A6;--accent-2:#FF4B36}
 body[data-theme=monarch]{--bg:#05030E;--panel:#0C0720;--control:#150D31;--line:#382663;--accent:#A97BFF;--on-accent:#0A0514;--muted:#D6C9F0;--accent-2:#FFD36E}
 body[data-theme=oblivion]{--bg:#020108;--panel:#070514;--control:#0F0A26;--line:#2E2058;--accent:#B96BFF;--on-accent:#06020C;--muted:#D8C4EC;--accent-2:#6C4DFF}
 body[data-theme=oppression]{--bg:#04060B;--panel:#0A0F17;--control:#121A25;--line:#39485C;--accent:#B9C6D8;--on-accent:#05070C;--muted:#C4CBD6;--accent-2:#6C8BB5}
 body[data-theme=tomorrow]{--bg:#03041A;--panel:#080C26;--control:#101638;--line:#33406F;--accent:#9FB4FF;--on-accent:#050716;--muted:#C9D4F2;--accent-2:#FFC98A}
 #aura-art[data-motif=constellation] svg{width:min(900px,125vw);right:-200px;top:-80px;opacity:.7}
-#aura-art[data-motif=bloodmoon] svg{width:min(700px,95vw);right:-70px;top:-30px;bottom:auto;opacity:.8}
-#aura-art[data-motif=dreamspiral] svg{width:min(820px,110vw);right:-150px;bottom:-100px;opacity:.75}
-#aura-art[data-motif=halo] svg{width:min(760px,105vw);right:-110px;top:-40px;bottom:auto;opacity:.7}
+#aura-art[data-motif=scythes] svg{width:min(700px,95vw);right:-70px;top:-30px;bottom:auto;opacity:.8}
+#aura-art[data-motif=stars] svg{width:min(820px,110vw);right:-150px;bottom:-100px;opacity:.75}
+#aura-art[data-motif=monolith] svg{width:min(760px,105vw);right:-110px;top:-40px;bottom:auto;opacity:.7}
 #aura-art[data-motif=inferno] svg{width:min(800px,105vw);right:-120px;bottom:-40px;opacity:.8}
-#aura-art[data-motif=throne] svg{width:min(680px,90vw);right:-60px;top:8%;bottom:auto;opacity:.75}
-#aura-art[data-motif=blackhole] svg{width:min(860px,115vw);right:-160px;bottom:-110px;opacity:.75}
-#aura-art[data-motif=cage] svg{width:min(860px,115vw);right:-140px;bottom:-60px;opacity:.6}
-#aura-art[data-motif=horizon] svg{width:min(880px,118vw);right:-150px;bottom:-90px;opacity:.75}
+#aura-art[data-motif=crown] svg{width:min(680px,90vw);right:-60px;top:8%;bottom:auto;opacity:.75}
+#aura-art[data-motif=dome] svg{width:min(860px,115vw);right:-160px;bottom:-110px;opacity:.75}
+#aura-art[data-motif=thorns] svg{width:min(860px,115vw);right:-140px;bottom:-60px;opacity:.6}
+#aura-art[data-motif=clock] svg{width:min(880px,118vw);right:-150px;bottom:-90px;opacity:.75}
 #aura-art[data-motif=orbit] svg{width:min(700px,95vw);right:-80px;bottom:-60px;opacity:.65}
+
+/* Theme-aware scrollbars for the browser, Telegram Mini App and the Android
+   WebView. They follow the active aura palette instead of an OS light theme. */
+:root{scrollbar-color:color-mix(in srgb,var(--accent) 55%,var(--line)) transparent;scrollbar-width:thin}
+*,*::before,*::after{scrollbar-color:color-mix(in srgb,var(--accent) 55%,var(--line)) transparent;scrollbar-width:thin}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:color-mix(in srgb,var(--panel) 65%,transparent);border-radius:99px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--accent) 48%,var(--line));border:2px solid transparent;background-clip:padding-box;border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--accent) 78%,var(--line));border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:active{background:var(--accent);border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-corner{background:transparent}
 .verified-badge{color:var(--accent);font-weight:700;margin-left:6px}
 .verified-note{color:var(--accent);font-weight:600}
 .session-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}.session-meta{flex:1;color:var(--text)}.session-current{color:var(--accent)}
@@ -174,10 +185,10 @@ body[data-ui=aura] .chat-head button{padding:7px 12px;font-size:12px;min-height:
 body[data-ui=aura] #messages{
   flex:1;min-height:0;max-height:none;padding:20px 22px;gap:10px;
   background:radial-gradient(700px 500px at 100% 100%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 65%);
-  scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--line) 70%,transparent) transparent;
+  scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 55%,var(--line)) transparent;
 }
-body[data-ui=aura] #messages::-webkit-scrollbar{width:9px}
-body[data-ui=aura] #messages::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--line) 60%,transparent);border-radius:99px;border:2px solid transparent;background-clip:padding-box}
+body[data-ui=aura] #messages::-webkit-scrollbar{width:10px}
+body[data-ui=aura] #messages::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--accent) 48%,var(--line));border-radius:99px;border:2px solid transparent;background-clip:padding-box}
 body[data-ui=aura] .message{
   position:relative;max-width:min(78%,620px);padding:11px 15px 9px;
   border-radius:18px 18px 18px 7px;
@@ -342,16 +353,16 @@ body[data-ui=aura] .search-hit{outline-color:color-mix(in srgb,var(--accent) 75%
 
 /* Detailed UI: pin controls stay out of the layout entirely until asked for.
    Hidden with display:none so no empty column is left behind; revealed with a
-   short fade. Browsers without :has() keep the plain always-visible control. */
+   short fade. Only a double-click (or long-press on touch) sets .pin-open -
+   hovering a row deliberately does nothing. Keyboard focus and pinned chats
+   keep the control reachable. Browsers without :has() keep the plain
+   always-visible control. */
 @supports selector(:has(*)){
   body[data-ui=aura] .chat-row .pin-chat{display:none}
   body[data-ui=aura] .chat-row.pin-open .pin-chat,
   body[data-ui=aura] .chat-row:has(:focus-visible) .pin-chat,
   body[data-ui=aura] .chat-row:has(.pin-chat[aria-pressed=true]) .pin-chat{
     display:inline-flex;animation:pin-reveal .18s ease both;
-  }
-  @media (hover:hover) and (pointer:fine){
-    body[data-ui=aura] .chat-row:hover .pin-chat{display:inline-flex;animation:pin-reveal .18s ease both}
   }
   @media (prefers-reduced-motion:reduce){
     body[data-ui=aura] .chat-row .pin-chat{animation:none}

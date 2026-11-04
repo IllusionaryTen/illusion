@@ -23,6 +23,7 @@ data/
 build/
 dist/
 artifacts/
+.workbuddy-ai/
 compliance/
 tools/happ-illusion-routing.json
 HAPP-CLOUDFLARE.md

@@ -239,7 +239,7 @@ namespace Illusion {
     void RenderMessages(bool bottom) { UpdateMessageViews(bottom,false); }
     void ApplyTheme() {ApplyPalette();ApplyUiStyle();string[] palette;if(!ThemeColors.TryGetValue(CurrentThemeId(),out palette))palette=ThemeColors["blue"];string saved=Setting("accent",palette[4]);if(string.IsNullOrEmpty(Setting("theme",""))&&(saved=="#297C91"||saved=="#56657C"))saved=palette[4];Window.Resources["Accent"]=Brush(saved);Window.FontFamily=new FontFamily(Setting("chatFont","Segoe UI"));}
     static readonly Dictionary<string,string> AuraCaptions=new Dictionary<string,string>{{"blue","ドリームステート / DREAM STATE"},{"astraios","アストライオス / ASTRAIOS"},{"crimson-moon","クリムゾンムーン / CRIMSON MOON"},{"dreammetric","ドリームメトリック / DREAMMETRIC"},{"eden","エデン / EDEN"},{"hellborn","ヘルボーン / HELLBORN"},{"monarch","モナーク / MONARCH"},{"oblivion","オブリヴィオン / OBLIVION"},{"oppression","オプレッション / OPPRESSION"},{"tomorrow","トゥモロー / TOMORROW"}};
-    static string MotifFor(string theme){switch(theme){case "astraios":return "constellation";case "crimson-moon":return "bloodmoon";case "dreammetric":return "dreamspiral";case "eden":return "halo";case "hellborn":return "inferno";case "monarch":return "throne";case "oblivion":return "blackhole";case "oppression":return "cage";case "tomorrow":return "horizon";default:return "orbit";}}
+    static string MotifFor(string theme){switch(theme){case "astraios":return "constellation";case "crimson-moon":return "scythes";case "dreammetric":return "stars";case "eden":return "monolith";case "hellborn":return "inferno";case "monarch":return "crown";case "oblivion":return "dome";case "oppression":return "thorns";case "tomorrow":return "clock";default:return "orbit";}}
     void AuraLine(Canvas c,double x1,double y1,double x2,double y2,double opacity,string color,double thickness=1.5){c.Children.Add(new Line{X1=x1,Y1=y1,X2=x2,Y2=y2,Stroke=Brush(color),StrokeThickness=thickness,Opacity=opacity,IsHitTestVisible=false});}
     void AuraEllipse(Canvas c,double cx,double cy,double w,double h,double angle,double opacity,string color,double thickness=1.5){var e=new Ellipse{Width=w,Height=h,Stroke=Brush(color),StrokeThickness=thickness,Opacity=opacity,RenderTransform=new RotateTransform(angle,w/2,h/2),IsHitTestVisible=false};Canvas.SetLeft(e,cx-w/2);Canvas.SetTop(e,cy-h/2);c.Children.Add(e);}
     void AuraDot(Canvas c,double x,double y,double r,double opacity,string color){var d=new Ellipse{Width=r*2,Height=r*2,Fill=Brush(color),Opacity=opacity,IsHitTestVisible=false};Canvas.SetLeft(d,x-r);Canvas.SetTop(d,y-r);c.Children.Add(d);}
@@ -256,91 +256,144 @@ namespace Illusion {
     void AuraDisc(Canvas c,double cx,double cy,double r,double opacity,Brush fill,Brush stroke=null,double thickness=1.5){
       var dot=new Ellipse{Width=r*2,Height=r*2,Fill=fill,Stroke=stroke??Brushes.Transparent,StrokeThickness=thickness,Opacity=opacity,IsHitTestVisible=false};Canvas.SetLeft(dot,cx-r);Canvas.SetTop(dot,cy-r);c.Children.Add(dot);
     }
+    // Lightweight vector echoes of the real Challenged+ collection artwork.
+    // Kept parallel to web/app.mjs auraShapes().
     void DrawAuraMotif(Canvas c,string motif,double ox,double oy,double scale,double opacity){
-      string a=AuraAccent(),m="#8CA5D6",s;ThemeSecondary.TryGetValue(CurrentThemeId(),out s);if(string.IsNullOrEmpty(s))s="#79E6FF";
+      string a=AuraAccent(),s;ThemeSecondary.TryGetValue(CurrentThemeId(),out s);if(string.IsNullOrEmpty(s))s="#79E6FF";
+      Func<double,double,double,double,int,double,Point[]> star=(cx,cy,outer,inner,points,rot)=>{
+        var pts=new Point[points*2];
+        for(int i=0;i<points*2;i++){double r=(i%2==1?inner:outer),ang=rot+i*Math.PI/points;pts[i]=new Point(cx+Math.Cos(ang)*r,cy+Math.Sin(ang)*r);}
+        return pts;
+      };
+      Action<double,double,double,double,double,string,double,double> ring=(cx,cy,rx,ry,ang,col,o,w)=>AuraEllipse(c,ox+cx*scale,oy+cy*scale,2*rx*scale,2*ry*scale,ang,o,col,w);
+      Action<double,double,double,double,int,string,double,double,double> rays=(cx,cy,r1,r2,n,col,o,w,off)=>{
+        for(int i=0;i<n;i++){double ang=off+i*2*Math.PI/n;AuraLine(c,ox+(cx+Math.Cos(ang)*r1)*scale,oy+(cy+Math.Sin(ang)*r1)*scale,ox+(cx+Math.Cos(ang)*r2)*scale,oy+(cy+Math.Sin(ang)*r2)*scale,o,col,w);}
+      };
+      Action<double,double,double,double,string,double,bool> rect=(x,y,w,h,col,o,fill)=>AuraPoly(c,new[]{new Point(x,y),new Point(x+w,y),new Point(x+w,y+h),new Point(x,y+h)},ox,oy,scale,o,col,1,fill);
+      Action<double[][],string,double> dots=(list,col,o)=>{foreach(var p in list)AuraDot(c,ox+p[0]*scale,oy+p[1]*scale,p[2]*scale,o,col);};
       switch(motif){
+        // Astraios: star-headed figure with a staff over a rock, inside an astrolabe.
         case "constellation":{
-          var nodes=new[]{new Point(300,64),new Point(382,128),new Point(474,92),new Point(512,196),new Point(430,252),new Point(326,300),new Point(220,248),new Point(132,188),new Point(170,106)};
-          foreach(var p in nodes)AuraDot(c,ox+p.X*scale,oy+p.Y*scale,2.6*scale,opacity*.9,a);
-          foreach(var pair in new[]{new[]{0,1},new[]{1,2},new[]{1,4},new[]{4,3},new[]{4,5},new[]{5,6},new[]{6,7},new[]{7,0},new[]{6,1},new[]{5,1}})
-            AuraLine(c,ox+nodes[pair[0]].X*scale,oy+nodes[pair[0]].Y*scale,ox+nodes[pair[1]].X*scale,oy+nodes[pair[1]].Y*scale,opacity*.42,a);
-          AuraPoly(c,new[]{new Point(300,92),new Point(309,171),new Point(388,180),new Point(309,189),new Point(300,268),new Point(291,189),new Point(212,180),new Point(291,171)},ox,oy,scale,opacity*.28,s);
-          AuraPoly(c,new[]{new Point(300,112),new Point(306,174),new Point(368,180),new Point(306,186),new Point(300,248),new Point(294,186),new Point(232,180),new Point(294,174)},ox,oy,scale,opacity*.85,s);
-          foreach(var p in new[]{new Point(80,90),new Point(120,240),new Point(470,300),new Point(520,60),new Point(210,40),new Point(520,300),new Point(70,300),new Point(410,60)})AuraDot(c,ox+p.X*scale,oy+p.Y*scale,1.8*scale,opacity*.8,s);
+          ring(300,180,150,150,0,a,opacity*.2,1);
+          ring(300,180,128,52,-24,s,opacity*.5,1.5);
+          ring(300,180,128,52,24,a,opacity*.34,1);
+          AuraPoly(c,star(300,96,20,8,5,-Math.PI/2),ox,oy,scale,opacity*.9,s,1,true);
+          AuraPath(c,"M300 116 L300 168 M300 130 L272 146 M300 130 L330 118 M300 168 L282 202 M300 168 L318 202",ox,oy,scale,opacity*.8,s,2);
+          AuraLine(c,ox+330*scale,oy+118*scale,ox+350*scale,oy+66*scale,opacity*.7,a,1.6);
+          AuraPoly(c,new[]{new Point(256,268),new Point(280,234),new Point(306,252),new Point(330,230),new Point(354,268)},ox,oy,scale,opacity*.9,a,1,false);
+          AuraPath(c,"M120 90 L180 130 L226 84 M420 96 L470 140 L510 112 M140 250 L196 226 M430 250 L486 226",ox,oy,scale,opacity*.35,a,1);
+          foreach(var p in new[]{new[]{180.0,130.0,7.0},new[]{470.0,140.0,6.0},new[]{226.0,84.0,4.0},new[]{140.0,250.0,4.0},new[]{486.0,226.0,5.0}})
+            AuraPoly(c,star(p[0],p[1],p[2],p[2]*.26,4,-Math.PI/2),ox,oy,scale,opacity*.8,s,1,true);
+          dots(new[]{new[]{80.0,90.0,2.0},new[]{120.0,240.0,1.5},new[]{470.0,300.0,2.5},new[]{520.0,60.0,1.8},new[]{210.0,40.0,1.8},new[]{520.0,300.0,1.8},new[]{70.0,300.0,1.8},new[]{410.0,60.0,1.8}},s,opacity*.8);
           break;}
-        case "bloodmoon":{
-          var moon=new RadialGradientBrush{GradientOrigin=new Point(.38,.34),Center=new Point(.5,.5),RadiusX=.62,RadiusY=.62};
-          moon.GradientStops.Add(new GradientStop(Mix(ColorOf(a),Colors.White,.25),0));moon.GradientStops.Add(new GradientStop(ColorOf(a),.58));moon.GradientStops.Add(new GradientStop(ColorOf("#250208"),1));
-          AuraDisc(c,ox+342*scale,oy+150*scale,112*scale,opacity*.9,moon);
-          AuraEllipse(c,ox+300*scale,oy+108*scale,240*scale,240*scale,0,opacity*.28,a,2);
-          foreach(var crater in new[]{new[]{390,118,13},new[]{352,196,20},new[]{300,142,10},new[]{415,196,9},new[]{330,96,7}})AuraDisc(c,ox+crater[0]*scale,oy+crater[1]*scale,crater[2]*scale,opacity*.2,Brush("#120208"));
-          AuraPath(c,"M300 66 C246 92 250 146 292 174 M430 120 C448 168 414 218 366 234 M334 40 L318 96 L344 132 M368 262 L390 300 M250 262 L222 300",ox,oy,scale,opacity*.55,a,2);
-          AuraPath(c,"M116 286 Q180 250 244 272 Q300 290 356 262 Q430 228 500 258",ox,oy,scale,opacity*.35,a,1.5);
-          AuraPath(c,"M120 96 Q160 120 150 170 M492 74 Q462 116 480 156",ox,oy,scale,opacity*.3,s,1.5);
-          foreach(var ember in new[]{new[]{470,120,6},new[]{486,170,4},new[]{150,80,4},new[]{190,300,5},new[]{470,286,3}})AuraDot(c,ox+ember[0]*scale,oy+ember[1]*scale,ember[2]*scale,opacity*.7,a);
+        // Calamity of the Crimson Moon: twin scythe crescents over a cloaked figure.
+        case "scythes":{
+          AuraPath(c,"M300 178 C214 168 150 100 132 26 C196 66 264 88 300 178 Z",ox,oy,scale,opacity*.16,a,2,true);
+          AuraPath(c,"M300 178 C386 168 450 100 468 26 C404 66 336 88 300 178 Z",ox,oy,scale,opacity*.16,a,2,true);
+          AuraPoly(c,new[]{new Point(300,118),new Point(282,176),new Point(270,240),new Point(300,262),new Point(330,240),new Point(318,176)},ox,oy,scale,opacity*.9,a,1.6,false);
+          AuraPoly(c,new[]{new Point(300,96),new Point(288,128),new Point(312,128)},ox,oy,scale,opacity*.6,a,1,true);
+          ring(300,272,168,42,0,a,opacity*.5,2);ring(300,272,126,30,0,s,opacity*.32,1);ring(300,272,86,20,0,a,opacity*.24,1);
+          rays(300,272,88,166,16,a,opacity*.26,1,0);
+          AuraPath(c,"M96 96 L196 160 M504 96 L404 160 M120 300 L208 268 M480 300 L392 268",ox,oy,scale,opacity*.32,a,1.4);
+          dots(new[]{new[]{150.0,60.0,3.0},new[]{450.0,60.0,3.0},new[]{110.0,214.0,2.5},new[]{490.0,214.0,2.5},new[]{300.0,40.0,2.0},new[]{220.0,320.0,2.0},new[]{380.0,320.0,2.0}},s,opacity*.65);
           break;}
-        case "dreamspiral":{
-          AuraEllipse(c,ox+300*scale,oy+178*scale,340*scale,192*scale,-18,opacity*.18,a,1);
-          for(int arm=0;arm<3;arm++){var poly=new Polyline{Stroke=Brush(arm==0?s:a),StrokeThickness=arm==0?2.2:1.2,Opacity=opacity*(arm==0?.9:.45),IsHitTestVisible=false};
-            for(double t=0;t<=13;t+=.28){double r=6+t*6.8,angle=t+arm*2.1;poly.Points.Add(new Point(ox+(300+Math.Cos(angle)*r*1.18)*scale,oy+(178+Math.Sin(angle)*r*.68)*scale));}c.Children.Add(poly);}
-          foreach(var spark in new[]{new[]{170,100,3},new[]{410,90,4},new[]{470,210,2},new[]{150,250,3},new[]{360,290,2},new[]{240,60,2},new[]{500,140,2},new[]{90,170,2}})AuraDot(c,ox+spark[0]*scale,oy+spark[1]*scale,spark[2]*scale,opacity*.8,s);
-          AuraDot(c,ox+300*scale,oy+178*scale,13*scale,opacity*.35,s);AuraDot(c,ox+300*scale,oy+178*scale,4*scale,opacity*.9,s);
+        // Dreammetric: five pink stars over burst rays and a checkered floor.
+        case "stars":{
+          rays(300,152,86,252,14,a,opacity*.2,1.2,.15);
+          ring(300,152,122,122,0,a,opacity*.13,1);
+          AuraPoly(c,star(300,148,92,40,5,-Math.PI/2),ox,oy,scale,opacity*.65,a,3.5,false);
+          AuraPoly(c,star(300,148,58,25,5,-Math.PI/2),ox,oy,scale,opacity*.7,a,1.8,false);
+          AuraPoly(c,star(300,148,20,8,5,-Math.PI/2),ox,oy,scale,opacity*.4,a,1,true);
+          AuraPoly(c,star(150,212,25,10,5,-Math.PI/2),ox,oy,scale,opacity*.8,a,1,true);
+          AuraPoly(c,star(450,212,25,10,5,-Math.PI/2),ox,oy,scale,opacity*.8,a,1,true);
+          AuraPoly(c,star(300,44,13,5,5,-Math.PI/2),ox,oy,scale,opacity*.55,a,1,true);
+          rect(242,198,116,8,a,opacity*.55,true);
+          for(int r=0;r<3;r++)for(int col=0;col<12;col++)rect(96+col*34,286+r*16,17,8,(r+col)%2==0?a:s,opacity*((r+col)%2==0?.16:.08),true);
+          dots(new[]{new[]{120.0,120.0,2.5},new[]{480.0,120.0,2.5},new[]{100.0,268.0,2.0},new[]{500.0,268.0,2.0},new[]{210.0,66.0,2.0},new[]{390.0,66.0,2.0},new[]{220.0,330.0,2.0},new[]{380.0,330.0,2.0}},s,opacity*.4);
           break;}
-        case "halo":{
-          AuraEllipse(c,ox+300*scale,oy+104*scale,128*scale,128*scale,0,opacity*.9,s,3);
-          AuraEllipse(c,ox+300*scale,oy+104*scale,160*scale,160*scale,0,opacity*.35,a,1);
-          for(int i=0;i<14;i++){double angle=i*Math.PI/7-Math.PI/2;AuraLine(c,ox+(300+Math.Cos(angle)*92)*scale,oy+(104+Math.Sin(angle)*92)*scale,ox+(300+Math.Cos(angle)*124)*scale,oy+(104+Math.Sin(angle)*124)*scale,opacity*.45,s,1.6);}
-          AuraPoly(c,new[]{new Point(300,136),new Point(310,166),new Point(342,176),new Point(310,186),new Point(300,220),new Point(290,186),new Point(258,176),new Point(290,166)},ox,oy,scale,opacity*.72,s);
-          AuraPath(c,"M300 226 C242 170 176 164 116 210 C168 218 210 246 250 286 C266 256 282 236 300 226 Z",ox,oy,scale,opacity*.14,a,1.2,true);
-          AuraPath(c,"M300 226 C358 170 424 164 484 210 C432 218 390 246 350 286 C334 256 318 236 300 226 Z",ox,oy,scale,opacity*.14,a,1.2,true);
-          AuraDot(c,ox+452*scale,oy+110*scale,5*scale,opacity*.4,s);AuraDot(c,ox+148*scale,oy+294*scale,4*scale,opacity*.35,s);
+        // Eden: the faceted Void Contractor monolith over black ripples.
+        case "monolith":{
+          AuraPoly(c,new[]{new Point(262,108),new Point(292,96),new Point(312,112),new Point(306,146),new Point(268,150)},ox,oy,scale,opacity*.2,a,1.4,false);
+          AuraPoly(c,new[]{new Point(256,146),new Point(308,142),new Point(326,176),new Point(318,268),new Point(276,272),new Point(250,178)},ox,oy,scale,opacity*.14,a,1.6,false);
+          AuraPath(c,"M268 150 L282 176 L276 272 M308 142 L300 176 L318 268 M250 178 L326 176",ox,oy,scale,opacity*.42,a,1);
+          for(int i=0;i<4;i++)ring(300,282-i*3,150-i*30,30-i*5,0,a,opacity*(.46-i*.09),1.2);
+          AuraPath(c,"M360 118 q14 -12 26 0 q-10 14 -22 8 M372 138 q10 8 22 2",ox,oy,scale,opacity*.6,s,1.4);
+          AuraPath(c,"M60 268 L540 268 M120 300 L480 300 M180 330 L420 330",ox,oy,scale,opacity*.13,s,1);
+          dots(new[]{new[]{140.0,120.0,1.8},new[]{470.0,150.0,1.8},new[]{110.0,220.0,1.5},new[]{500.0,240.0,1.5}},s,opacity*.45);
           break;}
+        // Hellborn: twin flame horns flanking a burning altar.
         case "inferno":{
-          AuraEllipse(c,ox+300*scale,oy+306*scale,420*scale,52*scale,0,opacity*.12,a,1);
-          foreach(var p in new[]{new Point(188,206),new Point(206,120),new Point(262,84),new Point(300,72),new Point(338,84),new Point(394,120),new Point(412,206),new Point(382,172),new Point(344,150),new Point(300,146),new Point(256,150),new Point(218,172)})AuraDot(c,ox+p.X*scale,oy+p.Y*scale,2*scale,opacity*.35,a);
-          for(int i=0;i<5;i++){double x=170+i*66;AuraPoly(c,new[]{new Point(x,302),new Point(x-26,262),new Point(x+16,228),new Point(x-4,182),new Point(x+34,216),new Point(x+48,256),new Point(x+30,302)},ox,oy,scale,opacity*.55,s);}
-          AuraPath(c,"M236 132 C238 96 266 72 282 58 C286 92 272 114 258 134 M364 132 C362 96 334 72 318 58 C314 92 328 114 342 134",ox,oy,scale,opacity*.85,s,3);
-          foreach(var ember in new[]{new[]{140,120,4},new[]{460,100,3},new[]{500,220,5},new[]{110,240,3},new[]{380,60,2},new[]{250,60,2}})AuraDot(c,ox+ember[0]*scale,oy+ember[1]*scale,ember[2]*scale,opacity*.75,s);
+          ring(300,286,190,30,0,a,opacity*.13,1);
+          AuraPath(c,"M186 262 C168 220 220 196 192 132 C226 172 238 214 220 262 Z",ox,oy,scale,opacity*.2,s,1.4,true);
+          AuraPath(c,"M414 262 C432 220 380 196 408 132 C374 172 362 214 380 262 Z",ox,oy,scale,opacity*.2,s,1.4,true);
+          AuraPoly(c,new[]{new Point(276,262),new Point(276,176),new Point(300,150),new Point(324,176),new Point(324,262)},ox,oy,scale,opacity*.16,a,1.5,false);
+          AuraPath(c,"M264 176 L336 176 M270 200 L330 200 M270 230 L330 230",ox,oy,scale,opacity*.4,a,1.2);
+          AuraPath(c,"M300 148 C282 118 292 92 300 66 C312 96 320 120 300 148 Z",ox,oy,scale,opacity*.75,s,1,true);
+          AuraPath(c,"M300 122 C292 104 296 88 300 78 C306 92 308 106 300 122 Z",ox,oy,scale,opacity*.7,a,1,true);
+          dots(new[]{new[]{150.0,110.0,3.0},new[]{450.0,100.0,3.0},new[]{120.0,220.0,2.5},new[]{480.0,220.0,2.5},new[]{220.0,60.0,2.0},new[]{380.0,60.0,2.0},new[]{200.0,300.0,2.0},new[]{400.0,300.0,2.0}},s,opacity*.7);
           break;}
-        case "throne":{
-          for(int i=0;i<7;i++)AuraLine(c,ox+300*scale,oy+170*scale,ox+(150+i*50)*scale,oy+40*scale,opacity*.22,s,1);
-          AuraPoly(c,new[]{new Point(300,78),new Point(266,126),new Point(246,82),new Point(244,154),new Point(356,154),new Point(354,82),new Point(334,126)},ox,oy,scale,opacity*.8,s);
-          AuraPoly(c,new[]{new Point(254,154),new Point(346,154),new Point(360,296),new Point(240,296)},ox,oy,scale,opacity*.18,a,1.5);
-          AuraLine(c,ox+232*scale,oy+296*scale,ox+368*scale,oy+296*scale,opacity*.8,s,3);
-          AuraLine(c,ox+246*scale,oy+296*scale,ox+238*scale,oy+320*scale,opacity*.8,s,3);AuraLine(c,ox+354*scale,oy+296*scale,ox+362*scale,oy+320*scale,opacity*.8,s,3);
-          AuraPoly(c,new[]{new Point(300,166),new Point(312,186),new Point(334,192),new Point(312,198),new Point(300,220),new Point(288,198),new Point(266,192),new Point(288,186)},ox,oy,scale,opacity*.65,s);
-          AuraDot(c,ox+276*scale,oy+132*scale,4*scale,opacity,s);AuraDot(c,ox+324*scale,oy+132*scale,4*scale,opacity,s);AuraDot(c,ox+300*scale,oy+110*scale,5*scale,opacity,s);
+        // Monarch: swirling violet orb under a tilted crown-brim and plume.
+        case "crown":{
+          ring(300,192,116,116,0,a,opacity*.28,1.6);
+          ring(300,192,96,116,28,s,opacity*.26,1.2);
+          ring(300,192,96,116,-28,a,opacity*.22,1.2);
+          ring(300,192,60,60,0,a,opacity*.16,1);
+          AuraEllipse(c,ox+300*scale,oy+118*scale,264*scale,52*scale,-8,opacity*.18,s,2);
+          AuraPath(c,"M256 112 C264 62 282 40 300 24 C316 46 334 66 340 112 Z",ox,oy,scale,opacity*.3,s,1.4,true);
+          AuraPath(c,"M282 110 C288 72 296 48 300 30 C306 54 312 78 316 110",ox,oy,scale,opacity*.7,a,1.4);
+          AuraPath(c,"M300 24 L300 6 M272 60 L258 30 M328 60 L342 30",ox,oy,scale,opacity*.55,s,2);
+          dots(new[]{new[]{190.0,120.0,3.0},new[]{410.0,130.0,3.0},new[]{170.0,230.0,2.5},new[]{430.0,230.0,2.5},new[]{300.0,290.0,2.0},new[]{240.0,60.0,2.0},new[]{360.0,50.0,2.0}},s,opacity*.7);
           break;}
-        case "blackhole":{
-          AuraEllipse(c,ox+300*scale,oy+182*scale,392*scale,108*scale,-14,opacity*.5,a,2);
-          AuraEllipse(c,ox+300*scale,oy+182*scale,332*scale,76*scale,-14,opacity*.45,s,1.2);
-          AuraDisc(c,ox+300*scale,oy+180*scale,70*scale,opacity,Brush("#000000"),Brush(a),2.2);
-          AuraEllipse(c,ox+300*scale,oy+180*scale,152*scale,152*scale,0,opacity*.55,s,1);
-          AuraPath(c,"M208 180 Q300 120 392 180 M204 188 Q300 244 396 188",ox,oy,scale,opacity*.38,s,1.5);
-          foreach(var line in new[]{new[]{90,100,180,70},new[]{470,280,560,320},new[]{120,300,70,330},new[]{520,70,560,30},new[]{180,60,130,30}})AuraLine(c,ox+line[0]*scale,oy+line[1]*scale,ox+line[2]*scale,oy+line[3]*scale,opacity*.35,s,1.2);
+        // Oblivion: an hourglass core sealed inside a glass dome.
+        case "dome":{
+          AuraPath(c,"M226 272 L226 148 A74 74 0 0 1 374 148 L374 272",ox,oy,scale,opacity*.6,s,1.6);
+          ring(300,272,86,18,0,s,opacity*.42,1.4);ring(300,272,110,24,0,a,opacity*.2,1);
+          for(int i=0;i<6;i++)AuraLine(c,ox+(226+i*29.6)*scale,oy+126*scale,ox+(226+i*29.6)*scale,oy+272*scale,opacity*.28,a,1);
+          AuraPoly(c,new[]{new Point(262,128),new Point(338,128),new Point(300,180)},ox,oy,scale,opacity*.5,a,1,true);
+          AuraPoly(c,new[]{new Point(262,232),new Point(338,232),new Point(300,180)},ox,oy,scale,opacity*.5,a,1,true);
+          AuraDisc(c,ox+300*scale,oy+178*scale,16*scale,opacity*.75,Brush(s));
+          AuraEllipse(c,ox+300*scale,oy+178*scale,60*scale,60*scale,0,opacity*.45,s,1.2);
+          AuraPath(c,"M300 60 L300 100 M270 70 L282 104 M330 70 L318 104",ox,oy,scale,opacity*.42,a,1.4);
+          dots(new[]{new[]{160.0,120.0,2.5},new[]{440.0,120.0,2.5},new[]{140.0,250.0,2.0},new[]{460.0,250.0,2.0},new[]{300.0,40.0,2.0}},s,opacity*.55);
           break;}
-        case "cage":{
-          for(int i=0;i<9;i++)AuraLine(c,ox+(150+i*38)*scale,oy+72*scale,ox+(150+i*38)*scale,oy+300*scale,opacity*.35,m,3);
-          AuraLine(c,ox+132*scale,oy+72*scale,ox+468*scale,oy+72*scale,opacity*.28,a,2);AuraLine(c,ox+128*scale,oy+300*scale,ox+472*scale,oy+300*scale,opacity*.28,a,2);
-          AuraLine(c,ox+120*scale,oy+54*scale,ox+480*scale,oy+318*scale,opacity*.28,a,2);AuraLine(c,ox+480*scale,oy+54*scale,ox+120*scale,oy+318*scale,opacity*.28,a,2);
-          for(int i=0;i<6;i++)AuraEllipse(c,ox+(188+i*46)*scale,oy+(96+(i%2)*14)*scale,18*scale,18*scale,0,opacity*.35,a,2);
-          AuraPath(c,"M250 120 L282 166 L266 214 L300 252 M350 120 L318 166 L334 214 L300 252",ox,oy,scale,opacity*.55,s,1.5);
-          AuraDot(c,ox+300*scale,oy+252*scale,5*scale,opacity*.8,s);
+        // Oppression: a spiked silver sphere with a bound figure.
+        case "thorns":{
+          ring(300,180,100,100,0,s,opacity*.55,1.5);ring(300,180,80,80,0,a,opacity*.3,1);ring(300,180,58,58,0,s,opacity*.28,1);
+          for(int i=0;i<20;i++){
+            double ang=i*Math.PI/10-Math.PI/2,r1=100,r2=126+(i%2==1?0:14);
+            AuraPoly(c,new[]{new Point(300+Math.Cos(ang-.09)*r1,180+Math.Sin(ang-.09)*r1),new Point(300+Math.Cos(ang)*r2,180+Math.Sin(ang)*r2),new Point(300+Math.Cos(ang+.09)*r1,180+Math.Sin(ang+.09)*r1)},ox,oy,scale,opacity*.26,s,.8,true);
+          }
+          rays(300,180,58,100,12,a,opacity*.22,1,0);
+          AuraPath(c,"M262 142 L338 218 M338 142 L262 218 M300 132 L300 228 M262 180 L338 180",ox,oy,scale,opacity*.45,s,1.4);
+          AuraDot(c,ox+300*scale,oy+180*scale,9*scale,opacity*.5,s);
+          AuraPath(c,"M120 292 L480 292 M160 316 L440 316",ox,oy,scale,opacity*.18,a,1);
+          dots(new[]{new[]{120.0,100.0,2.0},new[]{480.0,100.0,2.0},new[]{100.0,230.0,1.8},new[]{500.0,230.0,1.8}},s,opacity*.45);
           break;}
-        case "horizon":{
-          AuraEllipse(c,ox+300*scale,oy+260*scale,296*scale,296*scale,0,opacity*.2,a,1);
-          for(int i=0;i<12;i++){double angle=Math.PI+Math.PI*i/11;AuraLine(c,ox+(300+Math.Cos(angle)*150)*scale,oy+(260+Math.Sin(angle)*150)*scale,ox+(300+Math.Cos(angle)*164)*scale,oy+(260+Math.Sin(angle)*164)*scale,opacity*.45,s,1.5);}
-          AuraPath(c,"M152 260 A148 148 0 0 1 448 260",ox,oy,scale,opacity*.75,s,2.5);
-          AuraPath(c,"M208 260 A92 92 0 0 1 392 260 Z",ox,oy,scale,opacity*.32,s,1,true);
-          AuraLine(c,ox+110*scale,oy+260*scale,ox+490*scale,oy+260*scale,opacity*.7,a,1.8);
-          AuraLine(c,ox+132*scale,oy+288*scale,ox+468*scale,oy+288*scale,opacity*.25,a,1);AuraLine(c,ox+164*scale,oy+314*scale,ox+436*scale,oy+314*scale,opacity*.2,a,1);
-          for(int i=0;i<9;i++)AuraLine(c,ox+(170+i*32)*scale,oy+260*scale,ox+(188+i*32)*scale,oy+330*scale,opacity*.16,a,.8);
-          AuraDot(c,ox+300*scale,oy+260*scale,10*scale,opacity*.75,s);
+        // Tomorrow: a celestial clock inside a beam-lit portal.
+        case "clock":{
+          rect(222,74,156,208,s,opacity*.45,false);
+          for(int i=0;i<4;i++)AuraLine(c,ox+(232+i*45)*scale,oy+42*scale,ox+(232+i*45)*scale,oy+292*scale,opacity*.32,s,1);
+          rect(258,112,84,128,a,opacity*.14,true);
+          rect(258,112,84,128,s,opacity*.65,false);
+          AuraPath(c,"M300 128 L300 146 M300 206 L300 224 M270 176 L288 176 M312 176 L330 176",ox,oy,scale,opacity*.65,s,1.6);
+          ring(300,176,22,22,0,s,opacity*.65,1.4);
+          AuraPath(c,"M300 158 L300 176 L314 184",ox,oy,scale,opacity*.75,s,1.6);
+          AuraPath(c,"M300 46 A13 13 0 1 0 300 72 A10 10 0 1 1 300 46 Z",ox,oy,scale,opacity*.75,s,1,true);
+          AuraPoly(c,star(300,286,34,7,4,-Math.PI/2),ox,oy,scale,opacity*.75,s,1,true);
+          ring(300,292,110,26,0,s,opacity*.3,1.4);
+          AuraPath(c,"M196 96 L214 96 M386 96 L404 96 M196 254 L214 254 M386 254 L404 254",ox,oy,scale,opacity*.45,a,1.4);
+          dots(new[]{new[]{160.0,80.0,3.0},new[]{440.0,80.0,3.0},new[]{140.0,180.0,2.5},new[]{460.0,180.0,2.5},new[]{180.0,300.0,2.0},new[]{420.0,300.0,2.0}},s,opacity*.75);
           break;}
-        default:for(int i=0;i<3;i++)AuraEllipse(c,ox+210*scale,oy+140*scale,(240-i*56)*scale,(88-i*20)*scale,-25,opacity*(.85-i*.15),a,1.5);
-          AuraDot(c,ox+210*scale,oy+140*scale,5*scale,opacity,a);AuraEllipse(c,ox+210*scale,oy+140*scale,48*scale,48*scale,0,opacity*.85,m,2);
-          for(int y=0;y<3;y++)for(int x=0;x<5;x++){var sq=new Rectangle{Width=26*scale,Height=14*scale,Fill=Brush((x+y)%2==0?a:m),Opacity=opacity*(.35+((x+y)%2)*.25),IsHitTestVisible=false};Canvas.SetLeft(sq,ox+(120+x*34)*scale);Canvas.SetTop(sq,oy+(200+y*16)*scale);c.Children.Add(sq);}
-          break;
+        // Illusionary: central starburst, orbital rings, HUD glitches, checkerboard.
+        default:{
+          ring(300,176,182,52,-14,a,opacity*.32,1.5);ring(300,176,142,38,-14,s,opacity*.28,1);
+          rays(300,150,44,214,12,s,opacity*.24,1,.2);
+          AuraPoly(c,star(300,150,46,10,8,-Math.PI/2),ox,oy,scale,opacity*.75,s,1,true);
+          AuraDisc(c,ox+300*scale,oy+150*scale,9*scale,opacity*.65,Brushes.White);
+          foreach(var p in new[]{new[]{92.0,96.0,44.0,3.0},new[]{452.0,88.0,30.0,3.0},new[]{104.0,132.0,18.0,3.0},new[]{470.0,146.0,38.0,3.0},new[]{86.0,232.0,26.0,3.0},new[]{462.0,246.0,34.0,3.0},new[]{150.0,70.0,12.0,3.0},new[]{520.0,208.0,16.0,3.0}})rect(p[0],p[1],p[2],p[3],s,opacity*.4,true);
+          for(int r=0;r<6;r++)for(int col=0;col<9;col++)rect(192+col*26,286+r*13,13,6.5,(r+col)%2==0?a:s,opacity*((r+col)%2==0?.16:.08),true);
+          dots(new[]{new[]{120.0,180.0,2.5},new[]{488.0,120.0,2.0},new[]{150.0,270.0,2.0},new[]{520.0,270.0,2.5},new[]{230.0,60.0,2.0},new[]{390.0,50.0,1.8}},s,opacity*.65);
+          break;}
       }
     }
     void DrawAura() {

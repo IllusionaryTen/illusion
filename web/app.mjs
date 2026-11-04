@@ -223,14 +223,14 @@ const themeSwatches={
   astraios:['#030F16','#0B2A31','#6FE3D2','#F2D98E'],
   'crimson-moon':['#090206','#250810','#E02434','#FF9A5C'],
   dreammetric:['#10031C','#270B38','#D445E6','#7FE0FF'],
-  eden:['#04050A','#141923','#C7D3E3','#F1DCA7'],
+  eden:['#05060C','#171C27','#B9C2CE','#7D8899'],
   hellborn:['#0B0304','#250B0D','#F2713A','#FF4B36'],
   monarch:['#05030E','#150D31','#A97BFF','#FFD36E'],
   oblivion:['#020108','#0F0A26','#B96BFF','#6C4DFF'],
   oppression:['#04060B','#121A25','#B9C6D8','#6C8BB5'],
   tomorrow:['#03041A','#101638','#9FB4FF','#FFC98A']
 };
-function syncThemeColor(){const meta=document.querySelector('meta[name=theme-color]'),bg=getComputedStyle(document.body).getPropertyValue('--bg').trim();if(meta&&bg)meta.content=bg;}
+function syncThemeColor(){const meta=document.querySelector('meta[name=theme-color]'),bg=getComputedStyle(document.body).getPropertyValue('--bg').trim();if(meta&&bg)meta.content=bg;try{window.IllusionBridge?.setThemeColor?.(bg);}catch{}}
 function applyThemeChoice(id){if(!themeChoices.some(([value])=>value===id))return;document.body.dataset.theme=id;setPreference('illusion-theme',id);setPreference('illusion-text-color','');setPreference('illusion-accent','');applyLookColors();applyAuraArt();syncThemeColor();if(me&&(peer||group))renderMessages(false);else if(noticeView)renderNotices();}
 function setUiStyle(value){setPreference('illusion-ui',value==='classic'?'classic':'aura');applyUiStyle();}
 function themeGallery(){const gallery=node('div',undefined,'theme-gallery'),current=document.body.dataset.theme||'blue';for(const [id,label] of themeChoices){const card=node('button',undefined,'theme-card');card.type='button';card.dataset.theme=id;card.setAttribute('aria-pressed',String(id===current));const swatch=node('span',undefined,'theme-swatch');for(const color of themeSwatches[id]||themeSwatches.blue){const part=node('i');part.style.background=color;swatch.append(part);}card.append(swatch,node('strong',translate(label,language)));card.onclick=()=>{for(const item of gallery.querySelectorAll('.theme-card'))item.setAttribute('aria-pressed',String(item===card));applyThemeChoice(id);};gallery.append(card);}return gallery;}
@@ -238,101 +238,145 @@ function uiStyleSwitch(){const wrap=node('div',undefined,'ui-switch');for(const 
 const auraArt={
   blue:{caption:'ドリームステート / DREAM STATE',motif:'orbit'},
   astraios:{caption:'アストライオス / ASTRAIOS',motif:'constellation'},
-  'crimson-moon':{caption:'クリムゾンムーン / CRIMSON MOON',motif:'bloodmoon'},
-  dreammetric:{caption:'ドリームメトリック / DREAMMETRIC',motif:'dreamspiral'},
-  eden:{caption:'エデン / EDEN',motif:'halo'},
+  'crimson-moon':{caption:'クリムゾンムーン / CRIMSON MOON',motif:'scythes'},
+  dreammetric:{caption:'ドリームメトリック / DREAMMETRIC',motif:'stars'},
+  eden:{caption:'エデン / EDEN',motif:'monolith'},
   hellborn:{caption:'ヘルボーン / HELLBORN',motif:'inferno'},
-  monarch:{caption:'モナーク / MONARCH',motif:'throne'},
-  oblivion:{caption:'オブリヴィオン / OBLIVION',motif:'blackhole'},
-  oppression:{caption:'オプレッション / OPPRESSION',motif:'cage'},
-  tomorrow:{caption:'トゥモロー / TOMORROW',motif:'horizon'}
+  monarch:{caption:'モナーク / MONARCH',motif:'crown'},
+  oblivion:{caption:'オブリヴィオン / OBLIVION',motif:'dome'},
+  oppression:{caption:'オプレッション / OPPRESSION',motif:'thorns'},
+  tomorrow:{caption:'トゥモロー / TOMORROW',motif:'clock'}
 };
+// Each motif is a lightweight vector echo of the real Challenged+ collection
+// artwork: the shapes that make an aura recognisable, not a copy of the image.
 function auraShapes(motif){
-  const A='var(--accent)',M='var(--muted)',B='var(--bg)',S='var(--accent-2)';
+  const A='var(--accent)',B='var(--bg)',S='var(--accent-2)';
+  const star=(cx,cy,outer,inner,points=5,rot=-Math.PI/2)=>{let d='';for(let i=0;i<points*2;i++){const r=i%2?inner:outer,a=rot+i*Math.PI/points;d+=(i?'L':'M')+(cx+Math.cos(a)*r).toFixed(1)+' '+(cy+Math.sin(a)*r).toFixed(1);}return d+'Z';};
+  const ring=(cx,cy,rx,ry,c,o,w=1,rot=0)=>`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="${c}" stroke-width="${w}" opacity="${o}" transform="rotate(${rot} ${cx} ${cy})"/>`;
+  const rays=(cx,cy,r1,r2,n,c,o,w=1,offset=0)=>Array.from({length:n},(_,i)=>{const a=offset+i*2*Math.PI/n;return `<line x1="${(cx+Math.cos(a)*r1).toFixed(1)}" y1="${(cy+Math.sin(a)*r1).toFixed(1)}" x2="${(cx+Math.cos(a)*r2).toFixed(1)}" y2="${(cy+Math.sin(a)*r2).toFixed(1)}" stroke="${c}" stroke-width="${w}" opacity="${o}"/>`;}).join('');
+  const dots=(list,c,o)=>list.map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" opacity="${o}"/>`).join('');
+  const checker=(cols,rows,x0,y0,cw,ch)=>Array.from({length:rows},(_,r)=>Array.from({length:cols},(_,c)=>`<rect x="${x0+c*cw}" y="${y0+r*ch}" width="${cw/2}" height="${ch/2}" fill="${(r+c)%2?A:S}" opacity="${(r+c)%2?.16:.08}"/>`).join('')).join('');
   switch(motif){
+    // Astraios: a star-headed figure with a staff above a rock, wrapped in a
+    // tilted astrolabe, with teal constellation sparks.
     case 'constellation':{
-      const nodes=[[300,64],[382,128],[474,92],[512,196],[430,252],[326,300],[220,248],[132,188],[170,106]];
-      const links='M300 70 L300 160 M300 70 L380 130 L470 95 M380 130 L430 250 L520 190 M430 250 L320 300 L220 250 L170 110 L300 70 M220 250 L130 190 L170 110 M320 300 L380 130';
-      const dots=[[80,90,2],[120,240,1.5],[470,300,2.5],[520,60,1.8],[210,40,1.8],[520,300,1.8],[70,300,1.8],[410,60,1.8]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${S}" opacity=".8"/>`).join('');
-      return `<circle cx="300" cy="180" r="150" fill="${S}" opacity=".045"/>`+
-        `<path d="${links}" stroke="${A}" stroke-width="1" fill="none" opacity=".42"/>`+
-        nodes.map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.6" fill="${A}" opacity=".9"/>`).join('')+
-        `<path d="M300 92 L309 171 L388 180 L309 189 L300 268 L291 189 L212 180 L291 171 Z" fill="${S}" opacity=".28"/>`+
-        `<path d="M300 112 L306 174 L368 180 L306 186 L300 248 L294 186 L232 180 L294 174 Z" fill="${S}" opacity=".85"/>`+dots;
+      const sparkle=(x,y,r)=>`<path d="${star(x,y,r,r*.26,4)}" fill="${S}" opacity=".8"/>`;
+      return ring(300,180,150,150,A,.2,1)+ring(300,180,128,52,S,.5,1.5,-24)+ring(300,180,128,52,A,.34,1,24)+
+        `<path d="M300 74 L306 180 L360 236 L300 286 L240 236 L294 180 Z" fill="${S}" opacity=".12"/>`+
+        `<path d="${star(300,96,20,8,5)}" fill="${S}" opacity=".9"/>`+
+        `<path d="M300 116 L300 168 M300 130 L272 146 M300 130 L330 118 M300 168 L282 202 M300 168 L318 202" stroke="${S}" stroke-width="2" fill="none" opacity=".8"/>`+
+        `<path d="M330 118 L350 66" stroke="${A}" stroke-width="1.6" opacity=".7"/>`+
+        `<path d="M256 268 L280 234 L306 252 L330 230 L354 268 Z" fill="${B}" stroke="${A}" stroke-width="1" opacity=".9"/>`+
+        `<path d="M120 90 L180 130 L226 84 M420 96 L470 140 L510 112 M140 250 L196 226 M430 250 L486 226" stroke="${A}" stroke-width="1" fill="none" opacity=".35"/>`+
+        sparkle(180,130,7)+sparkle(470,140,6)+sparkle(226,84,4)+sparkle(140,250,4)+sparkle(486,226,5)+
+        dots([[80,90,2],[120,240,1.5],[470,300,2.5],[520,60,1.8],[210,40,1.8],[520,300,1.8],[70,300,1.8],[410,60,1.8]],S,.8);
     }
-    case 'bloodmoon':{
-      const craters=[[390,118,13],[352,196,20],[300,142,10],[415,196,9],[330,96,7]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${B}" opacity=".2"/>`).join('');
-      return `<defs><radialGradient id="aura-bloodmoon" cx="38%" cy="34%" r="72%"><stop offset="0" stop-color="#FF9A68" stop-opacity=".95"/><stop offset=".58" stop-color="${A}" stop-opacity=".72"/><stop offset="1" stop-color="#250208"/></radialGradient></defs>`+
-        `<circle cx="342" cy="150" r="112" fill="url(#aura-bloodmoon)" opacity=".9"/><circle cx="300" cy="108" r="120" fill="none" stroke="${A}" stroke-width="2" opacity=".28"/>`+craters+
-        `<path d="M300 66 C246 92 250 146 292 174 M430 120 C448 168 414 218 366 234 M334 40 L318 96 L344 132 M368 262 L390 300 M250 262 L222 300" stroke="${A}" stroke-width="2" fill="none" opacity=".55"/>`+
-        `<path d="M116 286 Q180 250 244 272 Q300 290 356 262 Q430 228 500 258" stroke="${A}" stroke-width="1.5" fill="none" opacity=".35"/>`+
-        `<path d="M120 96 Q160 120 150 170 M492 74 Q462 116 480 156" stroke="${S}" stroke-width="1.5" fill="none" opacity=".3"/>`+
-        [[470,120,6],[486,170,4],[150,80,4],[190,300,5],[470,286,3]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${A}" opacity=".7"/>`).join('');
+    // Calamity of the Crimson Moon: twin crescent scythes over a cloaked
+    // figure, standing in concentric rune rings.
+    case 'scythes':{
+      return `<path d="M300 178 C214 168 150 100 132 26 C196 66 264 88 300 178 Z" fill="${A}" opacity=".16" stroke="${A}" stroke-width="2"/>`+
+        `<path d="M300 178 C386 168 450 100 468 26 C404 66 336 88 300 178 Z" fill="${A}" opacity=".16" stroke="${A}" stroke-width="2"/>`+
+        `<path d="M300 118 L282 176 L270 240 L300 262 L330 240 L318 176 Z" fill="${B}" stroke="${A}" stroke-width="1.6" opacity=".9"/>`+
+        `<path d="M300 96 L288 128 L312 128 Z" fill="${A}" opacity=".6"/>`+
+        ring(300,272,168,42,A,.5,2)+ring(300,272,126,30,S,.32,1)+ring(300,272,86,20,A,.24,1)+
+        rays(300,272,88,166,16,A,.26,1)+
+        `<path d="M96 96 L196 160 M504 96 L404 160 M120 300 L208 268 M480 300 L392 268" stroke="${A}" stroke-width="1.4" opacity=".32"/>`+
+        dots([[150,60,3],[450,60,3],[110,214,2.5],[490,214,2.5],[300,40,2],[220,320,2],[380,320,2]],S,.65);
     }
-    case 'dreamspiral':{
-      const spiral=(turn)=>{let d='';for(let t=0;t<=13;t+=.28){const r=6+t*6.8,a=t+turn;const x=300+Math.cos(a)*r*1.18,y=178+Math.sin(a)*r*.68;d+=(t?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}return d;};
-      const sparks=[[170,100,3],[410,90,4],[470,210,2.5],[150,250,3],[360,290,2],[240,60,2],[500,140,2.5],[90,170,2]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${S}" opacity=".8"/>`).join('');
-      return `<ellipse cx="300" cy="178" rx="170" ry="96" fill="none" stroke="${A}" stroke-width="1" opacity=".18" transform="rotate(-18 300 178)"/>`+
-        `<path d="${spiral(0)}" fill="none" stroke="${S}" stroke-width="2.2" opacity=".9"/>`+
-        `<path d="${spiral(2.1)}" fill="none" stroke="${A}" stroke-width="1.4" opacity=".55"/>`+
-        `<path d="${spiral(4.2)}" fill="none" stroke="${A}" stroke-width="1.1" opacity=".4"/>`+sparks+
-        `<circle cx="300" cy="178" r="13" fill="${S}" opacity=".35"/><circle cx="300" cy="178" r="4" fill="${S}" opacity=".9"/>`;
+    // Dreammetric: five pink stars - one large outline, an inner star, two
+    // flanking stars and one above - over radial burst rays and a checkered floor.
+    case 'stars':{
+      return rays(300,152,86,252,14,A,.2,1.2,.15)+ring(300,152,122,122,A,.13,1)+
+        `<path d="${star(300,148,92,40,5)}" fill="${A}" opacity=".16" stroke="${A}" stroke-width="3.5" stroke-linejoin="round"/>`+
+        `<path d="${star(300,148,58,25,5)}" fill="none" stroke="${A}" stroke-width="1.8" opacity=".7"/>`+
+        `<path d="${star(300,148,20,8,5)}" fill="${A}" opacity=".4"/>`+
+        `<path d="${star(150,212,25,10,5)}" fill="${A}" opacity=".8"/>`+
+        `<path d="${star(450,212,25,10,5)}" fill="${A}" opacity=".8"/>`+
+        `<path d="${star(300,44,13,5,5)}" fill="${A}" opacity=".55"/>`+
+        `<rect x="242" y="198" width="116" height="8" rx="3" fill="${A}" opacity=".55"/>`+
+        checker(12,3,96,286,34,16)+
+        dots([[120,120,2.5],[480,120,2.5],[100,268,2],[500,268,2],[210,66,2],[390,66,2],[220,330,2],[380,330,2]],S,.4);
     }
-    case 'halo':{
-      const rays=Array.from({length:14},(_,i)=>{const a=i*Math.PI/7-Math.PI/2;return `<line x1="${300+Math.cos(a)*92}" y1="${104+Math.sin(a)*92}" x2="${300+Math.cos(a)*124}" y2="${104+Math.sin(a)*124}" stroke="${S}" stroke-width="1.6" opacity=".45"/>`;}).join('');
-      return `<circle cx="300" cy="104" r="64" fill="none" stroke="${S}" stroke-width="3" opacity=".9"/><circle cx="300" cy="104" r="80" fill="none" stroke="${A}" stroke-width="1" opacity=".35"/>`+rays+
-        `<path d="M300 136 L310 166 L342 176 L310 186 L300 220 L290 186 L258 176 L290 166 Z" fill="${S}" opacity=".72"/>`+
-        `<path d="M300 226 C242 170 176 164 116 210 C168 218 210 246 250 286 C266 256 282 236 300 226 Z" fill="${A}" opacity=".14" stroke="${A}" stroke-width="1.2"/>`+
-        `<path d="M300 226 C358 170 424 164 484 210 C432 218 390 246 350 286 C334 256 318 236 300 226 Z" fill="${A}" opacity=".14" stroke="${A}" stroke-width="1.2"/>`+
-        `<ellipse cx="452" cy="110" rx="10" ry="3" fill="${S}" opacity=".45" transform="rotate(-28 452 110)"/><ellipse cx="148" cy="294" rx="9" ry="2.5" fill="${S}" opacity=".35" transform="rotate(-24 148 294)"/>`;
+    // Eden: the pale faceted Void Contractor monolith above black liquid
+    // ripples, with the small floating key. Deliberately monochrome.
+    case 'monolith':{
+      const ripples=[0,1,2,3].map(i=>ring(300,282-i*3,150-i*30,30-i*5,A,.46-i*.09,1.2)).join('');
+      return `<path d="M262 108 L292 96 L312 112 L306 146 L268 150 Z" fill="${A}" opacity=".2" stroke="${A}" stroke-width="1.4"/>`+
+        `<path d="M256 146 L308 142 L326 176 L318 268 L276 272 L250 178 Z" fill="${A}" opacity=".14" stroke="${A}" stroke-width="1.6"/>`+
+        `<path d="M268 150 L282 176 L276 272 M308 142 L300 176 L318 268 M250 178 L326 176" stroke="${A}" stroke-width="1" fill="none" opacity=".42"/>`+
+        ripples+
+        `<path d="M360 118 q14 -12 26 0 q-10 14 -22 8 M372 138 q10 8 22 2" stroke="${S}" stroke-width="1.4" fill="none" opacity=".6"/>`+
+        `<path d="M60 268 L540 268 M120 300 L480 300 M180 330 L420 330" stroke="${S}" stroke-width="1" opacity=".13"/>`+
+        dots([[140,120,1.8],[470,150,1.8],[110,220,1.5],[500,240,1.5]],S,.45);
     }
+    // Hellborn: twin flame horns flanking a burning mechanical altar.
     case 'inferno':{
-      const flame=(x)=>`<path d="M${x} 302 C${x-26} 262 ${x+16} 228 ${x-4} 182 C${x+34} 216 ${x+48} 256 ${x+30} 302 Z" fill="${S}" opacity=".55"/>`;
-      let f='';for(let i=0;i<5;i++)f+=flame(170+i*66);
-      return `<ellipse cx="300" cy="306" rx="210" ry="26" fill="${A}" opacity=".12"/>`+
-        `<path d="M188 206 C206 120 262 84 300 72 C338 84 394 120 412 206 C382 172 344 150 300 146 C256 150 218 172 188 206 Z" fill="${A}" opacity=".18"/>`+f+
-        `<path d="M236 132 C238 96 266 72 282 58 C286 92 272 114 258 134 M364 132 C362 96 334 72 318 58 C314 92 328 114 342 134" fill="none" stroke="${S}" stroke-width="2.5" opacity=".75"/>`+
-        [[140,120,4],[460,100,3],[500,220,5],[110,240,3],[380,60,2],[250,60,2]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${S}" opacity=".75"/>`).join('');
+      const horn=(x,dir)=>`<path d="M${x} 262 C${x-18*dir} 220 ${x+34*dir} 196 ${x+6*dir} 132 C${x+40*dir} 172 ${x+52*dir} 214 ${x+34*dir} 262 Z" fill="${A}" opacity=".2" stroke="${S}" stroke-width="1.4"/>`;
+      return ring(300,286,190,30,A,.13,1)+horn(186,-1)+horn(414,1)+
+        `<path d="M276 262 L276 176 L300 150 L324 176 L324 262 Z" fill="${A}" opacity=".16" stroke="${A}" stroke-width="1.5"/>`+
+        `<path d="M264 176 L336 176 M270 200 L330 200 M270 230 L330 230" stroke="${A}" stroke-width="1.2" opacity=".4"/>`+
+        `<path d="M300 148 C282 118 292 92 300 66 C312 96 320 120 300 148 Z" fill="${S}" opacity=".75"/>`+
+        `<path d="M300 122 C292 104 296 88 300 78 C306 92 308 106 300 122 Z" fill="${A}" opacity=".7"/>`+
+        dots([[150,110,3],[450,100,3],[120,220,2.5],[480,220,2.5],[220,60,2],[380,60,2],[200,300,2],[400,300,2]],S,.7);
     }
-    case 'throne':{
-      const beams=Array.from({length:7},(_,i)=>`<line x1="300" y1="170" x2="${150+i*50}" y2="40" stroke="${S}" stroke-width="1" opacity=".22"/>`).join('');
-      return beams+
-        `<path d="M300 78 L266 126 L246 82 L244 154 L356 154 L354 82 L334 126 Z" fill="${S}" opacity=".8"/>`+
-        `<path d="M254 154 L346 154 L360 296 L240 296 Z" fill="${A}" opacity=".18" stroke="${A}" stroke-width="1.5"/>`+
-        `<path d="M232 296 L368 296 M246 296 L238 320 M354 296 L362 320" stroke="${S}" stroke-width="3" opacity=".8"/>`+
-        `<path d="M300 166 L312 186 L334 192 L312 198 L300 220 L288 198 L266 192 L288 186 Z" fill="${S}" opacity=".65"/>`+
-        `<circle cx="276" cy="132" r="4" fill="${S}"/><circle cx="324" cy="132" r="4" fill="${S}"/><circle cx="300" cy="110" r="5" fill="${S}"/>`+
-        `<path d="M210 240 Q240 214 262 240 Q240 262 210 240 M390 240 Q360 214 338 240 Q360 262 390 240" fill="${A}" opacity=".35"/>`;
+    // Monarch: a swirling violet orb under a wide tilted crown-brim and plume.
+    case 'crown':{
+      return ring(300,192,116,116,A,.28,1.6)+ring(300,192,96,116,S,.26,1.2,28)+ring(300,192,96,116,A,.22,1.2,-28)+
+        ring(300,192,60,60,A,.16,1)+
+        `<ellipse cx="300" cy="118" rx="132" ry="26" fill="${A}" opacity=".18" stroke="${S}" stroke-width="2" transform="rotate(-8 300 118)"/>`+
+        `<path d="M256 112 C264 62 282 40 300 24 C316 46 334 66 340 112 Z" fill="${S}" opacity=".3" stroke="${S}" stroke-width="1.4"/>`+
+        `<path d="M282 110 C288 72 296 48 300 30 C306 54 312 78 316 110" fill="none" stroke="${A}" stroke-width="1.4" opacity=".7"/>`+
+        `<path d="M300 24 L300 6 M272 60 L258 30 M328 60 L342 30" stroke="${S}" stroke-width="2" opacity=".55"/>`+
+        dots([[190,120,3],[410,130,3],[170,230,2.5],[430,230,2.5],[300,290,2],[240,60,2],[360,50,2]],S,.7);
     }
-    case 'blackhole':{
-      const streaks=[[90,100,180,70],[470,280,560,320],[120,300,70,330],[520,70,560,30],[180,60,130,30]].map(([x1,y1,x2,y2])=>`<path d="M${x1} ${y1} L${x2} ${y2}" stroke="${S}" stroke-width="1.2" opacity=".35"/>`).join('');
-      return `<ellipse cx="300" cy="182" rx="196" ry="54" fill="none" stroke="${A}" stroke-width="2" opacity=".5" transform="rotate(-14 300 182)"/>`+
-        `<ellipse cx="300" cy="182" rx="166" ry="38" fill="none" stroke="${S}" stroke-width="1.2" opacity=".45" transform="rotate(-14 300 182)"/>`+
-        `<circle cx="300" cy="180" r="70" fill="${B}" stroke="${A}" stroke-width="2.2"/><circle cx="300" cy="180" r="76" fill="none" stroke="${S}" stroke-width="1" opacity=".55"/>`+
-        `<path d="M208 180 Q300 120 392 180" fill="none" stroke="${S}" stroke-width="1.5" opacity=".35"/><path d="M204 188 Q300 244 396 188" fill="none" stroke="${A}" stroke-width="1.2" opacity=".4"/>`+
-        streaks+`<circle cx="300" cy="180" r="12" fill="#000" opacity=".8"/>`;
+    // Oblivion: a violet hourglass core sealed inside a tall glass dome.
+    case 'dome':{
+      const bars=[0,1,2,3,4,5].map(i=>`<line x1="${(226+i*29.6).toFixed(1)}" y1="126" x2="${(226+i*29.6).toFixed(1)}" y2="272" stroke="${A}" stroke-width="1" opacity=".28"/>`).join('');
+      return `<path d="M226 272 L226 148 A74 74 0 0 1 374 148 L374 272" fill="${B}" opacity=".3" stroke="${S}" stroke-width="1.6"/>`+
+        ring(300,272,86,18,S,.42,1.4)+ring(300,272,110,24,A,.2,1)+bars+
+        `<path d="M262 128 L338 128 L300 180 Z" fill="${A}" opacity=".5"/>`+
+        `<path d="M262 232 L338 232 L300 180 Z" fill="${A}" opacity=".5"/>`+
+        `<circle cx="300" cy="178" r="16" fill="${S}" opacity=".75"/><circle cx="300" cy="178" r="30" fill="none" stroke="${S}" stroke-width="1.2" opacity=".45"/>`+
+        `<path d="M300 60 L300 100 M270 70 L282 104 M330 70 L318 104" stroke="${A}" stroke-width="1.4" opacity=".42"/>`+
+        dots([[160,120,2.5],[440,120,2.5],[140,250,2],[460,250,2],[300,40,2]],S,.55);
     }
-    case 'cage':{
-      const bars=Array.from({length:9},(_,i)=>`<line x1="${150+i*38}" y1="72" x2="${150+i*38}" y2="300" stroke="${M}" stroke-width="3" opacity=".35"/>`).join('');
-      const links=Array.from({length:6},(_,i)=>`<circle cx="${188+i*46}" cy="${96+(i%2)*14}" r="9" fill="none" stroke="${A}" stroke-width="2" opacity=".35"/>`).join('');
-      return bars+`<path d="M132 72 L468 72 M128 300 L472 300 M120 54 L480 318 M480 54 L120 318" stroke="${A}" stroke-width="2" opacity=".28"/>`+links+
-        `<path d="M220 300 L196 336 M300 300 L300 340 M380 300 L404 336" stroke="${S}" stroke-width="2" opacity=".45"/>`+
-        `<path d="M250 120 L282 166 L266 214 L300 252 M350 120 L318 166 L334 214 L300 252" stroke="${S}" stroke-width="1.5" fill="none" opacity=".55"/>`+
-        `<circle cx="300" cy="252" r="5" fill="${S}" opacity=".8"/>`;
+    // Oppression: a spiked silver sphere with a bound figure at its centre.
+    case 'thorns':{
+      const spikes=Array.from({length:20},(_,i)=>{const a=i*Math.PI/10-Math.PI/2,r1=100,r2=126+(i%2?0:14);return `<path d="M${(300+Math.cos(a-.09)*r1).toFixed(1)} ${(180+Math.sin(a-.09)*r1).toFixed(1)} L${(300+Math.cos(a)*r2).toFixed(1)} ${(180+Math.sin(a)*r2).toFixed(1)} L${(300+Math.cos(a+.09)*r1).toFixed(1)} ${(180+Math.sin(a+.09)*r1).toFixed(1)} Z" fill="${S}" opacity=".26" stroke="${S}" stroke-width=".8"/>`;}).join('');
+      return ring(300,180,100,100,S,.55,1.5)+ring(300,180,80,80,A,.3,1)+ring(300,180,58,58,S,.28,1)+
+        spikes+rays(300,180,58,100,12,A,.22,1)+
+        `<path d="M262 142 L338 218 M338 142 L262 218 M300 132 L300 228 M262 180 L338 180" stroke="${S}" stroke-width="1.4" opacity=".45"/>`+
+        `<circle cx="300" cy="180" r="9" fill="${S}" opacity=".5"/>`+
+        `<path d="M120 292 L480 292 M160 316 L440 316" stroke="${A}" stroke-width="1" opacity=".18"/>`+
+        dots([[120,100,2],[480,100,2],[100,230,1.8],[500,230,1.8]],S,.45);
     }
-    case 'horizon':{
-      const ticks=Array.from({length:12},(_,i)=>{const a=Math.PI+(Math.PI*i/11);const x1=300+Math.cos(a)*150,y1=260+Math.sin(a)*150,x2=300+Math.cos(a)*164,y2=260+Math.sin(a)*164;return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${S}" stroke-width="1.5" opacity=".45"/>`;}).join('');
-      return `<circle cx="300" cy="260" r="148" fill="none" stroke="${A}" stroke-width="1" opacity=".2"/>`+ticks+
-        `<path d="M152 260 A148 148 0 0 1 448 260" fill="none" stroke="${S}" stroke-width="2.5" opacity=".75"/>`+
-        `<path d="M208 260 A92 92 0 0 1 392 260 Z" fill="${S}" opacity=".32"/>`+
-        `<line x1="110" y1="260" x2="490" y2="260" stroke="${A}" stroke-width="1.8" opacity=".7"/>`+
-        `<line x1="132" y1="288" x2="468" y2="288" stroke="${A}" stroke-width="1" opacity=".25"/><line x1="164" y1="314" x2="436" y2="314" stroke="${A}" stroke-width="1" opacity=".2"/>`+
-        Array.from({length:9},(_,i)=>`<line x1="${170+i*32}" y1="260" x2="${188+i*32}" y2="330" stroke="${A}" stroke-width=".8" opacity=".16"/>`).join('')+
-        `<circle cx="300" cy="260" r="10" fill="${S}" opacity=".75"/>`;
+    // Tomorrow: a celestial clock card inside a beam-lit portal, crescent
+    // moon above and a bright starburst at the base.
+    case 'clock':{
+      const beams=[0,1,2,3].map(i=>`<line x1="${232+i*45}" y1="42" x2="${232+i*45}" y2="292" stroke="${S}" stroke-width="1" opacity=".32"/>`).join('');
+      return `<rect x="222" y="74" width="156" height="208" rx="6" fill="none" stroke="${S}" stroke-width="2" opacity=".45"/>`+beams+
+        `<g transform="rotate(-12 300 176)"><rect x="258" y="112" width="84" height="128" rx="4" fill="${A}" opacity=".14" stroke="${S}" stroke-width="2"/>`+
+        `<path d="M300 128 L300 146 M300 206 L300 224 M270 176 L288 176 M312 176 L330 176" stroke="${S}" stroke-width="1.6" opacity=".65"/>`+
+        `<circle cx="300" cy="176" r="22" fill="none" stroke="${S}" stroke-width="1.4" opacity=".65"/>`+
+        `<path d="M300 158 L300 176 L314 184" fill="none" stroke="${S}" stroke-width="1.6" opacity=".75"/></g>`+
+        `<path d="M300 46 A13 13 0 1 0 300 72 A10 10 0 1 1 300 46 Z" fill="${S}" opacity=".75"/>`+
+        `<path d="${star(300,286,34,7,4)}" fill="${S}" opacity=".75"/>`+
+        ring(300,292,110,26,S,.3,1.4)+
+        `<path d="M196 96 L214 96 M386 96 L404 96 M196 254 L214 254 M386 254 L404 254" stroke="${A}" stroke-width="1.4" opacity=".45"/>`+
+        dots([[160,80,3],[440,80,3],[140,180,2.5],[460,180,2.5],[180,300,2],[420,300,2]],S,.75);
     }
-    default:return [0,1,2].map(i=>`<ellipse cx="210" cy="140" rx="${120-i*28}" ry="${44-i*10}" fill="none" stroke="${A}" stroke-width="1.5" transform="rotate(-25 210 140)"/>`).join('')+
-      `<circle cx="210" cy="140" r="24" fill="none" stroke="${M}" stroke-width="2" opacity=".85"/><circle cx="210" cy="140" r="5" fill="${A}"/>`+
-      Array.from({length:15},(_,i)=>{const x=i%5,y=Math.floor(i/5);return `<rect x="${120+x*34}" y="${200+y*16}" width="26" height="14" fill="${(x+y)%2===0?A:M}" opacity="${.32+((x+y)%2)*.24}"/>`;}).join('');
+    // Illusionary: a central starburst over orbital rings, glitchy HUD
+    // fragments and the signature checkerboard.
+    default:{
+      const hud=[[92,96,44,3],[452,88,30,3],[104,132,18,3],[470,146,38,3],[86,232,26,3],[462,246,34,3],[150,70,12,3],[520,208,16,3]]
+        .map(([x,y,w,h])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${S}" opacity=".4"/>`).join('');
+      return ring(300,176,182,52,A,.32,1.5,-14)+ring(300,176,142,38,S,.28,1,-14)+
+        rays(300,150,44,214,12,S,.24,1,.2)+
+        `<path d="${star(300,150,46,10,8)}" fill="${S}" opacity=".75"/>`+
+        `<circle cx="300" cy="150" r="9" fill="#fff" opacity=".65"/>`+
+        hud+checker(9,6,192,286,26,13)+
+        dots([[120,180,2.5],[488,120,2],[150,270,2],[520,270,2.5],[230,60,2],[390,50,1.8]],S,.65);
+    }
   }
 }
 function applyAuraArt(){const host=$('aura-art');if(!host)return;const id=document.body.dataset.theme||'blue';const art=auraArt[id]||auraArt.blue;host.dataset.motif=art.motif;host.innerHTML='<svg viewBox="0 0 600 360" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+auraShapes(art.motif)+'</svg><div class="aura-caption">'+art.caption+'</div>';}
@@ -537,16 +581,26 @@ $('settings').onclick=()=>{
 // Detailed UI: the per-chat pin control is revealed on demand instead of
 // sitting on every conversation card. Double-click latches it on desktop,
 // long-press on touch, keyboard focus reveals it, and a pinned chat keeps
-// its control visible so it can be unpinned again.
+// its control visible so it can be unpinned again. Hover never reveals it.
 (function pinOnDemand(){
-  const rowOf=event=>event.target instanceof Element?event.target.closest('.chat-row'):null;
-  let pressTimer=0,pressOrigin=null,suppressClick=false;
-  function clear(){for(const row of document.querySelectorAll('.chat-row.pin-open'))row.classList.remove('pin-open');}
-  function show(row){clear();row.classList.add('pin-open');}
+  const rowOf=event=>{
+    if(!(event.target instanceof Element))return null;
+    const direct=event.target.closest('.chat-row');
+    if(direct)return direct;
+    // A live refresh can rebuild the list between the two clicks, in which
+    // case dblclick lands on the list itself; use the row under the pointer.
+    const under=document.elementFromPoint(event.clientX,event.clientY);
+    if(!(under instanceof Element)||under.closest('.pin-chat'))return null;
+    return under.closest('.chat-row');
+  };
+  let openId=null,pressTimer=0,pressOrigin=null,suppressClick=false;
+  function apply(){for(const row of document.querySelectorAll('.chat-row'))row.classList.toggle('pin-open',!!openId&&row.dataset.chatId===openId);}
+  function clear(){openId=null;apply();}
+  function show(row){openId=row.dataset.chatId||null;apply();}
   document.addEventListener('dblclick',event=>{
     if(document.body.dataset.ui!=='aura')return;
     const row=rowOf(event);if(!row||event.target.closest('.pin-chat'))return;
-    if(row.classList.contains('pin-open'))row.classList.remove('pin-open');else show(row);
+    if(openId===row.dataset.chatId)clear();else show(row);
   });
   document.addEventListener('pointerdown',event=>{
     if(document.body.dataset.ui!=='aura'||event.pointerType==='mouse')return;
@@ -564,6 +618,9 @@ $('settings').onclick=()=>{
   },true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape')clear();});
   document.addEventListener('contextmenu',event=>{if(suppressClick&&event.target instanceof Element&&event.target.closest('.chat-row'))event.preventDefault();});
+  // refreshChats() replaces every row; keep the reveal latched across rebuilds.
+  const list=document.getElementById('chats');
+  if(list)new MutationObserver(apply).observe(list,{childList:true});
 })();
 
 

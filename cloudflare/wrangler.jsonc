@@ -19,5 +19,5 @@
     {"name":"ADMIN_LIMIT","namespace_id":"7606004","simple":{"limit":30,"period":60}}
   ],
   "observability": {"enabled": false},
-  "vars": {"OPERATOR_NAME": "Illusion", "OPERATOR_COUNTRY": "Russia", "SUPPORT_CONTACT": "publicillusiionsupport@gmail.com", "OPERATOR_ADDRESS": "Not applicable (individual)"}
+  "vars": {"OPERATOR_NAME": "Illusion", "OPERATOR_COUNTRY": "Russia", "SUPPORT_CONTACT": "support@illusionary.my.id", "OPERATOR_ADDRESS": "Not applicable (individual)"}
 }

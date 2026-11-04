@@ -306,6 +306,19 @@ public final class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void setThemeColor(String value) {
+            if (value == null || !value.matches("#[0-9a-fA-F]{6}")) return;
+            final int color;
+            try { color = Color.parseColor(value); } catch (IllegalArgumentException ignored) { return; }
+            runOnUiThread(() -> {
+                Window window = getWindow();
+                window.setStatusBarColor(color);
+                window.setNavigationBarColor(color);
+                if (webView != null) webView.setBackgroundColor(color);
+            });
+        }
+
+        @JavascriptInterface
         public void focusKeyboard() {
             runOnUiThread(() -> {
                 if (webView == null) return;

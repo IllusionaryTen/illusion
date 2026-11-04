@@ -29,6 +29,7 @@ const add = (s, where) => {
   s = s.replace(/\\n/g, ' ').trim();
   if (!s || !/[A-Za-z]{2,}/.test(s)) return;
   if (/^(https?:|\/|#|\.|\*|data:)/.test(s)) return;
+  if (/^\{Binding\b/.test(s)) return; // XAML markup extension, not user-visible text
   if (s.includes('{0}') || s.includes('+') && s.trim().startsWith('+')) { /* keep, normalize handles */ }
   if (!found.has(s)) found.set(s, []);
   found.get(s).push(where);

@@ -145,7 +145,7 @@
     'foot.report': 'Сообщить о проблеме',
     'foot.health': 'Состояние сервиса',
     'foot.version': 'Версия',
-    'foot.note': 'Без аналитики и сторонних скриптов. Оператор: Illusion · Россия · publicillusiionsupport@gmail.com.'
+    'foot.note': 'Без аналитики и сторонних скриптов. Оператор: Illusion · Россия · support@illusionary.my.id.'
   };
 
   const metaRu = {
