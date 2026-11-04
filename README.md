@@ -1,6 +1,10 @@
-# ◈ Illusion 1.7.1
+# ◈ Illusion 1.7.2
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with a detailed blue, white, black, checkerboard and orbital interface inspired by the Challenged+ auras of Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.7.2
+
+**Aura artwork stays on screen.** Every per-theme background motif was anchored with negative right/bottom offsets, which pushed the right third of the artwork past the viewport edge — the Dreammetric star lost its right points on narrow windows. All ten placements now use positive insets and widths capped below the viewport width, keeping the full silhouette visible at both phone and desktop sizes without shrinking it. The Windows client fits its chat wallpaper and empty-state canvas to the available space with the same result. No palette, motif or wire changes.
 
 ## What's new in 1.7.1
 

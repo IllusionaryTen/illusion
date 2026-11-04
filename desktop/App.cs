@@ -401,15 +401,22 @@ namespace Illusion {
       string theme=CurrentThemeId();string caption;AuraCaptions.TryGetValue(theme,out caption);if(caption==null)caption=AuraCaptions["blue"];
       var stamp=Window.FindName("AuraStamp") as TextBlock;if(stamp!=null)stamp.Text=caption;
       if(Setting("aura","true")=="false")return;
-      DrawAuraMotif(canvas,MotifFor(theme),10,10,theme=="blue"?0.95:0.52,0.9);
-      AuraCaption(canvas,caption,18,232,10,0.95);
+      // The small empty-state canvas is 300x230: keep the whole 600x360 motif
+      // inside it with the caption below, instead of letting it bleed right.
+      double scale=0.46,ox=(300-600*scale)/2,oy=Math.Max(0,(230-360*scale)/2-10);
+      DrawAuraMotif(canvas,MotifFor(theme),ox,oy,scale,0.9);
+      AuraCaption(canvas,caption,18,206,10,0.95);
     }
     void DrawWallpaper() {
       var canvas=Get<Canvas>("ChatWallpaper");canvas.Children.Clear();if(Setting("aura","true")=="false")return;
       double width=canvas.ActualWidth,height=canvas.ActualHeight;
       string theme=CurrentThemeId();string caption;AuraCaptions.TryGetValue(theme,out caption);if(caption==null)caption=AuraCaptions["blue"];
-      DrawAuraMotif(canvas,MotifFor(theme),width-330,height-300,theme=="blue"?1.35:0.82,0.5);
-      AuraCaption(canvas,caption,width-300,height-38,10,0.55);
+      // Fit the motif inside the chat canvas with a 24px margin; the old fixed
+      // offset pushed the right third of every aura off the window.
+      double scale=Math.Min(1.1,Math.Max(0.45,Math.Min(width/600,height/360)*0.92));
+      double ox=Math.Max(0,width-600*scale-24),oy=Math.Max(0,height-360*scale-24);
+      DrawAuraMotif(canvas,MotifFor(theme),ox,oy,scale,0.5);
+      AuraCaption(canvas,caption,Math.Max(12,width-300),Math.Max(12,height-38),10,0.55);
     }
     Window Dialog(string title,StackPanel panel) {
       var dialog=new Window {Title=T(title),Width=470,SizeToContent=SizeToContent.Height,MaxHeight=Window.ActualHeight-30,WindowStartupLocation=WindowStartupLocation.CenterOwner,Owner=Window,Background=(Brush)Window.Resources["PanelBackground"],Foreground=Brushes.White,FontFamily=new FontFamily("Segoe UI"),ResizeMode=ResizeMode.NoResize};

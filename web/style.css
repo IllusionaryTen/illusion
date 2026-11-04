@@ -3,7 +3,7 @@
 .media-icon{margin-right:6px}
 .media-preview.file-preview{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 12px;color:var(--text);background:var(--panel)}
 pre.document{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--control);border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--text);max-height:55vh;overflow:auto}
-#aura-art{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}#aura-art svg{position:absolute;right:-30px;bottom:-20px;width:min(620px,85vw);height:auto;opacity:.5}.aura-caption{position:absolute;right:24px;bottom:16px;font-family:Consolas,monospace;font-size:11px;letter-spacing:.14em;color:var(--muted);opacity:.6}header,main,footer,#status,#storage-notice{position:relative;z-index:1}
+#aura-art{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}#aura-art svg{position:absolute;right:4vw;bottom:4vh;width:min(620px,86vw);height:auto;opacity:.5}.aura-caption{position:absolute;right:24px;bottom:16px;font-family:Consolas,monospace;font-size:11px;letter-spacing:.14em;color:var(--muted);opacity:.6}header,main,footer,#status,#storage-notice{position:relative;z-index:1}
 body[data-theme=astraios]{--bg:#030F16;--panel:#071C23;--control:#0B2A31;--line:#265A5B;--accent:#6FE3D2;--on-accent:#04130F;--muted:#C6E3D0;--accent-2:#F2D98E}
 body[data-theme=crimson-moon]{--bg:#090206;--panel:#180409;--control:#250810;--line:#5A1620;--accent:#E02434;--on-accent:#FFFFFF;--muted:#E7B0AC;--accent-2:#FF9A5C}
 body[data-theme=dreammetric]{--bg:#10031C;--panel:#1A0629;--control:#270B38;--line:#5A2268;--accent:#D445E6;--on-accent:#14021B;--muted:#EBC9EE;--accent-2:#7FE0FF}
@@ -13,16 +13,19 @@ body[data-theme=monarch]{--bg:#05030E;--panel:#0C0720;--control:#150D31;--line:#
 body[data-theme=oblivion]{--bg:#020108;--panel:#070514;--control:#0F0A26;--line:#2E2058;--accent:#B96BFF;--on-accent:#06020C;--muted:#D8C4EC;--accent-2:#6C4DFF}
 body[data-theme=oppression]{--bg:#04060B;--panel:#0A0F17;--control:#121A25;--line:#39485C;--accent:#B9C6D8;--on-accent:#05070C;--muted:#C4CBD6;--accent-2:#6C8BB5}
 body[data-theme=tomorrow]{--bg:#03041A;--panel:#080C26;--control:#101638;--line:#33406F;--accent:#9FB4FF;--on-accent:#050716;--muted:#C9D4F2;--accent-2:#FFC98A}
-#aura-art[data-motif=constellation] svg{width:min(900px,125vw);right:-200px;top:-80px;opacity:.7}
-#aura-art[data-motif=scythes] svg{width:min(700px,95vw);right:-70px;top:-30px;bottom:auto;opacity:.8}
-#aura-art[data-motif=stars] svg{width:min(820px,110vw);right:-150px;bottom:-100px;opacity:.75}
-#aura-art[data-motif=monolith] svg{width:min(760px,105vw);right:-110px;top:-40px;bottom:auto;opacity:.7}
-#aura-art[data-motif=inferno] svg{width:min(800px,105vw);right:-120px;bottom:-40px;opacity:.8}
-#aura-art[data-motif=crown] svg{width:min(680px,90vw);right:-60px;top:8%;bottom:auto;opacity:.75}
-#aura-art[data-motif=dome] svg{width:min(860px,115vw);right:-160px;bottom:-110px;opacity:.75}
-#aura-art[data-motif=thorns] svg{width:min(860px,115vw);right:-140px;bottom:-60px;opacity:.6}
-#aura-art[data-motif=clock] svg{width:min(880px,118vw);right:-150px;bottom:-90px;opacity:.75}
-#aura-art[data-motif=orbit] svg{width:min(700px,95vw);right:-80px;bottom:-60px;opacity:.65}
+/* Keep the artwork at its full size but anchor it inside the viewport. All
+   offsets are positive and widths are capped below 100vw, so no silhouette is
+   clipped by the right edge or the bottom of the screen at any window size. */
+#aura-art[data-motif=constellation] svg{width:min(900px,96vw);right:2vw;top:2%;bottom:auto;opacity:.7}
+#aura-art[data-motif=scythes] svg{width:min(700px,96vw);right:2vw;top:2%;bottom:auto;opacity:.8}
+#aura-art[data-motif=stars] svg{width:min(820px,96vw);right:2vw;bottom:2vh;opacity:.75}
+#aura-art[data-motif=monolith] svg{width:min(760px,96vw);right:2vw;top:2%;bottom:auto;opacity:.7}
+#aura-art[data-motif=inferno] svg{width:min(800px,96vw);right:2vw;bottom:2vh;opacity:.8}
+#aura-art[data-motif=crown] svg{width:min(680px,96vw);right:2vw;top:6%;bottom:auto;opacity:.75}
+#aura-art[data-motif=dome] svg{width:min(860px,96vw);right:2vw;bottom:2vh;opacity:.75}
+#aura-art[data-motif=thorns] svg{width:min(860px,96vw);right:2vw;bottom:2vh;opacity:.6}
+#aura-art[data-motif=clock] svg{width:min(880px,96vw);right:2vw;bottom:2vh;opacity:.75}
+#aura-art[data-motif=orbit] svg{width:min(700px,96vw);right:2vw;bottom:2vh;opacity:.65}
 
 /* Theme-aware scrollbars for the browser, Telegram Mini App and the Android
    WebView. They follow the active aura palette instead of an OS light theme. */
