@@ -1,6 +1,10 @@
-# ◈ Illusion 1.7.2
+# ◈ Illusion 1.7.3
 
 **Private. Customizable. Free.** A portable Windows messenger, native Android APK and Telegram Mini App with a detailed blue, white, black, checkerboard and orbital interface inspired by the Challenged+ auras of Sol's RNG. Telegram delivers the Windows and Android apps.
+
+## What's new in 1.7.3
+
+**Settings text stays readable.** The Windows appearance dialog rendered its ComboBox values (Language, Interface style, Chat font) with the dark system control-text colour, making them almost invisible against the dark panels. Those values are now white with a small dark outline, and the dropdown items match. Browser, Mini App and Android WebView selects are also forced to white with the same subtle outline, so a WebView cannot fall back to the OS field colour and render dark-on-dark. No wire, palette or motif changes.
 
 ## What's new in 1.7.2
 

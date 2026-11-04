@@ -37,6 +37,13 @@ body[data-theme=tomorrow]{--bg:#03041A;--panel:#080C26;--control:#101638;--line:
 ::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--accent) 78%,var(--line));border:2px solid transparent;background-clip:padding-box}
 ::-webkit-scrollbar-thumb:active{background:var(--accent);border:2px solid transparent;background-clip:padding-box}
 ::-webkit-scrollbar-corner{background:transparent}
+
+/* Native selects in some WebViews fall back to the OS field colour, which is
+   dark on these dark panels. Force white values with a small dark outline so
+   settings stay legible over the aura backdrop, including the option list. */
+select,select option{color:#fff;-webkit-text-fill-color:#fff}
+select option{background:var(--control)}
+select,body[data-ui=aura] .settings-section{text-shadow:0 1px 2px #000c,0 0 1px #000a}
 .verified-badge{color:var(--accent);font-weight:700;margin-left:6px}
 .verified-note{color:var(--accent);font-weight:600}
 .session-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}.session-meta{flex:1;color:var(--text)}.session-current{color:var(--accent)}
